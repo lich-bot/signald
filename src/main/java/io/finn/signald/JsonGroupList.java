@@ -21,10 +21,10 @@ import java.util.List;
 import java.util.ArrayList;
 import org.asamk.signal.storage.groups.GroupInfo;
 
-class JsonGroupList {
+public class JsonGroupList {
     List<JsonGroupInfo> groups = new ArrayList<JsonGroupInfo>();
 
-    JsonGroupList(Manager m) {
+    public JsonGroupList(Manager m) {
         for(GroupInfo group : m.getGroups()) {
             if(group != null) {
                 this.groups.add(new JsonGroupInfo(group, m));

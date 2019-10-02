@@ -17,35 +17,35 @@
 
 package io.finn.signald;
 
-import java.io.File;
-
+import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
 import org.whispersystems.signalservice.internal.util.Base64;
-import org.whispersystems.libsignal.util.guava.Optional;
+
+import java.io.File;
 
 
-class JsonAttachment {
-    String contentType;
-    long id;
-    int size;
-    String storedFilename;
-    String filename;
-    String caption;
-    int width;
-    int height;
-    boolean voiceNote;
-    String preview;
-    String key;
-    String digest;
+public class JsonAttachment {
+    public String contentType;
+    public long id;
+    public int size;
+    public String storedFilename;
+    public String filename;
+    public String caption;
+    public int width;
+    public int height;
+    public boolean voiceNote;
+    public String preview;
+    public String key;
+    public String digest;
 
-    JsonAttachment() {}
+    public JsonAttachment() {}
 
-    JsonAttachment(String storedFilename) {
+    public JsonAttachment(String storedFilename) {
         this.filename = storedFilename;
     }
 
-    JsonAttachment(SignalServiceAttachment attachment, Manager m) {
+    public JsonAttachment(SignalServiceAttachment attachment, Manager m) {
         this.contentType = attachment.getContentType();
         final SignalServiceAttachmentPointer pointer = attachment.asPointer();
         if (attachment.isPointer()) {

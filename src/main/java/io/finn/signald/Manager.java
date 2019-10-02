@@ -114,7 +114,7 @@ import static org.whispersystems.signalservice.internal.util.Util.isEmpty;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-class Manager {
+public class Manager {
     private static final Logger logger = LogManager.getLogger();
     private final static TrustStore TRUST_STORE = new WhisperTrustStore();
     private final static SignalServiceConfiguration serviceConfiguration = new SignalServiceConfiguration(

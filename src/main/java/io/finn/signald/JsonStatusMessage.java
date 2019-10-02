@@ -17,19 +17,19 @@
 
 package io.finn.signald;
 
-class JsonStatusMessage {
+public class JsonStatusMessage {
   public int msg_number;
   public String message;
   public boolean error;
   public JsonRequest request;
 
-  JsonStatusMessage(int msgNumber, String message) {
+  public JsonStatusMessage(int msgNumber, String message) {
     this.msg_number = msgNumber;
     this.message = message;
     this.error = false;
   }
 
-  JsonStatusMessage(int msgNumber, String message, JsonRequest request) {
+  public JsonStatusMessage(int msgNumber, String message, JsonRequest request) {
     this.msg_number = msgNumber;
     this.message = message;
     this.error = true;

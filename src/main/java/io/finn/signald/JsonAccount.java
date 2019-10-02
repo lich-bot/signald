@@ -17,7 +17,7 @@
 
 package io.finn.signald;
 
-class JsonAccount {
+public class JsonAccount {
   public int deviceId;
   public String username;
   public String filename;
@@ -25,7 +25,7 @@ class JsonAccount {
   public boolean has_keys;
   public boolean subscribed;
 
-  JsonAccount(Manager m) {
+  public JsonAccount(Manager m) {
     this.username = m.getUsername();
     this.deviceId = m.getDeviceId();
     this.filename = m.getFileName();
@@ -33,7 +33,7 @@ class JsonAccount {
     this.has_keys = m.userHasKeys();
   }
 
-  JsonAccount(Manager m, boolean subscribed) {
+  public JsonAccount(Manager m, boolean subscribed) {
     this(m);
     this.subscribed = subscribed;
   }
