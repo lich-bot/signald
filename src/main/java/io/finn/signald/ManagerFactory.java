@@ -24,8 +24,6 @@ public class ManagerFactory {
     }
 
     public static Manager getManager(String username) throws IOException {
-        // So many problems in this method, need to have a single place to create new managers, probably in MessageReceiver
-
         if (managers.containsKey(username)) {
             return managers.get(username);
         } else {
