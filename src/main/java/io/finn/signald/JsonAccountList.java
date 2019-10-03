@@ -22,10 +22,10 @@ import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Enumeration;
 
-class JsonAccountList {
+public class JsonAccountList {
   public List<JsonAccount> accounts = new ArrayList<JsonAccount>();
 
-  JsonAccountList(ConcurrentHashMap<String,Manager> managers, ArrayList<String> subscribedAccounts) {
+  public JsonAccountList(ConcurrentHashMap<String, Manager> managers, ArrayList<String> subscribedAccounts) {
     Enumeration<String> usernames = managers.keys();
     while(usernames.hasMoreElements()) {
       String username = usernames.nextElement();

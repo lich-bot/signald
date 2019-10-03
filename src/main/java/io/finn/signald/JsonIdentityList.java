@@ -23,7 +23,7 @@ import java.util.Map;
 
 import org.asamk.signal.storage.protocol.JsonIdentityKeyStore;
 
-class JsonIdentityList {
+public class JsonIdentityList {
   public List<JsonIdentity> identities = new ArrayList<JsonIdentity>();
 
   JsonIdentityList(List<JsonIdentityKeyStore.Identity> identities, Manager m) {
@@ -32,7 +32,7 @@ class JsonIdentityList {
     }
   }
 
-  JsonIdentityList(String number, Manager m) {
+  public JsonIdentityList(String number, Manager m) {
     if(number == null) {
       for (Map.Entry<String, List<JsonIdentityKeyStore.Identity>> keys : m.getIdentities().entrySet()) {
         for (JsonIdentityKeyStore.Identity identity : keys.getValue()) {

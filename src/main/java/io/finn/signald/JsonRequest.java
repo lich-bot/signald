@@ -22,7 +22,7 @@ import org.asamk.signal.storage.contacts.ContactInfo;
 import java.util.List;
 
 
-class JsonRequest {
+public class JsonRequest {
     public String type;
     public String id;
     public String username;

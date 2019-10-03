@@ -19,12 +19,12 @@ package io.finn.signald;
 
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-import java.util.List;
+
 import java.util.ArrayList;
-import java.util.stream.Collectors;
+import java.util.List;
 
 
-class JsonQuote {
+public class JsonQuote {
   public long id;
   public String author;
   public String text;

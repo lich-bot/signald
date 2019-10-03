@@ -17,35 +17,26 @@
 
 package io.finn.signald;
 
-import java.io.IOException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.ConcurrentHashMap;
-import java.net.Socket;
-
-import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-import org.whispersystems.signalservice.api.messages.SignalServiceContent;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-
-import org.asamk.signal.AttachmentInvalidException;
-import org.asamk.signal.GroupNotFoundException;
-import org.asamk.signal.NotAGroupMemberException;
-import org.asamk.signal.storage.contacts.ContactInfo;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.asamk.signal.storage.contacts.ContactInfo;
+import org.whispersystems.signalservice.api.messages.SignalServiceContent;
+import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
-class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
+import java.io.IOException;
+import java.net.Socket;
+import java.util.concurrent.TimeUnit;
+
+public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
     final String username;
     private Manager m;
-    private ConcurrentHashMap<String,Manager> managers;
     private SocketManager sockets;
     private static final Logger logger = LogManager.getLogger();
     private String data_path;
 
-    public MessageReceiver(String username, ConcurrentHashMap<String,Manager> managers, String data_path) {
-      this.managers = managers;
+    public MessageReceiver(String username) {
       this.username = username;
-      this.data_path = data_path;
       this.sockets = new SocketManager();
     }
 
@@ -62,27 +53,10 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
       return removed;
     }
 
-    private Manager getManager(String username, String data_path) throws IOException {
-      if(this.managers.containsKey(username)) {
-        return this.managers.get(username);
-      } else {
-        logger.info("Creating a manager for " + username);
-        Manager m = new Manager(username, data_path);
-        if(m.userExists()) {
-          m.init();
-        } else {
-          logger.warn("Created manager for a user that doesn't exist! (" + username + ")");
-        }
-        this.managers.put(username, m);
-        return m;
-      }
-    }
-
-
     public void run() {
       try {
         Thread.currentThread().setName(this.username + "-manager");
-        this.m = getManager(this.username, this.data_path);
+        this.m = ManagerFactory.getManager(this.username);
         while(true) {
           double timeout = 3600;
           boolean returnOnTimeout = true;

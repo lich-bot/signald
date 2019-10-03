@@ -22,14 +22,14 @@ import java.io.IOException;
 
 import java.util.concurrent.TimeoutException;
 
-class JsonLinkingURI {
+public class JsonLinkingURI {
   public URI uri;
 
   JsonLinkingURI(URI uri) {
     this.uri = uri;
   }
 
-  JsonLinkingURI(Manager m) throws TimeoutException, IOException {
+  public JsonLinkingURI(Manager m) throws TimeoutException, IOException {
     this.uri = m.getDeviceLinkUri();
   }
 }

@@ -58,6 +58,9 @@ public class Main implements Runnable {
   @Option(names={"-s", "--socket"}, description="The path to the socket file")
   private String socket_path = "/var/run/signald/signald.sock";
 
+  @Option(names={"-a", "--address"}, description="Address for HTTP server")
+  private String ip_port = "127.0.0.1:9696";
+
   @Option(names={"-d", "--data"}, description="Data storage location")
   private String data_path = System.getProperty("user.home") + "/.config/signald";
 
@@ -76,6 +79,8 @@ public class Main implements Runnable {
       Sentry.getContext().addExtra("release", BuildConfig.VERSION);
       Sentry.getContext().addExtra("signal_url", BuildConfig.SIGNAL_URL);
       Sentry.getContext().addExtra("signal_cdn_url", BuildConfig.SIGNAL_CDN_URL);
+
+      ManagerFactory.setDataPath(data_path);
 
       // Workaround for BKS truststore
       Security.insertProviderAt(new SecurityProvider(), 1);
