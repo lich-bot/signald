@@ -47,6 +47,7 @@ import java.util.UUID;
 public class AccountData {
     public String username;
     public String password;
+    public String registrationLockPin;
     public JsonAddress address;
     public int deviceId = SignalServiceAddress.DEFAULT_DEVICE_ID;
     public String signalingKey;

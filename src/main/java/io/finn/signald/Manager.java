@@ -409,13 +409,14 @@ class Manager {
         }
     }
 
-    public void verifyAccount(String verificationCode) throws IOException, InvalidInputException {
+    public void verifyAccount(String verificationCode, String verificationPin) throws IOException, InvalidInputException {
         verificationCode = verificationCode.replace("-", "");
         accountData.signalingKey = Util.getSecret(52);
-        VerifyAccountResponse response = accountManager.verifyAccountWithCode(verificationCode, accountData.signalingKey, accountData.axolotlStore.getLocalRegistrationId(), true, null, null, accountData.getSelfUnidentifiedAccessKey(), false, SERVICE_CAPABILITIES);
+        VerifyAccountResponse response = accountManager.verifyAccountWithCode(verificationCode, accountData.signalingKey, accountData.axolotlStore.getLocalRegistrationId(), true, verificationPin, null, accountData.getSelfUnidentifiedAccessKey(), false, SERVICE_CAPABILITIES);
 
         //accountManager.setGcmId(Optional.of(GoogleCloudMessaging.getInstance(this).register(REGISTRATION_ID)));
         accountData.registered = true;
+        accountData.registrationLockPin = verificationPin;
 
         refreshPreKeys();
         accountData.init();

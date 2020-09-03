@@ -89,6 +89,7 @@ Completes the registration process, by providing a verification code sent after 
 |-------|------|-----------|-------------|
 | `username` | string | yes | The phone number that is being verified |
 | `code` | string | yes | The verification code. The `-` in the middle code is optional.
+| `pin` | string | no | The registration lock PIN, that was set by the user
 
 
 ### `mark_read`
@@ -145,14 +146,17 @@ Leaves a group
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | string | yes | The account to leave the group |
-| `recipientGroupId` string | yes | the base64 encoded group ID |
+| `recipientGroupId` | string | yes | the base64 encoded group ID |
 
 ### `link`
 
 Adds a new account to signald by linking to another signal device that has already registered. Provides a URI that should be used to
 link. To link with the Signal app, encode the URI as a QR code, open the Signal app, go to settings -> Linked Devices, tap the + button
 in the bottom right and scan the QR code.
-*Takes no argument*
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `deviceName` | string | no | The name to describe this new device. |
 
 ### `get_user`
 
@@ -280,7 +284,7 @@ As one might expect, `recipientAddress` and `recipientGroupId` are mutually excl
 | `username` | `string` | yes | The account to use. |
 | `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | no | The address to change the expiration with. |
 | `recipientGroupId` | `string` | no | The group ID to update expiration for. |
-| `expiresInSeconds` | `int` | yes | The number of seconds after which messages in the conversation should expire. Set to 0 to turn of disappearing messages. |
+| `expiresInSeconds` | `int` | yes | The number of seconds after which messages in the conversation should expire. Set to 0 to turn off disappearing messages. |
 
 
 ### `get_profile`

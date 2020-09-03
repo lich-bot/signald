@@ -308,11 +308,11 @@ public class SocketHandler implements Runnable {
     } else {
       logger.info("Submitting verification code " + request.code + " for number " + request.username);
       try {
-        m.verifyAccount(request.code);
+        m.verifyAccount(request.code, request.pin);
         this.reply("verification_succeeded", new JsonAccount(m), request.id);
       } catch(LockedException e) {
         logger.warn("Failed to register phone number with PIN lock. See https://gitlab.com/thefinn93/signald/-/issues/47");
-        this.reply("error", "registering phone numbers with a PIN lock is not currently supported, see https://gitlab.com/thefinn93/signald/-/issues/47", request.id);
+        this.reply("verification_error", new JsonStatusMessage(4, "Verification failed! This number is locked with a pin and has " + (e.getTimeRemaining() / 1000 / 60 / 60) + " Hours remaining until reset, pass the pin in the request to verify now.", request), request.id);
       }
     }
   }
