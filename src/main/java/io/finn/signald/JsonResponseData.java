@@ -17,22 +17,23 @@
 
 package io.finn.signald;
 
-import java.util.ArrayList;
+import io.finn.signald.clientprotocol.v1.JsonSendMessageResult;
+import io.finn.signald.storage.ContactStore;
+
 import java.util.List;
 
-class JsonAccountList {
-    public List<JsonAccount> accounts = new ArrayList<JsonAccount>();
+public class JsonResponseData {
+    public List<ContactStore.ContactInfo> contacts;
+    public List<JsonGroupInfo> groups;
+	public List<JsonAccount> accounts;
+    public List<JsonIdentity> identities;
+    public List<JsonSendMessageResult> sendresults;
+    public JsonStatusMessage statusmessage;
+    public JsonContactTokenDetails contacttokendetails;
+    public JsonProfile profile;
+    public JsonVersionMessage version;
+    public JsonUntrustedIdentityException untrustedidentityexception;
+    public String uri;
 
-    JsonAccountList(ArrayList<String> subscribedAccounts) {
-        for (Manager m : Manager.getAll()) {
-            if (m != null) {
-                accounts.add(new JsonAccount(m, subscribedAccounts.contains(m.getUsername())));
-            }
-
-        }
-    }
-
-    JsonAccountList(JsonAccount account) {
-        accounts.add(account);
-    }
+    JsonResponseData() {}
 }

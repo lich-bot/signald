@@ -56,6 +56,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.lang.reflect.Field;
 
 public class SocketHandler implements Runnable {
   private BufferedReader reader;
@@ -82,7 +83,7 @@ public class SocketHandler implements Runnable {
     logger.info("Client connected");
 
     try {
-      reply("version", new JsonVersionMessage(), null);
+      reply("version", makeReplyData("version", new JsonVersionMessage()), null);
 
       while (true) {
         final String line = reader.readLine();
@@ -198,7 +199,7 @@ public class SocketHandler implements Runnable {
         updateContact(request);
         break;
       case "version":
-        version();
+        version(request);
         break;
       case "get_profile":
         getProfile(request);
@@ -272,8 +273,11 @@ public class SocketHandler implements Runnable {
     if(result != null) {
       SendMessageResult.IdentityFailure identityFailure = result.getIdentityFailure();
       if(identityFailure != null) {
-        this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), result.getAddress(), m, request), request.id);
+        JsonUntrustedIdentityException e = new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), result.getAddress(), m, request);
+        this.reply("untrusted_identity", makeReplyData("untrustedidentityexception", e), request.id);
       }
+    } else {
+      this.reply("marked_read", new JsonStatusMessage(0, "Successfully marked message as read"), request.id);
     }
   }
 
@@ -296,7 +300,8 @@ public class SocketHandler implements Runnable {
     }
     logger.info("Registering (voice: " + voice + ")");
     m.register(voice, Optional.fromNullable(request.captcha));
-    this.reply("verification_required", new JsonAccount(m), request.id);
+    JsonAccountList accounts = new JsonAccountList(new JsonAccount(m));
+    this.reply("verification_required", accounts, request.id);
   }
 
   private void verify(JsonRequest request) throws IOException, NoSuchAccountException, InvalidInputException {
@@ -309,7 +314,8 @@ public class SocketHandler implements Runnable {
       logger.info("Submitting verification code " + request.code + " for number " + request.username);
       try {
         m.verifyAccount(request.code, request.pin);
-        this.reply("verification_succeeded", new JsonAccount(m), request.id);
+        JsonAccountList accounts = new JsonAccountList(new JsonAccount(m));
+        this.reply("verification_succeeded", accounts, request.id);
       } catch(LockedException e) {
         logger.warn("Failed to register phone number with PIN lock. See https://gitlab.com/thefinn93/signald/-/issues/47");
         this.reply("verification_error", new JsonStatusMessage(4, "Verification failed! This number is locked with a pin and has " + (e.getTimeRemaining() / 1000 / 60 / 60) + " Hours remaining until reset, pass the pin in the request to verify now.", request), request.id);
@@ -369,7 +375,7 @@ public class SocketHandler implements Runnable {
     }
 
     handleSendMessage(results, request);
-    this.reply("expiration_updated", null, request.id);
+    this.reply("expiration_updated", new JsonStatusMessage(0, "Expiration successfully updated"), request.id);
   }
 
   private void listGroups(JsonRequest request) throws IOException, NoSuchAccountException {
@@ -384,6 +390,10 @@ public class SocketHandler implements Runnable {
     this.reply("left_group", new JsonStatusMessage(7, "Successfully left group"), request.id);
   }
 
+  private void reply(String type, JsonStatusMessage statusMsg, String id) throws JsonProcessingException {
+    reply(type, makeReplyData("statusmessage", statusMsg), id);
+  }
+
   private void reply(String type, Object data, String id) throws JsonProcessingException {
     JsonMessageWrapper message = new JsonMessageWrapper(type, data, id);
     String jsonmessage = this.mpr.writeValueAsString(message);
@@ -391,6 +401,19 @@ public class SocketHandler implements Runnable {
     out.println(jsonmessage);
   }
 
+  private JsonResponseData makeReplyData(String key, Object value) {
+    JsonResponseData response = new JsonResponseData();
+    try {
+      Field f = response.getClass().getDeclaredField(key);
+      f.set(response, value);
+    } catch(Exception e) {  
+      logger.error(e);
+      response.statusmessage = new JsonStatusMessage(0, e.getMessage());
+      response.statusmessage.error = true;
+    }
+
+    return response;
+  } 
 
   private void link(JsonRequest request) throws AssertionError, IOException, InvalidKeyException, URISyntaxException, NoSuchAccountException, InvalidInputException {
     ProvisioningManager pm = new ProvisioningManager();
@@ -401,10 +424,11 @@ public class SocketHandler implements Runnable {
     try {
       logger.info("Generating linking URI");
       URI uri = pm.getDeviceLinkUri();
-      this.reply("linking_uri", new JsonLinkingURI(uri), request.id);
+      this.reply("linking_uri", makeReplyData("uri", new JsonLinkingURI(uri)), request.id);
       String username = pm.finishDeviceLink(deviceName);
       Manager m = Manager.get(username);
-      this.reply("linking_successful", new JsonAccount(m), request.id);
+      JsonAccountList accounts = new JsonAccountList(new JsonAccount(m));
+      this.reply("linking_successful", accounts, request.id);
     } catch(TimeoutException e) {
       this.reply("linking_error", new JsonStatusMessage(1, "Timed out while waiting for device to link", request), request.id);
     } catch(UserAlreadyExists e) {
@@ -415,16 +439,18 @@ public class SocketHandler implements Runnable {
   private void getUser(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager m = Manager.get(request.username);
     Optional<ContactTokenDetails> contact = m.getUser(request.recipientAddress.number);
+    logger.info(request.recipientAddress.number);
     if(contact.isPresent()) {
-      this.reply("user", new JsonContactTokenDetails(contact.get()), request.id);
+      this.reply("user", makeReplyData("contacttokendetails", new JsonContactTokenDetails(contact.get())), request.id);
     } else {
-      this.reply("user_not_registered", null, request.id);
+      this.reply("user_not_registered", new JsonStatusMessage(0, "User not registered", request), request.id);
     }
   }
 
   private void getIdentities(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager m = Manager.get(request.username);
-    this.reply("identities", new JsonIdentityList(request.recipientAddress == null ? null : request.recipientAddress.getSignalServiceAddress(), m), request.id);
+    JsonIdentityList identities = new JsonIdentityList(request.recipientAddress == null ? null : request.recipientAddress.getSignalServiceAddress(), m);
+    this.reply("identities", identities, request.id);
   }
 
   private void trust(JsonRequest request) throws IOException, NoSuchAccountException {
@@ -468,24 +494,24 @@ public class SocketHandler implements Runnable {
   private void syncContacts(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager m = Manager.get(request.username);
     m.requestSyncContacts();
-    this.reply("sync_requested", null, request.id);
+    this.reply("sync_requested", new JsonStatusMessage(0, "Sync requested"), request.id);
   }
 
   private void syncGroups(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager m = Manager.get(request.username);
     m.requestSyncGroups();
-    this.reply("sync_requested", null, request.id);
+    this.reply("sync_requested", new JsonStatusMessage(0, "Sync requested"), request.id);
   }
 
   private void syncConfiguration(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager m = Manager.get(request.username);
     m.requestSyncConfiguration();
-    this.reply("sync_requested", null, request.id);
+    this.reply("sync_requested", new JsonStatusMessage(0, "Sync requested"), request.id);
   }
 
   private void listContacts(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager m = Manager.get(request.username);
-    this.reply("contact_list", m.getContacts(), request.id);
+    this.reply("contact_list", makeReplyData("contacts", m.getContacts()), request.id);
   }
 
   public void updateContact(JsonRequest request) throws IOException, NoSuchAccountException {
@@ -501,7 +527,7 @@ public class SocketHandler implements Runnable {
     }
 
     m.updateContact(request.contact);
-    this.reply("contact_updated", null, request.id);
+    this.reply("contact_updated", new JsonStatusMessage(0, "Contact updated"), request.id);
   }
 
   private void subscribe(JsonRequest request) throws IOException, NoSuchAccountException {
@@ -516,34 +542,35 @@ public class SocketHandler implements Runnable {
     }
     this.receivers.get(request.username).subscribe(this.socket);
     this.subscribedAccounts.add(request.username);
-    this.reply("subscribed", null, request.id);  // TODO: Indicate if we actually subscribed or were already subscribed, also which username it was for
+    this.reply("subscribed", new JsonStatusMessage(0, "Subscribed"), request.id);  // TODO: Indicate if we actually subscribed or were already subscribed, also which username it was for
   }
 
   private void unsubscribe(JsonRequest request) throws IOException {
     this.receivers.get(request.username).unsubscribe(this.socket);
     this.receivers.remove(request.username);
     this.subscribedAccounts.remove(request.username);
-    this.reply("unsubscribed", null, request.id);  // TODO: Indicate if we actually unsubscribed or were already unsubscribed, also which username it was for
+    this.reply("unsubscribed", new JsonStatusMessage(0, "Unsubscribed"), request.id);  // TODO: Indicate if we actually unsubscribed or were already unsubscribed, also which username it was for
   }
 
-  private void version() throws IOException {
-      this.reply("version", new JsonVersionMessage(), null);
+  private void version(JsonRequest request) throws IOException {
+    this.reply("version", makeReplyData("version", new JsonVersionMessage()), request.id);
   }
 
   private void getProfile(JsonRequest request) throws IOException, InvalidCiphertextException, NoSuchAccountException, VerificationFailedException, InvalidInputException, InterruptedException, ExecutionException, TimeoutException {
       Manager m = Manager.get(request.username);
       ContactStore.ContactInfo contact = m.getContact(request.recipientAddress.getSignalServiceAddress());
       if(contact == null || contact.profileKey == null) {
-          this.reply("profile_not_available", null, request.id);
+          this.reply("profile_not_available", new JsonStatusMessage(0, "Profile not available", request), request.id);
           return;
       }
-      this.reply("profile", new JsonProfile(m.getProfile(request.recipientAddress.getSignalServiceAddress()), Base64.decode(contact.profileKey)), request.id);
+      JsonProfile profile = new JsonProfile(m.getProfile(request.recipientAddress.getSignalServiceAddress()), Base64.decode(contact.profileKey));
+      this.reply("profile", makeReplyData("profile", profile), request.id);
   }
 
   private void setProfile(JsonRequest request) throws IOException, NoSuchAccountException, InvalidInputException {
       Manager m = Manager.get(request.username);
       m.setProfile(request.name, null);
-      this.reply("profile_set", null, request.id);
+      this.reply("profile_set", new JsonStatusMessage(0, "Profile set"), request.id);
   }
 
   private void react(JsonRequest request) throws IOException, NoSuchAccountException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException {
@@ -555,10 +582,10 @@ public class SocketHandler implements Runnable {
 
   private void handleSendMessage(List<SendMessageResult> sendMessageResults, JsonRequest request) throws JsonProcessingException {
     List<JsonSendMessageResult> results = new ArrayList<>();
-    for(SendMessageResult r: sendMessageResults) {
+    for(SendMessageResult r : sendMessageResults) {
       results.add(new JsonSendMessageResult(r));
     }
-    this.reply("send_results", results, request.id);
+    this.reply("send_results", makeReplyData("sendresults", results), request.id);
   }
 
   private void handleError(Throwable error, JsonRequest request) {
@@ -567,7 +594,7 @@ public class SocketHandler implements Runnable {
     } else if(error instanceof UnregisteredUserException) {
       logger.warn("failed to send to an address that is not on Signal (UnregisteredUserException)");
     } else {
-      logger.error(error);
+      logger.catching(error);
     }
     String requestid = "";
     if(request != null) {
@@ -576,7 +603,7 @@ public class SocketHandler implements Runnable {
     try {
         this.reply("unexpected_error", new JsonStatusMessage(0, error.getMessage(), request), requestid);
     } catch(JsonProcessingException e) {
-        logger.catching(error);
+        logger.catching(e);
     }
   }
 }
