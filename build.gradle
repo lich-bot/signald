@@ -4,7 +4,7 @@ import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
 import org.xml.sax.SAXParseException
 
 plugins {
-   id 'de.fuerstenau.buildconfig' version '1.1.8'
+    id 'de.fuerstenau.buildconfig' version '1.1.8'
 }
 
 apply plugin: 'java'
@@ -18,7 +18,7 @@ compileJava.options.encoding = 'UTF-8'
 // crappy rust target detection
 String getTarget() {
     String target = System.getenv("SIGNALD_TARGET") // Allow overriding the architecture
-    if(target != null) {
+    if (target != null) {
         System.out.println("skipping target detection, using " + target)
         return target
     }
@@ -28,45 +28,45 @@ String getTarget() {
     String third = null
 
     ArchitectureInternal arch = DefaultNativePlatform.getCurrentArchitecture()
-    switch(arch.getName()) {
+    switch (arch.getName()) {
         case ["x86_64", "x64", "x86-64"]:  // based on https://github.com/wasmerio/wasmer-java/blob/d1fc32347b206f28ddaf48896267a9740770323e/build.gradle#L79-L82
             first = "x86_64"
-        break
+            break
         case "aarch64":
             first = "aarch64"
-        break
+            break
         case "arm-v7":
             first = "armv7"
-        break
+            break
     }
 
     OperatingSystemInternal os = DefaultNativePlatform.getCurrentOperatingSystem()
-    if(os.isLinux()) {
+    if (os.isLinux()) {
         second = "unknown-linux"
-        if(arch.getName() == "arm-v7") {
+        if (arch.getName() == "arm-v7") {
             third = "gnueabihf"
         } else {
             third = "gnu"
         }
     }
 
-    if(os.isMacOsX()) {
+    if (os.isMacOsX()) {
         second = "apple"
         third = "darwin"
     }
 
-    if(first == null || second == null || third == null) {
+    if (first == null || second == null || third == null) {
         throw new Exception("Unable to detect architecture." +
                 "\n * os: " + os.getName() +
                 "\n * arch: " + arch.getName() +
                 "\n * linux: " + os.isLinux() ? "yes" : "no" +
-                "\n * osx:" + os.isMacOsX() ? "yes": "no" +
-                "\n * windows: " + os.isWindows() ? "yes": "no" +
+                "\n * osx:" + os.isMacOsX() ? "yes" : "no" +
+                "\n * windows: " + os.isWindows() ? "yes" : "no" +
                 "\n\n Set environment variable SIGNALD_TARGET to force a target" +
                 "\n See https://gitlab.com/signald/signald/-/merge_requests/44")
     }
     target = first + "-" + second + "-" + third
-    System.out.println("detected build target: " + target + " (arch=" + arch.getName() + " os=" + os.getName() +")")
+    System.out.println("detected build target: " + target + " (arch=" + arch.getName() + " os=" + os.getName() + ")")
     return target
 }
 
@@ -107,25 +107,25 @@ dependencies {
 
 
 buildConfig {
-  packageName = "io.finn.signald"
-  version = System.getenv("VERSION") ?: "unversioned"
-  appName = System.getenv("CI_PROJECT_NAME") ?: "signald"
+    packageName = "io.finn.signald"
+    version = System.getenv("VERSION") ?: "unversioned"
+    appName = System.getenv("CI_PROJECT_NAME") ?: "signald"
 
-  buildConfigField 'String', 'BRANCH', { System.getenv("CI_BUILD_REF_NAME") ?: "" }
-  buildConfigField 'String', 'COMMIT', { System.getenv("CI_COMMIT_SHA") ?: "" }
-  buildConfigField 'String', 'BUILD_TIMESTAMP', { String.valueOf(System.currentTimeMillis()) }
+    buildConfigField 'String', 'BRANCH', { System.getenv("CI_BUILD_REF_NAME") ?: "" }
+    buildConfigField 'String', 'COMMIT', { System.getenv("CI_COMMIT_SHA") ?: "" }
+    buildConfigField 'String', 'BUILD_TIMESTAMP', { String.valueOf(System.currentTimeMillis()) }
 
-  buildConfigField 'String', 'SIGNAL_URL', { System.getenv("SIGNAL_URL") ?: "https://textsecure-service.whispersystems.org" }
-  buildConfigField 'String', 'SIGNAL_CDN_URL', { System.getenv("SIGNAL_CDN_URL") ?: "https://cdn.signal.org" }
-  buildConfigField 'String', 'SIGNAL_CDN2_URL', { System.getenv("SIGNAL_CDN_URL") ?: "https://cdn2.signal.org" }
-  buildConfigField 'String', 'SIGNAL_KEY_BACKUP_URL', { System.getenv("SIGNAL_KEY_BACKUP_URL") ?: "https://api.backup.signal.org" }
-  buildConfigField 'String', 'SIGNAL_STORAGE_URL', { System.getenv("SIGNAL_STORAGE_URL") ?: "https://storage.signal.org" }
-  buildConfigField 'String', 'SIGNAL_CONTACT_DISCOVERY_URL', { System.getenv("SIGNAL_CONTACT_DISCOVERY_URL") ?: "https://cms.souqcdn.com" }
-  buildConfigField 'String', 'USER_AGENT', { System.getenv("USER_AGENT") ?: "signald-" + version }
-  buildConfigField 'String', 'SIGNAL_AGENT', { System.getenv("SIGNAL_AGENT") ?: "signald" }
-  buildConfigField 'String', "UNIDENTIFIED_SENDER_TRUST_ROOT", "BXu6QIKVz5MA8gstzfOgRQGqyLqOwNKHL6INkv3IHWMF"
-  buildConfigField 'String', "SIGNAL_ZK_GROUP_SERVER_PUBLIC_PARAMS_HEX", "AMhf5ywVwITZMsff/eCyudZx9JDmkkkbV6PInzG4p8x3VqVJSFiMvnvlEKWuRob/1eaIetR31IYeAbm0NdOuHH8Qi+Rexi1wLlpzIo1gstHWBfZzy1+qHRV5A4TqPp15YzBPm0WSggW6PbSn+F4lf57VCnHF7p8SvzAA2ZZJPYJURt8X7bbg+H3i+PEjH9DXItNEqs2sNcug37xZQDLm7X0="
-  buildConfigField 'String', "ERROR_REPORTING_URL", "https://gitlab.com/signald/signald/-/issues/new"
+    buildConfigField 'String', 'SIGNAL_URL', { System.getenv("SIGNAL_URL") ?: "https://textsecure-service.whispersystems.org" }
+    buildConfigField 'String', 'SIGNAL_CDN_URL', { System.getenv("SIGNAL_CDN_URL") ?: "https://cdn.signal.org" }
+    buildConfigField 'String', 'SIGNAL_CDN2_URL', { System.getenv("SIGNAL_CDN_URL") ?: "https://cdn2.signal.org" }
+    buildConfigField 'String', 'SIGNAL_KEY_BACKUP_URL', { System.getenv("SIGNAL_KEY_BACKUP_URL") ?: "https://api.backup.signal.org" }
+    buildConfigField 'String', 'SIGNAL_STORAGE_URL', { System.getenv("SIGNAL_STORAGE_URL") ?: "https://storage.signal.org" }
+    buildConfigField 'String', 'SIGNAL_CONTACT_DISCOVERY_URL', { System.getenv("SIGNAL_CONTACT_DISCOVERY_URL") ?: "https://cms.souqcdn.com" }
+    buildConfigField 'String', 'USER_AGENT', { System.getenv("USER_AGENT") ?: "signald-" + version }
+    buildConfigField 'String', 'SIGNAL_AGENT', { System.getenv("SIGNAL_AGENT") ?: "signald" }
+    buildConfigField 'String', "UNIDENTIFIED_SENDER_TRUST_ROOT", "BXu6QIKVz5MA8gstzfOgRQGqyLqOwNKHL6INkv3IHWMF"
+    buildConfigField 'String', "SIGNAL_ZK_GROUP_SERVER_PUBLIC_PARAMS_HEX", "AMhf5ywVwITZMsff/eCyudZx9JDmkkkbV6PInzG4p8x3VqVJSFiMvnvlEKWuRob/1eaIetR31IYeAbm0NdOuHH8Qi+Rexi1wLlpzIo1gstHWBfZzy1+qHRV5A4TqPp15YzBPm0WSggW6PbSn+F4lf57VCnHF7p8SvzAA2ZZJPYJURt8X7bbg+H3i+PEjH9DXItNEqs2sNcug37xZQDLm7X0="
+    buildConfigField 'String', "ERROR_REPORTING_URL", "https://gitlab.com/signald/signald/-/issues/new"
 }
 
 

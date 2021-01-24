@@ -2,6 +2,7 @@ stages:
   - lint
   - build
   - test
+  - publish
   - docs
   - downstreams
 
@@ -10,6 +11,14 @@ variables:
   DOCKER_TLS_CERTDIR: "/certs"
 
 # from https://forum.gitlab.com/t/prevent-ci-cd-for-release-branches-for-forks/42207/2
+.arm-build:
+  tags: [arm-builder]
+  rules:
+    - if: '$CI_PROJECT_NAMESPACE == "signald"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
 workflow:
   rules:
     - if: '$CI_PROJECT_NAMESPACE != "signald"'
@@ -55,53 +64,59 @@ build java8 armv7-unknown-linux-gnueabihf:
   extends: .build
   variables:
     JAVA_VERSION: 8
-    SIGNALD_TARGET: armv7-unknown-linux-gnueabihf
+    TARGET: armv7-unknown-linux-gnueabihf
 
 build java11 armv7-unknown-linux-gnueabihf:
   extends: .build
   variables:
     JAVA_VERSION: 11
-    SIGNALD_TARGET: armv7-unknown-linux-gnueabihf
+    TARGET: armv7-unknown-linux-gnueabihf
 
 build java8 aarch64-unknown-linux-gnu:
   extends: .build
   variables:
     JAVA_VERSION: 8
-    SIGNALD_TARGET: aarch64-unknown-linux-gnu
+    TARGET: aarch64-unknown-linux-gnu
 
 build java11 aarch64-unknown-linux-gnu:
   extends: .build
   variables:
     JAVA_VERSION: 11
-    SIGNALD_TARGET: aarch64-unknown-linux-gnu
+    TARGET: aarch64-unknown-linux-gnu
 
-build deb x86:
-  image: registry.git.callpipe.com/finn/debian-repo-builder:latest
+build deb:
+  image: registry.gitlab.com/signald/infrastructure/signald-builder-x86:d5e68709
   stage: build
   needs: []
   before_script:
-    - export VERSION=$(./version.sh)
+    - export VERSION="$(./version.sh)"
+    - export SNAPSHOT="signald-${VERSION}"
     - echo "Building signald version $VERSION"
   script:
-    - gbp dch --ignore-branch --debian-tag="%(version)s" --git-author --new-version="$VERSION"
-    - cat debian/changelog
-    - dpkg-buildpackage -b
-    - cp -rv ../signald_${VERSION}* .
-  cache:
-    key: deb-builder
+    - 'sed -i "s#Architecture: all#Architecture: ${ARCH}#" debian/control'
+    - gbp dch --ignore-branch --debian-tag="%(version)s" --git-author --new-version="${VERSION}"
+    - CONFIG_SITE=/etc/dpkg-cross/cross-config.amd64 DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -a${ARCH} -Pcross,nocheck
+    - mv ../*.deb .
   artifacts:
     paths:
       - "signald_*"
-  rules:
-    - if: '$CI_PROJECT_NAMESPACE == "signald" && $CI_COMMIT_REF_PROTECTED == "true"'
-      when: on_success
-    - when: manual
-      allow_failure: true
+  parallel:
+    matrix:
+      - TARGET: [aarch64-unknown-linux-gnu]
+        ARCH: arm64
+      - TARGET: [armv7-unknown-linux-gnueabihf]
+        ARCH: armhf
+      - TARGET: [x86_64-unknown-linux-gnu]
+        ARCH: amd64
 
-build docker x86:
+build-docker:
   image: docker:latest
   stage: build
   needs: []
+  only:
+    refs:
+      - tags
+      - main
   before_script:
     - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
     - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]]; then docker login -u ${DOCKER_HUB_USERNAME} -p ${DOCKER_HUB_PASSWORD}; fi
@@ -114,33 +129,6 @@ build docker x86:
     - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]]; then docker push ${DOCKER_HUB_USERNAME}/signald:${CI_COMMIT_REF_SLUG}; fi
     - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]] && [[ "${CI_COMMIT_REF_SLUG}" == "main" ]]; then docker tag ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG} ${DOCKER_HUB_USERNAME}/signald:latest; fi
     - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]] && [[ "${CI_COMMIT_REF_SLUG}" == "main" ]]; then docker push ${DOCKER_HUB_USERNAME}/signald:latest; fi
-  rules:
-    - if: '$CI_PROJECT_NAMESPACE == "signald" && $CI_COMMIT_REF_PROTECTED == "true"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-build docker aarch64:
-  stage: build
-  tags: [arm-docker-builder]
-  needs: []
-  before_script:
-    - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
-    - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]]; then docker login -u ${DOCKER_HUB_USERNAME} -p ${DOCKER_HUB_PASSWORD}; fi
-  script:
-    - docker build --build-arg "CI_BUILD_REF_NAME=${CI_BUILD_REF_NAME}" --build-arg "CI_COMMIT_SHA=${CI_COMMIT_SHA}" -t ${CI_REGISTRY_IMAGE}:aarch64-${CI_COMMIT_REF_SLUG} .
-    - docker push ${CI_REGISTRY_IMAGE}:aarch64-${CI_COMMIT_REF_SLUG}
-    - if [[ "${CI_COMMIT_REF_SLUG}" == "main" ]]; then docker tag ${CI_REGISTRY_IMAGE}:aarch64-${CI_COMMIT_REF_SLUG} ${CI_REGISTRY_IMAGE}:aarch64-latest; fi;
-    - if [[ "${CI_COMMIT_REF_SLUG}" == "main" ]]; then docker push ${CI_REGISTRY_IMAGE}:aarch64-latest; fi;
-    - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]]; then docker tag ${CI_REGISTRY_IMAGE}:aarch64-${CI_COMMIT_REF_SLUG} ${DOCKER_HUB_USERNAME}/signald:aarch64-${CI_COMMIT_REF_SLUG}; fi
-    - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]]; then docker push ${DOCKER_HUB_USERNAME}/signald:aarch64-${CI_COMMIT_REF_SLUG}; fi
-    - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]] && [[ "${CI_COMMIT_REF_SLUG}" == "main" ]]; then docker tag ${CI_REGISTRY_IMAGE}:aarch64-${CI_COMMIT_REF_SLUG} ${DOCKER_HUB_USERNAME}/signald:aarch64-latest; fi
-    - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]] && [[ "${CI_COMMIT_REF_SLUG}" == "main" ]]; then docker push ${DOCKER_HUB_USERNAME}/signald:aarch64-latest; fi
-  rules:
-    - if: '$CI_PROJECT_NAMESPACE == "signald" && $CI_COMMIT_REF_PROTECTED == "true"'
-      when: on_success
-    - when: manual
-      allow_failure: true
 
 integration tests x86:
   image: openjdk:11-jdk
@@ -159,7 +147,7 @@ integration tests x86:
 integration tests aarch64-unknown-linux-gnu:
   image: debian
   stage: test
-  tags: [arm-builder]
+  extends: .arm-build
   needs: []
   before_script:
     - apt update && apt install -y make openjdk-11-jdk-headless
@@ -170,11 +158,6 @@ integration tests aarch64-unknown-linux-gnu:
   artifacts:
     reports:
       junit: build/test-results/integrationTest/TEST-*.xml
-  rules:
-    - if: '$CI_PROJECT_NAMESPACE == "signald" && $CI_COMMIT_REF_PROTECTED == "true"'
-      when: on_success
-    - when: manual
-      allow_failure: true
 
 integration tests x86_64-apple-darwin:
   image: debian
@@ -194,19 +177,31 @@ integration tests x86_64-apple-darwin:
     reports:
       junit: build/test-results/integrationTest/TEST-*.xml
   rules:
-    - if: '$CI_PROJECT_NAMESPACE == "signald" && $CI_COMMIT_REF_PROTECTED == "true"'
+    - if: '$CI_PROJECT_NAMESPACE == "signald"'
       when: on_success
     - when: manual
       allow_failure: true
 
-validate protocol:
-  image: golang:latest
+publish debian packages:
+  image: registry.gitlab.com/signald/infrastructure/signald-builder-x86:d5e68709
+  stage: publish
+  tags: [deb-signer]
+  needs: ["build deb"]
+  script:
+    - tools/aptly-publish.sh
+  variables:
+    DISTRIBUTION: unstable
+  rules:
+    - if: '$CI_PROJECT_NAMESPACE == "signald"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+documentation:
+  image: openjdk:11-jdk
   stage: docs
-  before_script:
-    - apt-get update && apt-get install -y openjdk-11-jdk-headless
   script:
     - build/install/signald/bin/signald --dump-protocol > protocol.json
-    - go run ./tools/validate-protocol.go < protocol.json
   needs: ["build java11 x86_64-unknown-linux-gnu"]
   artifacts:
     paths:
@@ -214,7 +209,8 @@ validate protocol:
 
 docs.signald.org:
   stage: downstreams
-  needs: ["validate protocol"]
+  needs: [documentation]
   trigger: signald/docs.signald.org
   only:
     - main
+
