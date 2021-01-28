@@ -36,7 +36,7 @@ Either register a new number on Signal or add signald as a linked device on your
 
 #### To link an account:
 1. Send `{"type": "link", "deviceName": "your-device-name"}`
-1. You'll receive a `uri`, create a QR code from that URI
+1. You'll receive a `uri`, create a QR code from that URI. https://gitlab.com/signald/signald-go will generate a QR code for you and perform a couple of other basic functions.
 1. Open the Signal app, go to Settings -> Linked Devices, tap the + button in the bottom right and scan the QR code.
 
 ### Interact with Signal
