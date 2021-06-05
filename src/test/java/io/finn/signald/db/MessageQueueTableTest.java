@@ -59,21 +59,22 @@ class MessageQueueTableTest {
         new SignalServiceEnvelope(type, sender, senderDevice, timestamp, legacyMessage, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid);
     messageQueue.storeEnvelope(originalEnvelope);
 
-    SignalServiceEnvelope storedEnvelope = messageQueue.nextEnvelope();
+    StoredEnvelope storedEnvelope = messageQueue.nextEnvelope();
 
-    assertEquals(type, storedEnvelope.getType());
-    assertEquals(senderDevice, storedEnvelope.getSourceDevice());
-    assertEquals(timestamp, storedEnvelope.getTimestamp());
-    assertArrayEquals(legacyMessage, storedEnvelope.getLegacyMessage());
-    assertArrayEquals(content, storedEnvelope.getContent());
-    assertEquals(serverReceivedTimestamp, storedEnvelope.getServerReceivedTimestamp());
-    assertEquals(serverDeliveredTimestamp, storedEnvelope.getServerDeliveredTimestamp());
-    assertEquals(uuid, storedEnvelope.getServerGuid());
+    SignalServiceEnvelope envelope = storedEnvelope.envelope;
+    assertEquals(type, envelope.getType());
+    assertEquals(senderDevice, envelope.getSourceDevice());
+    assertEquals(timestamp, envelope.getTimestamp());
+    assertArrayEquals(legacyMessage, envelope.getLegacyMessage());
+    assertArrayEquals(content, envelope.getContent());
+    assertEquals(serverReceivedTimestamp, envelope.getServerReceivedTimestamp());
+    assertEquals(serverDeliveredTimestamp, envelope.getServerDeliveredTimestamp());
+    assertEquals(uuid, envelope.getServerGuid());
 
     // This is somewhat unexpected given a type of Optional<String>.
     // But it's consistent with deserialized Protobuf objects.
-    assertEquals("", storedEnvelope.getSourceE164().get());
-    assertEquals("", storedEnvelope.getSourceUuid().get());
+    assertEquals("", envelope.getSourceE164().get());
+    assertEquals("", envelope.getSourceUuid().get());
   }
 
   @Test
@@ -83,15 +84,17 @@ class MessageQueueTableTest {
     byte[] content2 = {2};
     SignalServiceEnvelope envelope1 = createUnidentifiedSenderSignalServiceEnvelope(content1);
     SignalServiceEnvelope envelope2 = createUnidentifiedSenderSignalServiceEnvelope(content2);
-    messageQueue.storeEnvelope(envelope1);
-    messageQueue.storeEnvelope(envelope2);
+    long databaseId1 = messageQueue.storeEnvelope(envelope1);
+    long databaseId2 = messageQueue.storeEnvelope(envelope2);
 
-    SignalServiceEnvelope storedEnvelope = messageQueue.nextEnvelope();
-    messageQueue.deleteEnvelope(storedEnvelope);
+    StoredEnvelope storedEnvelope = messageQueue.nextEnvelope();
+    assertEquals(databaseId1, storedEnvelope.databaseId);
+    messageQueue.deleteEnvelope(storedEnvelope.databaseId);
 
-    SignalServiceEnvelope secondStoredEnvelope = messageQueue.nextEnvelope();
+    StoredEnvelope secondStoredEnvelope = messageQueue.nextEnvelope();
     assertNotNull(secondStoredEnvelope, "Expected second envelope not found in message queue");
-    assertArrayEquals(content2, secondStoredEnvelope.getContent());
+    assertEquals(databaseId2, secondStoredEnvelope.databaseId);
+    assertArrayEquals(content2, secondStoredEnvelope.envelope.getContent());
   }
 
   private SignalServiceEnvelope createUnidentifiedSenderSignalServiceEnvelope(byte[] content) {
