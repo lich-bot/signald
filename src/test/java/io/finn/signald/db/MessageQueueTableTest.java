@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.UUID;
 import org.flywaydb.core.Flyway;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,17 +20,26 @@ class MessageQueueTableTest {
   private static final int TYPE_UNIDENTIFIED_SENDER = 6;
 
   private final MessageQueueTable messageQueue = new MessageQueueTable(ACCOUNT_UUID);
+  private File databaseFile;
 
   @BeforeEach
   void setUp() throws IOException {
     File tmpDirectory = new File(System.getProperty("java.io.tmpdir"));
-    File databaseFile = File.createTempFile("test", "sqlite", tmpDirectory);
+    databaseFile = File.createTempFile("test", "sqlite", tmpDirectory);
     String db = "jdbc:sqlite:" + databaseFile.getAbsolutePath();
 
     Flyway flyway = Flyway.configure().dataSource(db, null, null).load();
     flyway.migrate();
 
     Database.setConnectionString(db);
+  }
+
+  @AfterEach
+  void tearDown() {
+    Database.close();
+    if (!databaseFile.delete()) {
+      System.err.println("Test database file couldn't be deleted: " + databaseFile.getAbsolutePath());
+    }
   }
 
   @Test
