@@ -34,7 +34,7 @@ import org.signal.zkgroup.VerificationFailedException;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 
 @ProtocolType("get_group")
-@Doc("Query the server for the latest state of a known group")
+@Doc("Query the server for the latest state of a known group. If the account is not a member of the group (anymore), an error with error_type: 'UnknownGroupException' is returned. In this case, the client SHOULD inform the account user and update the group")
 public class GetGroupRequest implements RequestType<JsonGroupV2Info> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
