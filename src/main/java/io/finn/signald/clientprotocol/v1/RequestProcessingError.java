@@ -21,9 +21,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.finn.signald.clientprotocol.v1.exceptions.ExceptionWrapper;
 
 public class RequestProcessingError extends ExceptionWrapper {
-  public RequestProcessingError(Throwable throwable) {
-    super(throwable.getMessage(), throwable);
-  }
+  public RequestProcessingError(Throwable throwable) { super(throwable.getMessage(), throwable); }
 
   @JsonIgnore
   public String getType() {

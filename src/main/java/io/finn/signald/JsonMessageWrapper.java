@@ -56,7 +56,7 @@ public class JsonMessageWrapper {
     JsonMessageWrapper j = new JsonMessageWrapper(type, null, id);
     j.error = error;
     if (error instanceof ExceptionWrapper) {
-      j.errorType = ((ExceptionWrapper) error).getType();
+      j.errorType = ((ExceptionWrapper)error).getType();
     } else {
       j.errorType = error.getClass().getSimpleName();
     }
