@@ -17,14 +17,16 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.finn.signald.clientprotocol.v1.exceptions.ExceptionWrapper;
 
 public class RequestProcessingError extends ExceptionWrapper {
-  public String type;
-  public String message;
-
   public RequestProcessingError(Throwable throwable) {
-    type = throwable.getClass().getSimpleName();
-    message = throwable.getMessage();
+    super(throwable.getMessage(), throwable);
+  }
+
+  @JsonIgnore
+  public String getType() {
+    return this.getCause().getClass().getSimpleName();
   }
 }
