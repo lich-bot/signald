@@ -17,4 +17,4 @@ RUN ln -sf /opt/signald/bin/signald /usr/local/bin/
 
 VOLUME /signald
 
-CMD ["/usr/local/bin/signald", "-d", "/signald", "-s", "/signald/signald.sock"]
+CMD ["/usr/local/bin/signald", "-d", "/signald", "-s", "/signald/signald.sock", "-v"]
