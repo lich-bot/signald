@@ -362,10 +362,3 @@ signald.org-branch:
       job: build:x86
       ref: main
       artifacts: true
-
-signald.org:
-  stage: downstreams
-  needs: ["validate protocol"]
-  trigger: signald/signald.org
-  only:
-    - main
