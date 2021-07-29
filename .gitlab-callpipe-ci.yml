@@ -74,21 +74,6 @@ deb:publish:
   dependencies:
     - deb:build
 
-test:integration:
-  image: openjdk:11-jdk
-  stage: test
-  before_script:
-    - cp tools/log4j2.xml src/main/resources/log4j2.xml
-  script:
-    - ./gradlew integrationTest --info
-  variables:
-    SIGNAL_URL: $SIGNAL_TEST_SERVER
-  artifacts:
-    reports:
-      junit: build/test-results/integrationTest/TEST-*.xml
-  dependencies:
-    - build-java-11
-
 deb:cleanup:
   stage: cleanup
   image: registry.git.callpipe.com/finn/debian-repo-builder/buster:latest

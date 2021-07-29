@@ -87,7 +87,8 @@ String getTarget() {
 }
 
 repositories {
-    maven {url "https://gitlab.com/api/v4/groups/6853927/-/packages/maven"} // https://gitlab.com/groups/signald/-/packages
+    maven {url "https://gitlab.com/api/v4/groups/6853927/-/packages"} // https://gitlab.com/groups/signald/-/packages
+    maven {url "https://gitlab.com/api/v4/projects/28447712/packages/maven"} // https://gitlab.com/beeper/libsignal-service-java/-/packages
     maven {url "https://plugins.gradle.org/m2/"}
     mavenCentral()
 }
@@ -109,7 +110,7 @@ configurations {
 }
 
 dependencies {
-    implementation 'com.github.turasa:signal-service-java-' + getTarget() + ':2.15.3_unofficial_24'
+    implementation 'com.beeper:signal-service-java:2.15.3_unofficial_25'
     implementation 'org.bouncycastle:bcprov-jdk15on:1.66'
     implementation 'com.kohlschutter.junixsocket:junixsocket-common:2.3.2'
     implementation 'com.kohlschutter.junixsocket:junixsocket-native-common:2.3.2'
