@@ -129,10 +129,10 @@ public class ClientConnection implements Runnable {
       String id = " ";
       try {
         JsonNode rawRequest = mapper.readTree(line);
-        logger.debug("handling request: " + line);
         if (rawRequest.has("id")) {
           id = " (request ID: " + rawRequest.get("id").asText() + ") ";
         }
+        logger.debug("handling request with ID: " + rawRequest.get("id").asText());
         String version = "v0";
         String type = rawRequest.get("type").asText();
         if (rawRequest.has("version")) {
