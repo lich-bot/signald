@@ -156,6 +156,7 @@ public class Request {
     try {
       Object r = requestType.run(this);
       reply(new JsonMessageWrapper(type, r, id));
+      logger.info("handled request " + id + " successfully");
     } catch (ExceptionWrapper e) {
       error(e);
       if (e.isUnexpected()) {
@@ -235,7 +236,10 @@ public class Request {
 
   private void error(Object data) throws JsonProcessingException { reply(JsonMessageWrapper.error(type, data, id)); }
 
-  private void reply(JsonMessageWrapper message) throws JsonProcessingException { writer.println(mapper.writeValueAsString(message)); }
+  private void reply(JsonMessageWrapper message) throws JsonProcessingException {
+    LogManager.getLogger().info("reply called with " + mapper.writeValueAsString(message));
+    writer.println(mapper.writeValueAsString(message));
+  }
 
   public Socket getSocket() { return socket; }
 

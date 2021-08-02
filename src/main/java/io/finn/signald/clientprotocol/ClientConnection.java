@@ -142,6 +142,7 @@ public class ClientConnection implements Runnable {
         } else if (rawRequest.has("type") && Request.defaultVersions.containsKey(rawRequest.get("type").asText())) {
           version = Request.defaultVersions.get(type);
         }
+        logger.debug("request " + rawRequest.get("id").asText() + " has version " + version);
 
         Summary.Timer timer = requestProcessingTime.labels(type, version).startTimer();
         try {
