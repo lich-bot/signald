@@ -580,7 +580,9 @@ public class Manager {
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().asExpirationUpdate().withExpiration(expiresInSeconds);
     List<SignalServiceAddress> recipients = new ArrayList<>(1);
     recipients.add(address);
-    return sendMessage(messageBuilder, recipients);
+    List<SendMessageResult> result = sendMessage(messageBuilder, recipients);
+    accountData.save();
+    return result;
   }
 
   private List<SendMessageResult> sendGroupInfoRequest(byte[] groupId, SignalServiceAddress recipient) throws IOException {
@@ -938,8 +940,11 @@ public class Manager {
       }
     } else {
       ContactStore.ContactInfo c = accountData.contactStore.getContact(isSync ? destination : source);
-      c.messageExpirationTime = message.getExpiresInSeconds();
-      accountData.contactStore.updateContact(c);
+      if (c.messageExpirationTime != message.getExpiresInSeconds()) {
+        c.messageExpirationTime = message.getExpiresInSeconds();
+        accountData.contactStore.updateContact(c);
+        accountData.save();
+      }
     }
 
     if (message.isEndSession()) {

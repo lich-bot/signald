@@ -44,7 +44,8 @@ public class ClientConnection implements Runnable {
   private final PrintWriter writer;
   private final Socket socket;
   private final LegacySocketHandler legacySocketHandler;
-  static final Gauge clientsConnected = Gauge.build().name(BuildConfig.NAME + "_clients_connected").help("Client connection count.").register();
+  static final Gauge clientsConnected = Gauge.build().name(BuildConfig.NAME + "_current_clients_connected").help("current client connections").register();
+  static final Counter clientsConnectedTotal = Counter.build().name(BuildConfig.NAME + "_clients_connected_total").help("total client connections").register();
   static final Summary requestProcessingTime = Summary.build()
                                                    .quantile(0.5, 0.05)
                                                    .quantile(0.9, 0.01)
@@ -66,6 +67,7 @@ public class ClientConnection implements Runnable {
     logger.info("Client connected");
 
     try {
+      clientsConnectedTotal.inc();
       clientsConnected.inc();
       JsonMessageWrapper message = new JsonMessageWrapper("version", new JsonVersionMessage(), (String)null);
       send(message);
