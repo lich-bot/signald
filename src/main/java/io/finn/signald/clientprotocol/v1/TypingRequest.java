@@ -77,7 +77,7 @@ public class TypingRequest implements RequestType<Empty> {
       try {
         messageSender.sendTyping(addr, m.getAccessPairFor(addr), message);
       } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-        m.getAccountData().axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+        m.getAccountData().axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
         throw e;
       }
     } else if (group != null) {

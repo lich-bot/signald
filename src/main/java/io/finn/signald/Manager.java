@@ -662,7 +662,7 @@ public class Manager {
     try {
       messageSender.sendSyncMessage(message, getAccessPairFor(getOwnAddress()));
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-      accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+      accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
       throw e;
     }
   }
@@ -682,7 +682,7 @@ public class Manager {
       messageSender.sendTyping(address, getAccessPairFor(address), message);
       return null;
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-      accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+      accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
       return SendMessageResult.identityFailure(address, e.getIdentityKey());
     }
   }
@@ -709,7 +709,7 @@ public class Manager {
       }
       return null;
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-      accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+      accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
       return SendMessageResult.identityFailure(address, e.getIdentityKey());
     }
   }
@@ -744,12 +744,12 @@ public class Manager {
               messageSender.sendDataMessage(new ArrayList<>(recipients), getAccessPairFor(recipients), isRecipientUpdate, ContentHint.DEFAULT, message);
           for (SendMessageResult r : result) {
             if (r.getIdentityFailure() != null) {
-              accountData.axolotlStore.saveIdentity(r.getAddress(), r.getIdentityFailure().getIdentityKey(), TrustLevel.UNTRUSTED);
+              accountData.axolotlStore.saveIdentity(r.getAddress(), r.getIdentityFailure().getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
             }
           }
           return result;
         } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-          accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+          accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
           return Collections.emptyList();
         }
       } else if (recipients.size() == 1 && recipients.contains(accountData.address.getSignalServiceAddress())) {
@@ -763,7 +763,7 @@ public class Manager {
         try {
           messageSender.sendSyncMessage(syncMessage, unidentifiedAccess);
         } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-          accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+          accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
           results.add(SendMessageResult.identityFailure(recipient, e.getIdentityKey()));
         }
         return results;
@@ -790,7 +790,7 @@ public class Manager {
             }
           } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
             if (e.getIdentityKey() != null) {
-              accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+              accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
             }
             results.add(SendMessageResult.identityFailure(address, e.getIdentityKey()));
           }
@@ -817,7 +817,7 @@ public class Manager {
     } catch (ProtocolUntrustedIdentityException e) {
       if (e.getCause() instanceof org.whispersystems.libsignal.UntrustedIdentityException) {
         org.whispersystems.libsignal.UntrustedIdentityException identityException = (org.whispersystems.libsignal.UntrustedIdentityException)e.getCause();
-        accountData.axolotlStore.saveIdentity(identityException.getName(), identityException.getUntrustedIdentity(), TrustLevel.UNTRUSTED);
+        accountData.axolotlStore.saveIdentity(identityException.getName(), identityException.getUntrustedIdentity(), TrustLevel.TRUSTED_UNVERIFIED);
         throw identityException;
       }
       throw e;
@@ -1463,7 +1463,12 @@ public class Manager {
       accountData.axolotlStore.saveIdentity(address, id.getKey(), level);
       try {
         sendVerifiedMessage(address, id.getKey(), level);
-      } catch (IOException | org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
+      } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
+        if (e.getIdentityKey() != null) {
+          accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
+        }
+        logger.catching(e);
+      } catch (IOException e) {
         logger.catching(e);
       }
       return true;
@@ -1483,7 +1488,12 @@ public class Manager {
       accountData.axolotlStore.saveIdentity(address, id.getKey(), level);
       try {
         sendVerifiedMessage(address, id.getKey(), level);
-      } catch (IOException | org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
+      } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
+        if (e.getIdentityKey() != null) {
+          accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
+        }
+        logger.catching(e);
+      } catch (IOException e) {
         logger.catching(e);
       }
       return true;
@@ -1507,7 +1517,12 @@ public class Manager {
       accountData.axolotlStore.saveIdentity(address, id.getKey(), level);
       try {
         sendVerifiedMessage(address, id.getKey(), level);
-      } catch (IOException | org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
+      } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
+        if (e.getIdentityKey() != null) {
+          accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
+        }
+        logger.catching(e);
+      } catch (IOException e) {
         logger.catching(e);
       }
       return true;
