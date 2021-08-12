@@ -79,6 +79,7 @@ public class TypingRequest implements RequestType<Empty> {
       for (int i = 0; i < 2; i++) {
         try {
           messageSender.sendTyping(addr, m.getAccessPairFor(addr), message);
+          break;
         } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
           LogManager.getLogger("manager").error("Got identity failure sending message." + (i == 0 ? " Retrying..." : ""), e);
           m.getAccountData().axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);

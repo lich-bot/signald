@@ -758,7 +758,7 @@ public class Manager {
               messageSender.sendDataMessage(new ArrayList<>(recipients), getAccessPairFor(recipients), isRecipientUpdate, ContentHint.DEFAULT, message);
           for (SendMessageResult r : result) {
             if (r.getIdentityFailure() != null) {
-              // TODO
+              // TODO should I reuse sendDataMessage here?
               accountData.axolotlStore.saveIdentity(r.getAddress(), r.getIdentityFailure().getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
             }
           }
@@ -810,6 +810,7 @@ public class Manager {
               } else {
                 results.add(messageSender.sendDataMessage(address, getAccessPairFor(address), ContentHint.DEFAULT, message));
               }
+              break;
             } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
               if (e.getIdentityKey() != null) {
                 logger.error("Got identity failure sending message." + (i == 0 ? " Retrying..." : ""), e);
