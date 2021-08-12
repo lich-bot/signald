@@ -659,11 +659,14 @@ public class Manager {
 
   public void sendSyncMessage(SignalServiceSyncMessage message) throws IOException, org.whispersystems.signalservice.api.crypto.UntrustedIdentityException {
     SignalServiceMessageSender messageSender = getMessageSender();
-    try {
-      messageSender.sendSyncMessage(message, getAccessPairFor(getOwnAddress()));
-    } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-      accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
-      throw e;
+    for (int i = 0; i < 2; i++) {
+      try {
+        messageSender.sendSyncMessage(message, getAccessPairFor(getOwnAddress()));
+        return;
+      } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
+        logger.error("Got identity failure sending sync message." + (i == 0 ? " Retrying..." : ""), e);
+        accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
+      }
     }
   }
 
@@ -677,14 +680,19 @@ public class Manager {
 
     SignalServiceMessageSender messageSender = getMessageSender();
 
-    try {
-      // TODO: this just calls sendMessage() under the hood. We should call sendMessage() directly so we can get the return value
-      messageSender.sendTyping(address, getAccessPairFor(address), message);
-      return null;
-    } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-      accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
-      return SendMessageResult.identityFailure(address, e.getIdentityKey());
+    for (int i = 0; i < 2; i++) {
+      try {
+        messageSender.sendTyping(address, getAccessPairFor(address), message);
+        return null;
+      } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
+        logger.error("Got identity failure sending sync message." + (i == 0 ? " Retrying..." : ""), e);
+        accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
+        if (i == 1) {
+          return SendMessageResult.identityFailure(address, e.getIdentityKey());
+        }
+      }
     }
+    return null;
   }
 
   public SendMessageResult sendReceipt(SignalServiceReceiptMessage message, SignalServiceAddress address) throws IOException {
@@ -697,21 +705,27 @@ public class Manager {
 
     SignalServiceMessageSender messageSender = getMessageSender();
 
-    try {
-      // TODO: this just calls sendMessage() under the hood. We should call sendMessage() directly so we can get the return value
-      messageSender.sendReceipt(address, getAccessPairFor(address), message);
-      if (message.getType() == SignalServiceReceiptMessage.Type.READ) {
-        List<ReadMessage> readMessages = new LinkedList<>();
-        for (Long ts : message.getTimestamps()) {
-          readMessages.add(new ReadMessage(address, ts));
+    for (int i = 0; i < 2; i++) {
+      try {
+        // TODO: this just calls sendMessage() under the hood. We should call sendMessage() directly so we can get the return value
+        messageSender.sendReceipt(address, getAccessPairFor(address), message);
+        if (message.getType() == SignalServiceReceiptMessage.Type.READ) {
+          List<ReadMessage> readMessages = new LinkedList<>();
+          for (Long ts : message.getTimestamps()) {
+            readMessages.add(new ReadMessage(address, ts));
+          }
+          messageSender.sendSyncMessage(SignalServiceSyncMessage.forRead(readMessages), getAccessPairFor(getOwnAddress()));
         }
-        messageSender.sendSyncMessage(SignalServiceSyncMessage.forRead(readMessages), getAccessPairFor(getOwnAddress()));
+        return null;
+      } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
+        logger.error("Got identity failure sending receipt." + (i == 0 ? " Retrying..." : ""), e);
+        accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
+        if (i == 1) {
+          return SendMessageResult.identityFailure(address, e.getIdentityKey());
+        }
       }
-      return null;
-    } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-      accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
-      return SendMessageResult.identityFailure(address, e.getIdentityKey());
     }
+    return null;
   }
 
   public List<SendMessageResult> sendMessage(SignalServiceDataMessage.Builder messageBuilder, Collection<SignalServiceAddress> recipients) throws IOException {
@@ -744,6 +758,7 @@ public class Manager {
               messageSender.sendDataMessage(new ArrayList<>(recipients), getAccessPairFor(recipients), isRecipientUpdate, ContentHint.DEFAULT, message);
           for (SendMessageResult r : result) {
             if (r.getIdentityFailure() != null) {
+              // TODO
               accountData.axolotlStore.saveIdentity(r.getAddress(), r.getIdentityFailure().getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
             }
           }
@@ -760,11 +775,17 @@ public class Manager {
         SignalServiceSyncMessage syncMessage = SignalServiceSyncMessage.forSentTranscript(transcript);
 
         List<SendMessageResult> results = new ArrayList<>(recipients.size());
-        try {
-          messageSender.sendSyncMessage(syncMessage, unidentifiedAccess);
-        } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-          accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
-          results.add(SendMessageResult.identityFailure(recipient, e.getIdentityKey()));
+        for (int i = 0; i < 2; i++) {
+          try {
+            messageSender.sendSyncMessage(syncMessage, unidentifiedAccess);
+            break;
+          } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
+            logger.error("Got identity failure sending message." + (i == 0 ? " Retrying..." : ""), e);
+            accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
+            if (i == 1) {
+              results.add(SendMessageResult.identityFailure(recipient, e.getIdentityKey()));
+            }
+          }
         }
         return results;
       } else {
@@ -774,25 +795,30 @@ public class Manager {
           ContactStore.ContactInfo contact = accountData.contactStore.getContact(address);
           messageBuilder.withExpiration(contact.messageExpirationTime);
           message = messageBuilder.build();
-          try {
-            if (accountData.address.matches(address)) {
-              SignalServiceAddress recipient = accountData.address.getSignalServiceAddress();
+          for (int i = 0; i < 2; i++) {
+            try {
+              if (accountData.address.matches(address)) {
+                SignalServiceAddress recipient = accountData.address.getSignalServiceAddress();
 
-              final Optional<UnidentifiedAccessPair> unidentifiedAccess = getAccessPairFor(recipient);
-              SentTranscriptMessage transcript = new SentTranscriptMessage(Optional.of(recipient), message.getTimestamp(), message, message.getExpiresInSeconds(),
-                                                                           Collections.singletonMap(recipient, unidentifiedAccess.isPresent()), false);
-              SignalServiceSyncMessage syncMessage = SignalServiceSyncMessage.forSentTranscript(transcript);
-              long start = System.currentTimeMillis();
-              messageSender.sendSyncMessage(syncMessage, unidentifiedAccess);
-              results.add(SendMessageResult.success(recipient, unidentifiedAccess.isPresent(), false, System.currentTimeMillis() - start));
-            } else {
-              results.add(messageSender.sendDataMessage(address, getAccessPairFor(address), ContentHint.DEFAULT, message));
+                final Optional<UnidentifiedAccessPair> unidentifiedAccess = getAccessPairFor(recipient);
+                SentTranscriptMessage transcript = new SentTranscriptMessage(Optional.of(recipient), message.getTimestamp(), message, message.getExpiresInSeconds(),
+                                                                             Collections.singletonMap(recipient, unidentifiedAccess.isPresent()), false);
+                SignalServiceSyncMessage syncMessage = SignalServiceSyncMessage.forSentTranscript(transcript);
+                long start = System.currentTimeMillis();
+                messageSender.sendSyncMessage(syncMessage, unidentifiedAccess);
+                results.add(SendMessageResult.success(recipient, unidentifiedAccess.isPresent(), false, System.currentTimeMillis() - start));
+              } else {
+                results.add(messageSender.sendDataMessage(address, getAccessPairFor(address), ContentHint.DEFAULT, message));
+              }
+            } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
+              if (e.getIdentityKey() != null) {
+                logger.error("Got identity failure sending message." + (i == 0 ? " Retrying..." : ""), e);
+                accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
+              }
+              if (i == 1) {
+                results.add(SendMessageResult.identityFailure(address, e.getIdentityKey()));
+              }
             }
-          } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-            if (e.getIdentityKey() != null) {
-              accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
-            }
-            results.add(SendMessageResult.identityFailure(address, e.getIdentityKey()));
           }
         }
         return results;
@@ -806,22 +832,25 @@ public class Manager {
     }
   }
 
-  private SignalServiceContent decryptMessage(SignalServiceEnvelope envelope)
-      throws InvalidMetadataMessageException, InvalidMetadataVersionException, ProtocolInvalidKeyIdException, ProtocolUntrustedIdentityException, ProtocolLegacyMessageException,
-             ProtocolNoSessionException, ProtocolInvalidVersionException, ProtocolInvalidMessageException, ProtocolInvalidKeyException, ProtocolDuplicateMessageException,
-             SelfSendException, UnsupportedDataMessageException, org.whispersystems.libsignal.UntrustedIdentityException {
+  private SignalServiceContent decryptMessage(SignalServiceEnvelope envelope) throws Exception {
     CertificateValidator certificateValidator = new CertificateValidator(unidentifiedSenderTrustRoot);
     SignalServiceCipher cipher = new SignalServiceCipher(accountData.address.getSignalServiceAddress(), accountData.axolotlStore, new SessionLock(getUUID()), certificateValidator);
-    try {
-      return cipher.decrypt(envelope);
-    } catch (ProtocolUntrustedIdentityException e) {
-      if (e.getCause() instanceof org.whispersystems.libsignal.UntrustedIdentityException) {
-        org.whispersystems.libsignal.UntrustedIdentityException identityException = (org.whispersystems.libsignal.UntrustedIdentityException)e.getCause();
-        accountData.axolotlStore.saveIdentity(identityException.getName(), identityException.getUntrustedIdentity(), TrustLevel.TRUSTED_UNVERIFIED);
-        throw identityException;
+    for (int i = 0; i < 2; i++) {
+      try {
+        return cipher.decrypt(envelope);
+      } catch (ProtocolUntrustedIdentityException e) {
+        if (e.getCause() instanceof org.whispersystems.libsignal.UntrustedIdentityException) {
+          org.whispersystems.libsignal.UntrustedIdentityException identityException = (org.whispersystems.libsignal.UntrustedIdentityException)e.getCause();
+          accountData.axolotlStore.saveIdentity(identityException.getName(), identityException.getUntrustedIdentity(), TrustLevel.TRUSTED_UNVERIFIED);
+          logger.error("Got identity failure decrypting message." + (i == 0 ? " Retrying..." : ""), identityException);
+          if (i == 1) {
+            throw identityException;
+          }
+        }
+        throw e;
       }
-      throw e;
     }
+    throw new Exception("Decrypting failed. We should never get never get here.");
   }
 
   private void handleEndSession(SignalServiceAddress address) { accountData.axolotlStore.deleteAllSessions(address); }
@@ -1463,12 +1492,8 @@ public class Manager {
       accountData.axolotlStore.saveIdentity(address, id.getKey(), level);
       try {
         sendVerifiedMessage(address, id.getKey(), level);
-      } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-        if (e.getIdentityKey() != null) {
-          accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
-        }
-        logger.catching(e);
-      } catch (IOException e) {
+      } catch (IOException | org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
+        // TODO should we do something here?
         logger.catching(e);
       }
       return true;
@@ -1488,12 +1513,8 @@ public class Manager {
       accountData.axolotlStore.saveIdentity(address, id.getKey(), level);
       try {
         sendVerifiedMessage(address, id.getKey(), level);
-      } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-        if (e.getIdentityKey() != null) {
-          accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
-        }
-        logger.catching(e);
-      } catch (IOException e) {
+      } catch (IOException | org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
+        // TODO should we do something here?
         logger.catching(e);
       }
       return true;
@@ -1517,12 +1538,8 @@ public class Manager {
       accountData.axolotlStore.saveIdentity(address, id.getKey(), level);
       try {
         sendVerifiedMessage(address, id.getKey(), level);
-      } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-        if (e.getIdentityKey() != null) {
-          accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
-        }
-        logger.catching(e);
-      } catch (IOException e) {
+      } catch (IOException | org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
+        // TODO should we do something here?
         logger.catching(e);
       }
       return true;

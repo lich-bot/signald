@@ -32,6 +32,8 @@ import io.finn.signald.clientprotocol.v1.exceptions.UnknownGroupException;
 import io.finn.signald.storage.Group;
 import java.io.IOException;
 import java.sql.SQLException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.TrustLevel;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -74,11 +76,16 @@ public class TypingRequest implements RequestType<Empty> {
 
     if (address != null) {
       SignalServiceAddress addr = m.getResolver().resolve(address.getSignalServiceAddress());
-      try {
-        messageSender.sendTyping(addr, m.getAccessPairFor(addr), message);
-      } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-        m.getAccountData().axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
-        throw e;
+      for (int i = 0; i < 2; i++) {
+        try {
+          messageSender.sendTyping(addr, m.getAccessPairFor(addr), message);
+        } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
+          LogManager.getLogger("manager").error("Got identity failure sending message." + (i == 0 ? " Retrying..." : ""), e);
+          m.getAccountData().axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
+          if (i == 1) {
+            throw e;
+          }
+        }
       }
     } else if (group != null) {
       Group g;
