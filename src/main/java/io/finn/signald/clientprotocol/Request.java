@@ -156,7 +156,9 @@ public class Request {
     try {
       Object r = requestType.run(this);
       reply(new JsonMessageWrapper(type, r, id));
-      logger.info("handled request " + id + " successfully");
+      if (id != null) {
+        logger.info("handled request " + id + " successfully");
+      }
     } catch (ExceptionWrapper e) {
       error(e);
       if (e.isUnexpected()) {

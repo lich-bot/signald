@@ -133,6 +133,7 @@ public class ClientConnection implements Runnable {
         JsonNode rawRequest = mapper.readTree(line);
         if (rawRequest.has("id")) {
           id = " (request ID: " + rawRequest.get("id").asText() + ") ";
+          logger.debug("handling request with ID: " + rawRequest.get("id").asText());
         }
         logger.debug("handling request with ID: " + rawRequest.get("id").asText());
         String version = "v0";
@@ -142,7 +143,9 @@ public class ClientConnection implements Runnable {
         } else if (rawRequest.has("type") && Request.defaultVersions.containsKey(rawRequest.get("type").asText())) {
           version = Request.defaultVersions.get(type);
         }
-        logger.debug("request " + rawRequest.get("id").asText() + " has version " + version);
+        if (rawRequest.has("id")) {
+          logger.debug("request " + rawRequest.get("id").asText() + " has version " + version);
+        }
 
         Summary.Timer timer = requestProcessingTime.labels(type, version).startTimer();
         try {
