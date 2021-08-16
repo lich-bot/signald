@@ -64,6 +64,7 @@ import org.whispersystems.libsignal.fingerprint.FingerprintVersionMismatchExcept
 import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.Medium;
+import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.SignalServiceMessagePipe;
@@ -89,6 +90,7 @@ import org.whispersystems.signalservice.internal.push.UnsupportedDataMessageExce
 import org.whispersystems.signalservice.internal.push.VerifyAccountResponse;
 import org.whispersystems.signalservice.internal.util.concurrent.ListenableFuture;
 import org.whispersystems.util.Base64;
+import sun.misc.Signal;
 
 public class Manager {
   private final Logger logger;
@@ -755,13 +757,25 @@ public class Manager {
         try {
           final boolean isRecipientUpdate = false;
           List<SendMessageResult> result =
-              messageSender.sendDataMessage(new ArrayList<>(recipients), getAccessPairFor(recipients), isRecipientUpdate, ContentHint.DEFAULT, message);
-          for (SendMessageResult r : result) {
+                  messageSender.sendDataMessage(new ArrayList<>(recipients), getAccessPairFor(recipients), isRecipientUpdate, ContentHint.DEFAULT, message);
+          var retryRecipients = new ArrayList<Pair<Integer, SignalServiceAddress>>();
+          for (int i = 0; i < result.size(); i++) {
+            var r = result.get(i);
             if (r.getIdentityFailure() != null) {
-              // TODO should I reuse sendDataMessage here?
+              logger.warn("Identity failure sending to " + r.getAddress().getNumber() + ". Will retry.");
               accountData.axolotlStore.saveIdentity(r.getAddress(), r.getIdentityFailure().getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
+              retryRecipients.add(new Pair<>(i, r.getAddress()));
             }
           }
+
+          if (retryRecipients.size() > 0) {
+            for (var p : retryRecipients) {
+              logger.info("Retrying send to " + p.second().getNumber());
+              var retryResult = messageSender.sendDataMessage(p.second(), getAccessPairFor(p.second()), ContentHint.DEFAULT, message, true);
+              result.set(p.first(), retryResult);
+            }
+          }
+
           return result;
         } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
           accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
