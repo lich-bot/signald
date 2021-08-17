@@ -862,6 +862,8 @@ public class Manager {
             throw identityException;
           }
         }
+        logger.error("Exception of type " + e.getClass().getName() + " thrown trying to decrypt envelope");
+        logger.error(e.getStackTrace());
         throw e;
       }
     }
@@ -1168,6 +1170,7 @@ public class Manager {
           try {
             content = decryptMessage(envelope);
           } catch (Exception e) {
+            logger.error("Failed to decrypt message");
             exception = e;
           }
           if (exception == null) {
@@ -1302,6 +1305,7 @@ public class Manager {
         final VerifiedMessage verifiedMessage = syncMessage.getVerified().get();
         SignalServiceAddress destination = resolver.resolve(verifiedMessage.getDestination());
         TrustLevel trustLevel = TrustLevel.fromVerifiedState(verifiedMessage.getVerified());
+        logger.info("VerifiedMessage to " + destination.getNumber() + ", trust level: " + trustLevel.toString());
         accountData.axolotlStore.saveIdentity(destination, verifiedMessage.getIdentityKey(), trustLevel);
       }
     }
