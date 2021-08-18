@@ -74,6 +74,7 @@ import org.whispersystems.signalservice.api.account.AccountAttributes;
 import org.whispersystems.signalservice.api.crypto.*;
 import org.whispersystems.signalservice.api.groupsv2.ClientZkOperations;
 import org.whispersystems.signalservice.api.messages.*;
+import org.whispersystems.signalservice.api.messages.calls.SignalServiceCallMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
 import org.whispersystems.signalservice.api.profiles.ProfileAndCredential;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
@@ -848,10 +849,10 @@ public class Manager {
   }
 
   private SignalServiceContent decryptMessage(SignalServiceEnvelope envelope) throws Exception {
-    CertificateValidator certificateValidator = new CertificateValidator(unidentifiedSenderTrustRoot);
-    SignalServiceCipher cipher = new SignalServiceCipher(accountData.address.getSignalServiceAddress(), accountData.axolotlStore, new SessionLock(getUUID()), certificateValidator);
     for (int i = 0; i < 2; i++) {
       try {
+        CertificateValidator certificateValidator = new CertificateValidator(unidentifiedSenderTrustRoot);
+        SignalServiceCipher cipher = new SignalServiceCipher(accountData.address.getSignalServiceAddress(), accountData.axolotlStore, new SessionLock(getUUID()), certificateValidator);
         return cipher.decrypt(envelope);
       } catch (ProtocolUntrustedIdentityException e) {
         if (e.getCause() instanceof org.whispersystems.libsignal.UntrustedIdentityException) {
@@ -1266,6 +1267,7 @@ public class Manager {
           // TODO store list of blocked numbers
         }
       }
+
       if (syncMessage.getContacts().isPresent()) {
         File tmpFile = null;
         try {
@@ -1309,6 +1311,14 @@ public class Manager {
         accountData.axolotlStore.saveIdentity(destination, verifiedMessage.getIdentityKey(), trustLevel);
       }
     }
+
+    if (content.getDecryptionErrorMessage().isPresent()) {
+      var decryptionErrorMessage = content.getDecryptionErrorMessage().get();
+      long sentTimestamp = decryptionErrorMessage.getTimestamp();
+
+      logger.warn("[RetryReceipt] Received a retry receipt from " + content.getSender().getIdentifier() + ", device " + decryptionErrorMessage.getDeviceId() + " for message with timestamp " + sentTimestamp + ".");
+    }
+
     for (Job job : jobs) {
       try {
         logger.debug("running " + job.getClass().getName());
