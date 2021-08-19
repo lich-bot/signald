@@ -74,6 +74,7 @@ import org.whispersystems.signalservice.api.SignalServiceMessageReceiver;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.account.AccountAttributes;
 import org.whispersystems.signalservice.api.crypto.*;
+import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.groupsv2.ClientZkOperations;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.messages.calls.SignalServiceCallMessage;
@@ -1200,6 +1201,9 @@ public class Manager {
         if (!envelope.isReceipt()) {
           try {
             content = decryptMessage(envelope);
+          } catch (UntrustedIdentityException e) {
+            logger.error("Got identity failure sending sync message. Trusting key " + e.getIdentityKey() + " for " + e.getIdentifier(), e);
+            accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
           } catch (Exception e) {
             logger.error("Failed to decrypt message");
             exception = e;
