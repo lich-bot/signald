@@ -61,6 +61,8 @@ import org.whispersystems.libsignal.ecc.ECPublicKey;
 import org.whispersystems.libsignal.fingerprint.Fingerprint;
 import org.whispersystems.libsignal.fingerprint.FingerprintParsingException;
 import org.whispersystems.libsignal.fingerprint.FingerprintVersionMismatchException;
+import org.whispersystems.libsignal.protocol.CiphertextMessage;
+import org.whispersystems.libsignal.protocol.DecryptionErrorMessage;
 import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.Medium;
@@ -72,8 +74,10 @@ import org.whispersystems.signalservice.api.SignalServiceMessageReceiver;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.account.AccountAttributes;
 import org.whispersystems.signalservice.api.crypto.*;
+import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.groupsv2.ClientZkOperations;
 import org.whispersystems.signalservice.api.messages.*;
+import org.whispersystems.signalservice.api.messages.calls.SignalServiceCallMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
 import org.whispersystems.signalservice.api.profiles.ProfileAndCredential;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
@@ -848,24 +852,52 @@ public class Manager {
   }
 
   private SignalServiceContent decryptMessage(SignalServiceEnvelope envelope) throws Exception {
-    CertificateValidator certificateValidator = new CertificateValidator(unidentifiedSenderTrustRoot);
-    SignalServiceCipher cipher = new SignalServiceCipher(accountData.address.getSignalServiceAddress(), accountData.axolotlStore, new SessionLock(getUUID()), certificateValidator);
-    for (int i = 0; i < 2; i++) {
-      try {
-        return cipher.decrypt(envelope);
-      } catch (ProtocolUntrustedIdentityException e) {
-        if (e.getCause() instanceof org.whispersystems.libsignal.UntrustedIdentityException) {
-          org.whispersystems.libsignal.UntrustedIdentityException identityException = (org.whispersystems.libsignal.UntrustedIdentityException)e.getCause();
-          accountData.axolotlStore.saveIdentity(identityException.getName(), identityException.getUntrustedIdentity(), TrustLevel.TRUSTED_UNVERIFIED);
-          logger.error("Got identity failure decrypting message." + (i == 0 ? " Retrying..." : ""), identityException);
-          if (i == 1) {
-            throw identityException;
-          }
-        }
-        throw e;
+    try {
+      var certificateValidator = new CertificateValidator(unidentifiedSenderTrustRoot);
+      var cipher = new SignalServiceCipher(accountData.address.getSignalServiceAddress(), accountData.axolotlStore, new SessionLock(getUUID()), certificateValidator);
+      return cipher.decrypt(envelope);
+    } catch (ProtocolInvalidKeyIdException | ProtocolInvalidKeyException | ProtocolUntrustedIdentityException | ProtocolNoSessionException | ProtocolInvalidMessageException e) {
+      logger.error("Exception of type " + e.getClass().getName() + " thrown trying to decrypt envelope");
+      int senderDevice = e.getSenderDevice();
+
+      Optional<byte[]> groupId = Optional.absent();
+      if (e.getGroupId().isPresent()) {
+        groupId = Optional.of(e.getGroupId().get());
       }
+
+      byte[] originalContent;
+      int    envelopeType;
+      if (e.getUnidentifiedSenderMessageContent().isPresent()) {
+        originalContent = e.getUnidentifiedSenderMessageContent().get().getContent();
+        envelopeType    = e.getUnidentifiedSenderMessageContent().get().getType();
+      } else {
+        originalContent = envelope.getContent();
+        switch (envelope.getType()) {
+          case SignalServiceProtos.Envelope.Type.PREKEY_BUNDLE_VALUE:
+            envelopeType = CiphertextMessage.PREKEY_TYPE;
+            break;
+          case SignalServiceProtos.Envelope.Type.UNIDENTIFIED_SENDER_VALUE:
+            envelopeType = CiphertextMessage.SENDERKEY_TYPE;
+            break;
+          case SignalServiceProtos.Envelope.Type.PLAINTEXT_CONTENT_VALUE:
+            envelopeType = CiphertextMessage.PLAINTEXT_CONTENT_TYPE;
+            break;
+          default:
+            envelopeType = CiphertextMessage.WHISPER_TYPE;
+            break;
+        }
+      }
+
+      var resolver = accountData.getResolver();
+      var sender = resolver.resolve(e.getSender());
+
+      // TODO leaving this as absent seems to be working, so I'm inclined to just leave this as is until things break.
+      Optional<UnidentifiedAccessPair> access = Optional.absent();
+
+      var decryptionErrorMessage = DecryptionErrorMessage.forOriginalMessage(originalContent, envelopeType, envelope.getTimestamp(), senderDevice);
+      this.getMessageSender().sendRetryReceipt(sender, access, groupId, decryptionErrorMessage);
+      throw e;
     }
-    throw new Exception("Decrypting failed. We should never get never get here.");
   }
 
   private void handleEndSession(SignalServiceAddress address) { accountData.axolotlStore.deleteAllSessions(address); }
@@ -1167,7 +1199,19 @@ public class Manager {
         if (!envelope.isReceipt()) {
           try {
             content = decryptMessage(envelope);
+          } catch (UntrustedIdentityException e) {
+            logger.error("Got identity failure decrypting message. Likely because sending the retry resulted in an UntrustedIdentityException. Trusting key " + e.getIdentityKey() + " for " + e.getIdentifier(), e);
+            accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
+
+            // retry the decryption
+            try {
+              content = decryptMessage(envelope);
+            } catch (Exception ex) {
+              logger.error("Failed to decrypt message");
+              exception = e;
+            }
           } catch (Exception e) {
+            logger.error("Failed to decrypt message");
             exception = e;
           }
           if (exception == null) {
@@ -1263,6 +1307,7 @@ public class Manager {
           // TODO store list of blocked numbers
         }
       }
+
       if (syncMessage.getContacts().isPresent()) {
         File tmpFile = null;
         try {
@@ -1302,9 +1347,18 @@ public class Manager {
         final VerifiedMessage verifiedMessage = syncMessage.getVerified().get();
         SignalServiceAddress destination = resolver.resolve(verifiedMessage.getDestination());
         TrustLevel trustLevel = TrustLevel.fromVerifiedState(verifiedMessage.getVerified());
+        logger.info("VerifiedMessage to " + destination.getNumber() + ", trust level: " + trustLevel.toString());
         accountData.axolotlStore.saveIdentity(destination, verifiedMessage.getIdentityKey(), trustLevel);
       }
     }
+
+    if (content.getDecryptionErrorMessage().isPresent()) {
+      var decryptionErrorMessage = content.getDecryptionErrorMessage().get();
+      long sentTimestamp = decryptionErrorMessage.getTimestamp();
+
+      logger.warn("[RetryReceipt] Received a retry receipt from " + content.getSender().getIdentifier() + ", device " + decryptionErrorMessage.getDeviceId() + " for message with timestamp " + sentTimestamp + ".");
+    }
+
     for (Job job : jobs) {
       try {
         logger.debug("running " + job.getClass().getName());
