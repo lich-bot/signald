@@ -733,6 +733,11 @@ public class LegacySocketHandler {
     }
 
     @Override
+    public void broadcastSafetyNumberChange(String identifier) throws IOException {
+      broadcast(new JsonMessageWrapper("safety_number_change", identifier));
+    }
+
+    @Override
     public boolean isClosed() {
       return socket.isClosed();
     }
