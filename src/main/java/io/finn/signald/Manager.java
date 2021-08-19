@@ -74,6 +74,7 @@ import org.whispersystems.signalservice.api.account.AccountAttributes;
 import org.whispersystems.signalservice.api.crypto.*;
 import org.whispersystems.signalservice.api.groupsv2.ClientZkOperations;
 import org.whispersystems.signalservice.api.messages.*;
+import org.whispersystems.signalservice.api.messages.calls.SignalServiceCallMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
 import org.whispersystems.signalservice.api.profiles.ProfileAndCredential;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
@@ -1305,6 +1306,39 @@ public class Manager {
         accountData.axolotlStore.saveIdentity(destination, verifiedMessage.getIdentityKey(), trustLevel);
       }
     }
+
+    if (content.getDecryptionErrorMessage().isPresent()) {
+      var decryptionErrorMessage = content.getDecryptionErrorMessage().get();
+      long sentTimestamp = decryptionErrorMessage.getTimestamp();
+
+      logger.warn("[RetryReceipt] Received a retry receipt from " + content.getSender().getIdentifier() + ", device " + decryptionErrorMessage.getDeviceId() + " for message with timestamp " + sentTimestamp + ".");
+    }
+
+    if (content.getCallMessage().isPresent()) {
+      logger.info("Got call message...");
+
+      SignalServiceCallMessage message = content.getCallMessage().get();
+      Optional<Integer> destinationDeviceId = message.getDestinationDeviceId();
+
+      if (destinationDeviceId.isPresent() && destinationDeviceId.get() != 1) {
+        logger.info(String.format(Locale.US, "Ignoring call message that is not for this device! intended: %d, this: %d", destinationDeviceId.get(), 1));
+        return;
+      }
+
+      if (message.getOfferMessage().isPresent())
+        logger.info("call offer");
+      else if (message.getAnswerMessage().isPresent())
+        logger.info("call answer");
+      else if (message.getIceUpdateMessages().isPresent())
+        logger.info("call ice update");
+      else if (message.getHangupMessage().isPresent())
+        logger.info("call hangup");
+      else if (message.getBusyMessage().isPresent())
+        logger.info("call busy");
+      else if (message.getOpaqueMessage().isPresent())
+        logger.info("call opaque");
+    }
+
     for (Job job : jobs) {
       try {
         logger.debug("running " + job.getClass().getName());
