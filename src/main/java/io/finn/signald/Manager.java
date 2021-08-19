@@ -853,17 +853,16 @@ public class Manager {
 
   private SignalServiceContent decryptMessage(SignalServiceEnvelope envelope) throws Exception {
     try {
-      CertificateValidator certificateValidator = new CertificateValidator(unidentifiedSenderTrustRoot);
-      SignalServiceCipher cipher = new SignalServiceCipher(accountData.address.getSignalServiceAddress(), accountData.axolotlStore, new SessionLock(getUUID()), certificateValidator);
+      var certificateValidator = new CertificateValidator(unidentifiedSenderTrustRoot);
+      var cipher = new SignalServiceCipher(accountData.address.getSignalServiceAddress(), accountData.axolotlStore, new SessionLock(getUUID()), certificateValidator);
       return cipher.decrypt(envelope);
     } catch (ProtocolInvalidKeyIdException | ProtocolInvalidKeyException | ProtocolUntrustedIdentityException | ProtocolNoSessionException | ProtocolInvalidMessageException e) {
       logger.error("Exception of type " + e.getClass().getName() + " thrown trying to decrypt envelope");
-      ContentHint contentHint = ContentHint.fromType(e.getContentHint());
       int senderDevice = e.getSenderDevice();
-      long receivedTimestamp = System.currentTimeMillis();
 
+      Optional<byte[]> groupId = Optional.absent();
       if (e.getGroupId().isPresent()) {
-        // TODO do something
+        groupId = Optional.of(e.getGroupId().get());
       }
 
       byte[] originalContent;
@@ -892,12 +891,11 @@ public class Manager {
       var resolver = accountData.getResolver();
       var sender = resolver.resolve(e.getSender());
 
-      // TODO figure this stuff out
+      // TODO leaving this as absent seems to be working, so I'm inclined to just leave this as is until things break.
       Optional<UnidentifiedAccessPair> access = Optional.absent();
-      Optional<byte[]> group = Optional.absent();
 
       var decryptionErrorMessage = DecryptionErrorMessage.forOriginalMessage(originalContent, envelopeType, envelope.getTimestamp(), senderDevice);
-      this.getMessageSender().sendRetryReceipt(sender, access, group, decryptionErrorMessage);
+      this.getMessageSender().sendRetryReceipt(sender, access, groupId, decryptionErrorMessage);
       throw e;
     }
   }
@@ -1202,7 +1200,7 @@ public class Manager {
           try {
             content = decryptMessage(envelope);
           } catch (UntrustedIdentityException e) {
-            logger.error("Got identity failure sending sync message. Trusting key " + e.getIdentityKey() + " for " + e.getIdentifier(), e);
+            logger.error("Got identity failure decrypting message. Likely because sending the retry resulted in an UntrustedIdentityException. Trusting key " + e.getIdentityKey() + " for " + e.getIdentifier(), e);
             accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
           } catch (Exception e) {
             logger.error("Failed to decrypt message");
