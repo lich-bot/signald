@@ -1203,7 +1203,11 @@ public class Manager {
           } catch (UntrustedIdentityException e) {
             logger.error("Got identity failure decrypting message. Likely because sending the retry resulted in an UntrustedIdentityException. Trusting key " + e.getIdentityKey() + " for " + e.getIdentifier(), e);
             accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
-            handler.handleSafetyNumberChange(e.getIdentifier());
+            var number = e.getIdentifier();
+            if (envelope.getSourceAddress().getNumber().isPresent()) {
+              number = envelope.getSourceAddress().getNumber().get();
+            }
+            handler.handleSafetyNumberChange(number);
 
             // retry the decryption
             try {
