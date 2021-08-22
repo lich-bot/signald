@@ -26,6 +26,7 @@ import org.whispersystems.util.Base64;
 public class JsonGroupJoinInfo {
   @ExampleValue(ExampleValue.GROUP_ID) public String groupID;
   @ExampleValue(ExampleValue.GROUP_TITLE) public String title;
+  @ExampleValue(ExampleValue.GROUP_DESCRIPTION) public String description;
   @ExampleValue("3") public int memberCount;
   public int addFromInviteLink;
   @ExampleValue("5") public int revision;
@@ -34,6 +35,7 @@ public class JsonGroupJoinInfo {
   public JsonGroupJoinInfo(DecryptedGroupJoinInfo i, GroupMasterKey masterKey) {
     groupID = Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(masterKey).serialize());
     title = i.getTitle();
+    description = i.getDescription();
     memberCount = i.getMemberCount();
     addFromInviteLink = i.getAddFromInviteLinkValue();
     revision = i.getRevision();
