@@ -1214,8 +1214,15 @@ public class Manager {
               } catch (Exception x) {
                 logger.error("Exception while handling safety number change");
               }
+            } catch (ProtocolDuplicateMessageException e) {
+              logger.error("Protocol duplicate message exception");
+              logger.error(e);
+            } catch (DuplicateMessageException e) {
+              logger.error("Duplicate message exception");
+              logger.error(e);
             } catch (Exception e) {
               logger.error("Failed to decrypt message");
+              logger.error(e);
               exception = e;
             }
           }
