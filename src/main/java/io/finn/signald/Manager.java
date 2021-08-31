@@ -929,6 +929,7 @@ public class Manager {
 
   public interface ReceiveMessageHandler {
     void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent decryptedContent, Throwable e);
+    void handleSafetyNumberChange(String identifier);
   }
 
   private List<Job> handleSignalServiceDataMessage(SignalServiceDataMessage message, boolean isSync, SignalServiceAddress source, SignalServiceAddress destination,
@@ -1197,22 +1198,33 @@ public class Manager {
           accountData.getResolver().resolve(envelope.getSourceAddress());
         }
         if (!envelope.isReceipt()) {
-          try {
-            content = decryptMessage(envelope);
-          } catch (UntrustedIdentityException e) {
-            logger.error("Got identity failure decrypting message. Likely because sending the retry resulted in an UntrustedIdentityException. Trusting key " + e.getIdentityKey() + " for " + e.getIdentifier(), e);
-            accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
-
-            // retry the decryption
+          for (int i = 0; i < 2; i++) {
             try {
               content = decryptMessage(envelope);
-            } catch (Exception ex) {
+            } catch (UntrustedIdentityException e) {
+              logger.error("Got identity failure decrypting message. Likely because sending the retry resulted in an UntrustedIdentityException. Trusting key " + e.getIdentityKey() + " for " + e.getIdentifier(), e);
+              accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
+
+              try {
+                var number = e.getIdentifier();
+                if (envelope.getSourceAddress().getNumber().isPresent()) {
+                  number = envelope.getSourceAddress().getNumber().get();
+                }
+                handler.handleSafetyNumberChange(number);
+              } catch (Exception x) {
+                logger.error("Exception while handling safety number change");
+              }
+            } catch (ProtocolDuplicateMessageException e) {
+              logger.error("Protocol duplicate message exception");
+              logger.error(e);
+            } catch (DuplicateMessageException e) {
+              logger.error("Duplicate message exception");
+              logger.error(e);
+            } catch (Exception e) {
               logger.error("Failed to decrypt message");
+              logger.error(e);
               exception = e;
             }
-          } catch (Exception e) {
-            logger.error("Failed to decrypt message");
-            exception = e;
           }
           if (exception == null) {
             handleMessage(envelope, content, ignoreAttachments);

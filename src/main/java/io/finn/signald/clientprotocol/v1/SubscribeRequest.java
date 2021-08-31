@@ -19,6 +19,7 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.finn.signald.Empty;
+import io.finn.signald.JsonMessageWrapper;
 import io.finn.signald.MessageReceiver;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
@@ -40,6 +41,7 @@ import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 @ProtocolType("subscribe")
 @Doc("receive incoming messages. After making a subscribe request, incoming messages will be sent to the client encoded "
@@ -103,6 +105,11 @@ public class SubscribeRequest implements RequestType<Empty> {
       if (exception != null) {
         broadcast(ClientMessageWrapper.Exception(exception));
       }
+    }
+
+    @Override
+    public void broadcastSafetyNumberChange(String identifier) throws IOException {
+      broadcast(new ClientMessageWrapper(new SafetyNumberChange(identifier)));
     }
 
     @Override

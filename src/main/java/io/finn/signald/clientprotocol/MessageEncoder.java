@@ -21,12 +21,14 @@ import java.io.IOException;
 import java.net.Socket;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public interface MessageEncoder {
   void broadcastIncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content) throws IOException;
   void broadcastReceiveFailure(Throwable exception) throws IOException;
   void broadcastListenStarted() throws IOException;
   void broadcastListenStopped(Throwable exception) throws IOException;
+  void broadcastSafetyNumberChange(String identifier) throws IOException;
   boolean isClosed();
   boolean equals(Socket socket);
 }
