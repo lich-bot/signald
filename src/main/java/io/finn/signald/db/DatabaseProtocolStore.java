@@ -29,11 +29,11 @@ import org.whispersystems.libsignal.groups.state.SenderKeyRecord;
 import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
-import org.whispersystems.signalservice.api.SignalServiceProtocolStore;
+import org.whispersystems.signalservice.api.SignalServiceDataStore;
 import org.whispersystems.signalservice.api.push.DistributionId;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
-public class DatabaseProtocolStore implements SignalServiceProtocolStore {
+public class DatabaseProtocolStore implements SignalServiceDataStore {
   private final PreKeysTable preKeys;
   private final SessionsTable sessions;
   private final SignedPreKeysTable signedPrekeys;
@@ -185,6 +185,11 @@ public class DatabaseProtocolStore implements SignalServiceProtocolStore {
   }
 
   @Override
+  public Set<SignalProtocolAddress> getAllAddressesWithActiveSessions(List<String> list) {
+    return sessions.getAllAddressesWithActiveSessions(list);
+  }
+
+  @Override
   public void storeSenderKey(SignalProtocolAddress signalProtocolAddress, UUID distributionId, SenderKeyRecord senderKeyRecord) {
     senderKeys.storeSenderKey(signalProtocolAddress, distributionId, senderKeyRecord);
   }
@@ -205,7 +210,17 @@ public class DatabaseProtocolStore implements SignalServiceProtocolStore {
   }
 
   @Override
-  public void clearSenderKeySharedWith(DistributionId distributionId, Collection<SignalProtocolAddress> addresses) {
-    senderKeyShared.clearSenderKeySharedWith(distributionId, addresses);
+  public void clearSenderKeySharedWith(Collection<SignalProtocolAddress> collection) {
+    senderKeyShared.clearSenderKeySharedWith(collection);
+  }
+
+  @Override
+  public boolean isMultiDevice() {
+    return false;
+  }
+
+  @Override
+  public Transaction beginTransaction() {
+    return null;
   }
 }

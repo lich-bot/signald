@@ -79,11 +79,19 @@ public class RecipientsTable implements AddressResolver {
 
   public Pair<Integer, SignalServiceAddress> get(String address) throws SQLException { return get(AddressUtil.fromIdentifier(address)); }
 
+  public List<Pair<Integer, SignalServiceAddress>> get(List<SignalServiceAddress> addresses) throws SQLException {
+    List<Pair<Integer, SignalServiceAddress>> results = new ArrayList<>();
+    for (SignalServiceAddress address : addresses) {
+      results.add(get(address));
+    }
+    return results;
+  }
+
   public Pair<Integer, SignalServiceAddress> get(SignalServiceAddress address) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + ROW_ID + "," + E164 + "," + UUID + " FROM " + TABLE_NAME + " WHERE (" + UUID + " = ? OR " + E164 +
                                                                       " = ?) AND " + ACCOUNT_UUID + " = ?");
-    if (address.getUuid().isPresent()) {
-      statement.setString(1, address.getUuid().get().toString());
+    if (address.getUuid() != null) {
+      statement.setString(1, address.getUuid().toString());
     }
 
     if (address.getNumber().isPresent()) {
@@ -112,7 +120,7 @@ public class RecipientsTable implements AddressResolver {
       logger.warn("recipient query returned multiple results, merging");
       int rowid = -1; //
       for (Pair<Integer, SignalServiceAddress> r : results) {
-        if (rowid < 0 && r.second().getUuid().isPresent()) { // have not selected a preferred winner yet and this candidate has a UUID
+        if (rowid < 0 && r.second().getUuid() != null) { // have not selected a preferred winner yet and this candidate has a UUID
           rowid = r.first();
           result = r;
         } else {
@@ -123,15 +131,15 @@ public class RecipientsTable implements AddressResolver {
     }
 
     int rowid = result.first();
-    String storedUUID = result.second().getUuid().isPresent() ? result.second().getUuid().get().toString() : null;
+    String storedUUID = result.second().getUuid() != null ? result.second().getUuid().toString() : null;
     String storedE164 = result.second().getNumber().orNull();
 
-    if (address.getUuid().isPresent() && storedUUID == null) {
-      update(UUID, address.getUuid().get().toString(), result.first());
+    if (address.getUuid() != null && storedUUID == null) {
+      update(UUID, address.getUuid().toString(), result.first());
     }
 
-    if (!address.getUuid().isPresent() && storedUUID != null) {
-      address = new SignalServiceAddress(result.second().getUuid().get(), storedE164);
+    if (address.getUuid() != null && storedUUID != null) {
+      address = new SignalServiceAddress(result.second().getUuid(), storedE164);
     }
 
     if (address.getNumber().isPresent() && storedE164 == null) {
@@ -139,8 +147,7 @@ public class RecipientsTable implements AddressResolver {
     }
 
     if (!address.getNumber().isPresent() && storedE164 != null) {
-      UUID uuid = address.getUuid().isPresent() ? address.getUuid().get() : null;
-      address = new SignalServiceAddress(uuid, storedE164);
+      address = new SignalServiceAddress(address.getUuid(), storedE164);
     }
 
     return new Pair<>(rowid, address);
@@ -150,8 +157,8 @@ public class RecipientsTable implements AddressResolver {
     Connection connection = Database.getConn();
     PreparedStatement statement = connection.prepareStatement("INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + UUID + "," + E164 + ") VALUES (?, ?, ?)");
     statement.setString(1, uuid.toString());
-    if (address.getUuid().isPresent()) {
-      statement.setString(2, address.getUuid().get().toString());
+    if (address.getUuid() != null) {
+      statement.setString(2, address.getUuid().toString());
     }
     if (address.getNumber().isPresent()) {
       statement.setString(3, address.getNumber().get());

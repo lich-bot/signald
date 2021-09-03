@@ -18,13 +18,13 @@
 package io.finn.signald.db;
 
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.util.AddressUtil;
 import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.NoSessionException;
@@ -196,5 +196,36 @@ public class SessionsTable implements SessionStore {
     PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
     statement.setString(1, uuid.toString());
     statement.executeUpdate();
+  }
+
+  public Set<SignalProtocolAddress> getAllAddressesWithActiveSessions(List<String> list) {
+    List<SignalServiceAddress> addressList = list.stream().map(AddressUtil::fromIdentifier).collect(Collectors.toList());
+    try {
+      List<Pair<Integer, SignalServiceAddress>> recipientList = recipientsTable.get(addressList);
+      String query = "SELECT " + RecipientsTable.TABLE_NAME + "." + RecipientsTable.UUID + "," + DEVICE_ID + "," + RECORD + " FROM " + TABLE_NAME + "," +
+                     RecipientsTable.TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RecipientsTable.TABLE_NAME + "." + RecipientsTable.ROW_ID + " = " + RECIPIENT +
+                     " AND (" + (RECIPIENT + " = ? OR".repeat(recipientList.size() - 1)) + ")";
+      PreparedStatement statement = Database.getConn().prepareStatement(query);
+      int i = 0;
+      statement.setString(i++, uuid.toString());
+      for (Pair<Integer, SignalServiceAddress> recipient : recipientList) {
+        statement.setInt(i++, recipient.first());
+      }
+      ResultSet rows = statement.executeQuery();
+      Set<SignalProtocolAddress> results = new HashSet<>();
+      while (rows.next()) {
+        String name = rows.getString(RecipientsTable.UUID);
+        int deviceId = rows.getInt(DEVICE_ID);
+        SessionRecord record = new SessionRecord(rows.getBytes(RECORD));
+        if (record.hasSenderChain() && record.getSessionVersion() == CiphertextMessage.CURRENT_VERSION) { // signal-cli calls this "isActive"
+          results.add(new SignalProtocolAddress(name, deviceId));
+        }
+      }
+      rows.close();
+      return results;
+    } catch (SQLException | IOException e) {
+      logger.catching(e);
+    }
+    return new HashSet<>();
   }
 }

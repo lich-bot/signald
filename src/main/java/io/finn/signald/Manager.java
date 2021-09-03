@@ -66,7 +66,6 @@ import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.Medium;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
-import org.whispersystems.signalservice.api.SignalServiceMessagePipe;
 import org.whispersystems.signalservice.api.SignalServiceMessageReceiver;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.account.AccountAttributes;
@@ -95,7 +94,7 @@ public class Manager {
   private final SignalServiceConfiguration serviceConfiguration;
   private final ECPublicKey unidentifiedSenderTrustRoot;
   private final static String USER_AGENT = BuildConfig.USER_AGENT;
-  private static final AccountAttributes.Capabilities SERVICE_CAPABILITIES = new AccountAttributes.Capabilities(false, true, false, true, false);
+  private static final AccountAttributes.Capabilities SERVICE_CAPABILITIES = new AccountAttributes.Capabilities(false, true, false, true, false, false);
   private final static int ACCOUNT_REFRESH_VERSION = 3;
 
   public final static int PREKEY_MINIMUM_COUNT = 20;
@@ -114,8 +113,6 @@ public class Manager {
   private AccountData accountData;
 
   private GroupsV2Manager groupsV2Manager;
-  private SignalServiceMessagePipe messagePipe = null;
-  private SignalServiceMessagePipe unidentifiedMessagePipe = null;
 
   private final UptimeSleepTimer sleepTimer = new UptimeSleepTimer();
 
@@ -152,10 +149,10 @@ public class Manager {
   public static Manager get(String e164) throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     AddressResolver resolver = new AddressUtil();
     SignalServiceAddress address = resolver.resolve(e164);
-    if (!address.getUuid().isPresent()) {
+    if (address.getUuid() == null) {
       throw new NoSuchAccountException(e164);
     }
-    return Manager.get(address.getUuid().get());
+    return Manager.get(address.getUuid());
   }
 
   public static Manager getPending(String e164, UUID server) throws IOException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
@@ -276,7 +273,7 @@ public class Manager {
 
   public SignalServiceAccountManager getAccountManager() {
     return new SignalServiceAccountManager(serviceConfiguration, accountData.getCredentialsProvider(), BuildConfig.SIGNAL_AGENT,
-                                           GroupsUtil.GetGroupsV2Operations(serviceConfiguration), true, sleepTimer);
+                                           GroupsUtil.GetGroupsV2Operations(serviceConfiguration), true);
   }
 
   public static Map<String, String> getQueryMap(String query) {
@@ -740,8 +737,9 @@ public class Manager {
       if (message.getGroupContext().isPresent()) {
         try {
           final boolean isRecipientUpdate = false;
-          List<SendMessageResult> result =
-              messageSender.sendDataMessage(new ArrayList<>(recipients), getAccessPairFor(recipients), isRecipientUpdate, ContentHint.DEFAULT, message);
+
+          List<SendMessageResult> result = messageSender.sendDataMessage(new ArrayList<>(recipients), getAccessPairFor(recipients), isRecipientUpdate, ContentHint.DEFAULT, message,
+                                                                         sendResult -> logger.trace("Partial message send result: {}", sendResult.isSuccess()), () -> false);
           for (SendMessageResult r : result) {
             if (r.getIdentityFailure() != null) {
               accountData.axolotlStore.saveIdentity(r.getAddress(), r.getIdentityFailure().getIdentityKey(), TrustLevel.UNTRUSTED);
@@ -784,7 +782,7 @@ public class Manager {
               SignalServiceSyncMessage syncMessage = SignalServiceSyncMessage.forSentTranscript(transcript);
               long start = System.currentTimeMillis();
               messageSender.sendSyncMessage(syncMessage, unidentifiedAccess);
-              results.add(SendMessageResult.success(recipient, unidentifiedAccess.isPresent(), false, System.currentTimeMillis() - start));
+              results.add(SendMessageResult.success(recipient, devices, false, unidentifiedAccess.isPresent(), true, System.currentTimeMillis() - start), Optional.absent());
             } else {
               results.add(messageSender.sendDataMessage(address, getAccessPairFor(address), ContentHint.DEFAULT, message));
             }
