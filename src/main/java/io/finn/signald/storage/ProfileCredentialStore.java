@@ -32,7 +32,7 @@ public class ProfileCredentialStore {
 
   @JsonIgnore
   public ProfileKeyCredential getProfileKeyCredential(UUID uuid) {
-    ProfileAndCredentialEntry entry = get(new SignalServiceAddress(Optional.of(uuid), Optional.absent()));
+    ProfileAndCredentialEntry entry = get(new SignalServiceAddress(uuid, Optional.absent()));
     if (entry != null) {
       return entry.getProfileKeyCredential();
     }

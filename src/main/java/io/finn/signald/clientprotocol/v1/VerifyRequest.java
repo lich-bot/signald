@@ -19,6 +19,7 @@ package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.BuildConfig;
 import io.finn.signald.Manager;
+import io.finn.signald.RegistrationManager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
@@ -32,14 +33,15 @@ import io.finn.signald.clientprotocol.v1.exceptions.ExceptionWrapper;
 import io.finn.signald.db.PendingAccountDataTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.ServerNotFoundException;
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.internal.push.LockedException;
+
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.UUID;
 
 @ProtocolType("verify")
 @Doc("verify an account's phone number with a code after registering, completing the account creation process")
@@ -58,19 +60,19 @@ public class VerifyRequest implements RequestType<Account> {
     if (server == null) {
       server = BuildConfig.DEFAULT_SERVER_UUID;
     }
-    Manager m = Manager.getPending(account, UUID.fromString(server));
-    if (!m.hasPendingKeys()) {
+    RegistrationManager rm = RegistrationManager.get(account, UUID.fromString(server));
+    if (!rm.hasPendingKeys()) {
       throw new AccountHasNoKeys();
-    } else if (m.isRegistered()) {
+    } else if (rm.isRegistered()) {
       throw new AccountAlreadyVerified();
     } else {
       try {
-        m.verifyAccount(code);
+        Manager m = rm.verifyAccount(code);
+        return new Account(m);
       } catch (LockedException e) {
         logger.warn("Failed to register phone number with PIN lock. See https://gitlab.com/signald/signald/-/issues/47");
         throw new AccountLocked();
       }
     }
-    return new Account(m);
   }
 }

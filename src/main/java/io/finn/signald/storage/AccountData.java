@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import io.finn.signald.BuildConfig;
 import io.finn.signald.Manager;
+import io.finn.signald.Util;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.db.*;
 import io.finn.signald.exceptions.InvalidStorageFileException;
@@ -89,10 +90,13 @@ public class AccountData {
 
   AccountData() {}
 
+  // create a new pending account
   public AccountData(String pendingIdentifier) {
     username = pendingIdentifier;
     address = new JsonAddress(pendingIdentifier);
     axolotlStore = new DatabaseProtocolStore(pendingIdentifier);
+    setPending();
+    Util.getSecret(18);
   }
 
   public static AccountData load(File storageFile) throws IOException {
@@ -166,7 +170,7 @@ public class AccountData {
 
     ProfileAndCredentialEntry profileKeyEntry = profileCredentialStore.get(address.getSignalServiceAddress());
     if (profileKeyEntry != null) {
-      if (!profileKeyEntry.getServiceAddress().getUuid().isPresent() && address.uuid != null) {
+      if (profileKeyEntry.getServiceAddress().getUuid() == null && address.uuid != null) {
         profileKeyEntry.setAddress(address.getSignalServiceAddress());
       }
     }
@@ -258,7 +262,7 @@ public class AccountData {
       if (profileKeyEntry == null) {
         generateProfileKey();
       } else {
-        if (!profileKeyEntry.getServiceAddress().getUuid().isPresent() && address.uuid != null) {
+        if (profileKeyEntry.getServiceAddress().getUuid() == null && address.uuid != null) {
           profileKeyEntry.setAddress(address.getSignalServiceAddress());
         }
       }

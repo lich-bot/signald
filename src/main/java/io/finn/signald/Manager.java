@@ -65,6 +65,7 @@ import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.Medium;
 import org.whispersystems.libsignal.util.guava.Optional;
+import org.whispersystems.signalservice.api.InvalidMessageStructureException;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.SignalServiceMessageReceiver;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
@@ -82,6 +83,7 @@ import org.whispersystems.signalservice.api.util.DeviceNameUtil;
 import org.whispersystems.signalservice.api.util.StreamDetails;
 import org.whispersystems.signalservice.api.util.UptimeSleepTimer;
 import org.whispersystems.signalservice.api.util.UuidUtil;
+import org.whispersystems.signalservice.internal.ServiceResponse;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.signalservice.internal.push.UnsupportedDataMessageException;
@@ -115,6 +117,8 @@ public class Manager {
   private GroupsV2Manager groupsV2Manager;
 
   private final UptimeSleepTimer sleepTimer = new UptimeSleepTimer();
+
+  private final SignalDependencies dependencies;
 
   public static Manager get(UUID uuid) throws SQLException, NoSuchAccountException, IOException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Logger logger = LogManager.getLogger("manager");
@@ -155,18 +159,6 @@ public class Manager {
     return Manager.get(address.getUuid());
   }
 
-  public static Manager getPending(String e164, UUID server) throws IOException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Logger logger = LogManager.getLogger("new-account-manager");
-    if (pendingManagers.containsKey(e164)) {
-      return pendingManagers.get(e164);
-    }
-    Manager m = new Manager(e164, server);
-    pendingManagers.put(e164, m);
-    m.accountData.setPending();
-    logger.info("Created a manager for " + Util.redact(e164));
-    return m;
-  }
-
   public static List<Manager> getAll() {
     Logger logger = LogManager.getLogger("manager");
     // We have to create a manager for each account that we're listing, which is all of them :/
@@ -187,29 +179,16 @@ public class Manager {
     return allManagers;
   }
 
-  // creates a Manager for an account that has not completed registration
-  Manager(String e164, UUID serverUUID) throws IOException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    logger = LogManager.getLogger("manager-" + Util.redact(e164));
-    logger.info("Creating new manager for " + Util.redact(e164));
-    ServersTable.Server server = ServersTable.getServer(serverUUID);
-    serviceConfiguration = server.getSignalServiceConfiguration();
-    unidentifiedSenderTrustRoot = server.getUnidentifiedSenderRoot();
-    try {
-      accountData = AccountData.load(new File(Manager.getFileName(e164)));
-    } catch (IOException e) {
-      accountData = new AccountData(e164);
-    }
-  }
-
   Manager(AccountData a) throws IOException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     logger = LogManager.getLogger("manager-" + Util.redact(a.username));
     accountData = a;
     ServersTable.Server server = AccountsTable.getServer(accountData.getUUID());
     serviceConfiguration = server.getSignalServiceConfiguration();
     unidentifiedSenderTrustRoot = server.getUnidentifiedSenderRoot();
-    synchronized (managers) { managers.put(a.username, this); }
+    dependencies = new SignalDependencies(a.getUUID(), server.getSignalServiceConfiguration(), accountData.getCredentialsProvider());
     groupsV2Manager = new GroupsV2Manager(getAccountManager().getGroupsV2Api(), a.groupsV2, accountData.profileCredentialStore, a.getUUID(), serviceConfiguration);
     logger.info("Created a manager for " + Util.redact(accountData.username));
+    synchronized (managers) { managers.put(a.username, this); }
   }
 
   public static void setDataPath(String path) {
@@ -253,23 +232,7 @@ public class Manager {
     return !(!f.exists() || f.isDirectory());
   }
 
-  public boolean hasPendingKeys() throws SQLException { return PendingAccountDataTable.getBytes(accountData.username, PendingAccountDataTable.Key.OWN_IDENTITY_KEY_PAIR) != null; }
-
   public boolean isRegistered() { return accountData.registered; }
-
-  public void register(boolean voiceVerification, Optional<String> captcha) throws IOException, InvalidInputException {
-    accountData.password = Util.getSecret(18);
-
-    if (voiceVerification) {
-      getAccountManager().requestVoiceVerificationCode(Locale.getDefault(), captcha, Optional.absent()); // TODO: Allow requester to set the locale and challenge
-    } else {
-      getAccountManager().requestSmsVerificationCode(false, captcha, Optional.absent()); //  TODO: Allow requester to set challenge and androidSmsReceiverSupported
-    }
-
-    accountData.registered = false;
-    accountData.init();
-    accountData.save();
-  }
 
   public SignalServiceAccountManager getAccountManager() {
     return new SignalServiceAccountManager(serviceConfiguration, accountData.getCredentialsProvider(), BuildConfig.SIGNAL_AGENT,
@@ -353,9 +316,10 @@ public class Manager {
     verificationCode = verificationCode.replace("-", "");
     accountData.signalingKey = Util.getSecret(52);
     int registrationID = PendingAccountDataTable.getInt(accountData.username, PendingAccountDataTable.Key.LOCAL_REGISTRATION_ID);
-    VerifyAccountResponse response = getAccountManager().verifyAccountWithCode(verificationCode, accountData.signalingKey, registrationID, true, null, null,
-                                                                               accountData.getSelfUnidentifiedAccessKey(), false, SERVICE_CAPABILITIES, true);
-    accountData.setUUID(UUID.fromString(response.getUuid()));
+    ServiceResponse<VerifyAccountResponse> r =
+        getAccountManager().verifyAccount(verificationCode, registrationID, true, accountData.getSelfUnidentifiedAccessKey(), false, SERVICE_CAPABILITIES, true);
+    VerifyAccountResponse result = r.getResult().get();
+    accountData.setUUID(UUID.fromString(result.getUuid()));
     String server = PendingAccountDataTable.getString(accountData.username, PendingAccountDataTable.Key.SERVER_UUID);
     AccountsTable.add(accountData.address.number, accountData.address.getUUID(), getFileName(), server == null ? null : UUID.fromString(server));
     accountData.save();
@@ -773,7 +737,7 @@ public class Manager {
           messageBuilder.withExpiration(contact.messageExpirationTime);
           message = messageBuilder.build();
           try {
-            if (accountData.address.matches(address)) {
+            if (accountData.address.matches(address)) { // sending to ourself
               SignalServiceAddress recipient = accountData.address.getSignalServiceAddress();
 
               final Optional<UnidentifiedAccessPair> unidentifiedAccess = getAccessPairFor(recipient);
@@ -782,9 +746,10 @@ public class Manager {
               SignalServiceSyncMessage syncMessage = SignalServiceSyncMessage.forSentTranscript(transcript);
               long start = System.currentTimeMillis();
               messageSender.sendSyncMessage(syncMessage, unidentifiedAccess);
-              results.add(SendMessageResult.success(recipient, devices, false, unidentifiedAccess.isPresent(), true, System.currentTimeMillis() - start), Optional.absent());
+              //              results.add(SendMessageResult.success(recipient, devices, false, unidentifiedAccess.isPresent(), true, (System.currentTimeMillis() - start),
+              //              Optional.absent());
             } else {
-              results.add(messageSender.sendDataMessage(address, getAccessPairFor(address), ContentHint.DEFAULT, message));
+              results.add(messageSender.sendDataMessage(address, getAccessPairFor(address), ContentHint.DEFAULT, message, new IndividualSendEventsLogger(address)));
             }
           } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
             if (e.getIdentityKey() != null) {
@@ -807,7 +772,7 @@ public class Manager {
   private SignalServiceContent decryptMessage(SignalServiceEnvelope envelope)
       throws InvalidMetadataMessageException, InvalidMetadataVersionException, ProtocolInvalidKeyIdException, ProtocolUntrustedIdentityException, ProtocolLegacyMessageException,
              ProtocolNoSessionException, ProtocolInvalidVersionException, ProtocolInvalidMessageException, ProtocolInvalidKeyException, ProtocolDuplicateMessageException,
-             SelfSendException, UnsupportedDataMessageException, org.whispersystems.libsignal.UntrustedIdentityException {
+             SelfSendException, UnsupportedDataMessageException, org.whispersystems.libsignal.UntrustedIdentityException, InvalidMessageStructureException {
     CertificateValidator certificateValidator = new CertificateValidator(unidentifiedSenderTrustRoot);
     SignalServiceCipher cipher = new SignalServiceCipher(accountData.address.getSignalServiceAddress(), accountData.axolotlStore, new SessionLock(getUUID()), certificateValidator);
     try {
@@ -1070,12 +1035,6 @@ public class Manager {
     }
   }
 
-  public void shutdownMessagePipe() {
-    if (messagePipe != null) {
-      messagePipe.shutdown();
-    }
-  }
-
   public void receiveMessages(long timeout, TimeUnit unit, boolean returnOnTimeout, boolean ignoreAttachments, ReceiveMessageHandler handler)
       throws IOException, MissingConfigurationException, VerificationFailedException, SQLException {
     retryFailedReceivedMessages(handler, ignoreAttachments);
@@ -1084,10 +1043,6 @@ public class Manager {
     final SignalServiceMessageReceiver messageReceiver = getMessageReceiver();
 
     try {
-      if (messagePipe == null) {
-        messagePipe = messageReceiver.createMessagePipe();
-      }
-
       while (true) {
         SignalServiceEnvelope envelope;
         SignalServiceContent content = null;
@@ -1114,10 +1069,7 @@ public class Manager {
           logger.info("Ignoring error: " + e.getMessage());
           continue;
         }
-        if (envelope.hasSource()) {
-          // Store uuid if we don't have it already
-          accountData.getResolver().resolve(envelope.getSourceAddress());
-        }
+
         if (!envelope.isReceipt()) {
           try {
             content = decryptMessage(envelope);
@@ -1139,11 +1091,6 @@ public class Manager {
         }
       }
     } finally {
-      if (messagePipe != null) {
-        messagePipe.shutdown();
-        messagePipe = null;
-      }
-
       accountData.save();
     }
   }
@@ -1323,10 +1270,10 @@ public class Manager {
   public File getContactAvatarFile(SignalServiceAddress address) { return new File(avatarsPath, "contact-" + address.getNumber().get()); }
 
   public File getProfileAvatarFile(SignalServiceAddress address) {
-    if (!address.getUuid().isPresent()) {
+    if (address.getUuid() == null) {
       return null;
     }
-    return new File(avatarsPath, address.getUuid().get().toString());
+    return new File(avatarsPath, address.getUuid().toString());
   }
 
   private File retrieveContactAvatarAttachment(SignalServiceAttachment attachment, SignalServiceAddress address)
@@ -1612,14 +1559,6 @@ public class Manager {
   }
 
   public SignalServiceMessageSender getMessageSender() {
-    if (messagePipe == null) {
-      messagePipe = getMessageReceiver().createMessagePipe();
-    }
-
-    if (unidentifiedMessagePipe == null) {
-      unidentifiedMessagePipe = getMessageReceiver().createUnidentifiedMessagePipe();
-    }
-
     return new SignalServiceMessageSender(serviceConfiguration, accountData.getCredentialsProvider(), accountData.axolotlStore, new SessionLock(getUUID()),
                                           BuildConfig.SIGNAL_AGENT, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(),
                                           ClientZkOperations.create(serviceConfiguration).getProfileOperations(), null, 0, true);

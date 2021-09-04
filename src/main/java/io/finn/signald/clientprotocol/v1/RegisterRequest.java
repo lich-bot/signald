@@ -18,7 +18,7 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.BuildConfig;
-import io.finn.signald.Manager;
+import io.finn.signald.RegistrationManager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
@@ -55,9 +55,9 @@ public class RegisterRequest implements RequestType<Account> {
   @Override
   public Account run(Request request)
       throws SQLException, IOException, InvalidInputException, CaptchaRequired, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager m = null;
+    RegistrationManager m;
     try {
-      m = Manager.getPending(account, UUID.fromString(server));
+      m = RegistrationManager.get(account, UUID.fromString(server));
     } catch (io.finn.signald.exceptions.InvalidProxyException e) {
       throw new InvalidProxyException(e);
     } catch (io.finn.signald.exceptions.ServerNotFoundException e) {

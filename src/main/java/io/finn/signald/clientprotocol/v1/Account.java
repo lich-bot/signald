@@ -19,6 +19,7 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.Manager;
+import io.finn.signald.RegistrationManager;
 import io.finn.signald.annotations.Doc;
 
 @Doc("A local account in signald")
@@ -32,9 +33,16 @@ public class Account {
   public String accountID;
   @Doc("The address of this account") public JsonAddress address;
 
+  @Doc("indicates the account has not completed registration") public Boolean pending;
+
   public Account(Manager m) {
     accountID = m.getE164();
     deviceID = m.getDeviceId();
     address = new JsonAddress(m.getOwnAddress());
+  }
+
+  public Account(RegistrationManager m) {
+    accountID = m.getE164();
+    pending = true;
   }
 }

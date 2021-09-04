@@ -39,6 +39,12 @@ class JsonAccount {
     this.registered = m.isRegistered();
   }
 
+  JsonAccount(RegistrationManager m) {
+    this.username = m.getE164();
+    this.filename = Manager.getFileName(username);
+    this.registered = false;
+  }
+
   JsonAccount(Manager m, boolean subscribed) {
     this(m);
     this.subscribed = subscribed;

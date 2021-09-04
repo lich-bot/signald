@@ -37,19 +37,6 @@ import io.finn.signald.storage.ProfileAndCredentialEntry;
 import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.JSONUtil;
 import io.finn.signald.util.KeyUtil;
-import java.io.*;
-import java.net.Socket;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.*;
@@ -71,6 +58,20 @@ import org.whispersystems.signalservice.api.push.exceptions.CaptchaRequiredExcep
 import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.signalservice.internal.push.LockedException;
 import org.whispersystems.util.Base64;
+
+import java.io.*;
+import java.net.Socket;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 public class LegacySocketHandler {
   private BufferedReader reader;
@@ -315,7 +316,7 @@ public class LegacySocketHandler {
 
   private void register(JsonRequest request) throws IOException, InvalidInputException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     logger.info("Register request: " + request);
-    Manager m = Manager.getPending(request.username, UUID.fromString(BuildConfig.DEFAULT_SERVER_UUID));
+    RegistrationManager m = RegistrationManager.get(request.username, UUID.fromString(BuildConfig.DEFAULT_SERVER_UUID));
     boolean voice = false;
     if (request.voice != null) {
       voice = request.voice;
@@ -337,17 +338,17 @@ public class LegacySocketHandler {
   }
 
   private void verify(JsonRequest request) throws IOException, InvalidInputException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager m = Manager.getPending(request.username, UUID.fromString(BuildConfig.DEFAULT_SERVER_UUID));
-    if (!m.hasPendingKeys()) {
+    RegistrationManager rm = RegistrationManager.get(request.username, UUID.fromString(BuildConfig.DEFAULT_SERVER_UUID));
+    if (!rm.hasPendingKeys()) {
       logger.warn("User has no keys, first call register.");
       this.reply("error", "user has no keys, must register first", request.id);
-    } else if (m.isRegistered()) {
+    } else if (rm.isRegistered()) {
       logger.warn("User is already verified");
       this.reply("error", "user is already verified", request.id);
     } else {
       logger.info("Submitting verification code " + request.code + " for number " + request.username);
       try {
-        m.verifyAccount(request.code);
+        Manager m = rm.verifyAccount(request.code);
         this.reply("verification_succeeded", new JsonAccount(m), request.id);
       } catch (LockedException e) {
         logger.warn("Failed to register phone number with PIN lock. See https://gitlab.com/signald/signald/-/issues/47");
@@ -396,7 +397,7 @@ public class LegacySocketHandler {
       GroupsV2Manager groupsV2Manager = m.getGroupsV2Manager();
       Group group = groupsV2Manager.getGroup(request.recipientGroupId);
       List<SignalServiceAddress> recipients =
-          group.group.getMembersList().stream().map(x -> new SignalServiceAddress(UuidUtil.fromByteString(x.getUuid()), null)).collect(Collectors.toList());
+          group.group.getMembersList().stream().map(x -> new SignalServiceAddress(UuidUtil.fromByteString(x.getUuid()))).collect(Collectors.toList());
       Pair<SignalServiceDataMessage.Builder, Group> output;
       if (request.groupName != null) {
         output = groupsV2Manager.updateTitle(request.recipientGroupId, request.groupName);
