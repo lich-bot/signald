@@ -24,14 +24,15 @@ import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.AddressUtil;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+
 import java.io.File;
 import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class AccountsTable {
   private static final Logger logger = LogManager.getLogger();
@@ -122,6 +123,19 @@ public class AccountsTable {
     statement.setString(1, address.uuid);
     statement.setString(2, address.number);
     statement.executeUpdate();
+  }
+
+  public static java.util.UUID getUUID(String e164) throws SQLException, NoSuchAccountException {
+    PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + UUID + " FROM " + TABLE_NAME + " WHERE " + E164 + " = ?");
+    statement.setString(1, e164);
+    ResultSet rows = statement.executeQuery();
+    if (!rows.next()) {
+      rows.close();
+      throw new NoSuchAccountException(e164);
+    }
+    java.util.UUID result = java.util.UUID.fromString(rows.getString(UUID));
+    rows.close();
+    return result;
   }
 
   public static ServersTable.Server getServer(java.util.UUID uuid) throws SQLException, IOException, ServerNotFoundException, InvalidProxyException {

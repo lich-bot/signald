@@ -23,12 +23,13 @@ import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
-import java.io.IOException;
-import java.sql.SQLException;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
+
+import java.io.IOException;
+import java.sql.SQLException;
 
 public class IncomingMessage {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) public String account;
@@ -57,7 +58,7 @@ public class IncomingMessage {
     }
 
     Manager m = Utils.getManager(account);
-    if (envelope.hasSource()) {
+    if (envelope.isUnidentifiedSender()) {
       source = new JsonAddress(m.getResolver().resolve(envelope.getSourceAddress()));
     } else if (content != null) {
       source = new JsonAddress(m.getResolver().resolve(content.getSender()));

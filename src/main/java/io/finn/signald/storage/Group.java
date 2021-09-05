@@ -82,7 +82,7 @@ public class Group {
     List<SignalServiceAddress> l = new ArrayList<>();
     for (DecryptedMember member : group.getMembersList()) {
       UUID uuid = DecryptedGroupUtil.toUuid(member);
-      l.add(new SignalServiceAddress(Optional.of(uuid), Optional.absent()));
+      l.add(new SignalServiceAddress(uuid, Optional.absent()));
     }
     return l;
   }
@@ -95,7 +95,7 @@ public class Group {
     List<SignalServiceAddress> l = new ArrayList<>();
     for (DecryptedPendingMember member : group.getPendingMembersList()) {
       UUID uuid = DecryptedGroupUtil.toUuid(member);
-      l.add(new SignalServiceAddress(Optional.of(uuid), Optional.absent()));
+      l.add(new SignalServiceAddress(uuid, Optional.absent()));
     }
     return l;
   }

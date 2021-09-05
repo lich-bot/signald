@@ -33,15 +33,14 @@ import io.finn.signald.clientprotocol.v1.exceptions.ExceptionWrapper;
 import io.finn.signald.db.PendingAccountDataTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.ServerNotFoundException;
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.internal.push.LockedException;
-
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.UUID;
 
 @ProtocolType("verify")
 @Doc("verify an account's phone number with a code after registering, completing the account creation process")

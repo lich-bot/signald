@@ -74,8 +74,8 @@ public class ProvisioningManager {
     final SleepTimer timer = new UptimeSleepTimer();
     DynamicCredentialsProvider credentialProvider = new DynamicCredentialsProvider(null, null, password, SignalServiceAddress.DEFAULT_DEVICE_ID);
     SignalServiceConfiguration serviceConfiguration = ServersTable.getServer(server).getSignalServiceConfiguration();
-    accountManager =
-        new SignalServiceAccountManager(serviceConfiguration, credentialProvider, BuildConfig.SIGNAL_AGENT, GroupsUtil.GetGroupsV2Operations(serviceConfiguration), true, timer);
+    accountManager = new SignalServiceAccountManager(serviceConfiguration, credentialProvider, BuildConfig.SIGNAL_AGENT, GroupsUtil.GetGroupsV2Operations(serviceConfiguration),
+                                                     ServiceConfig.AUTOMATIC_NETWORK_RETRY);
   }
 
   public URI getDeviceLinkUri() throws TimeoutException, IOException, URISyntaxException {

@@ -33,11 +33,11 @@ public class SafetyNumberHelper {
     byte[] ownId;
     byte[] theirId;
 
-    if (UseV2SafetyNumbers && ownAddress.getUuid().isPresent() && theirAddress.getUuid().isPresent()) {
+    if (UseV2SafetyNumbers && ownAddress.getUuid()!= null && theirAddress.getUuid() != null) {
       // Version 2: UUID user
       version = 2;
-      ownId = UuidUtil.toByteArray(ownAddress.getUuid().get());
-      theirId = UuidUtil.toByteArray(theirAddress.getUuid().get());
+      ownId = UuidUtil.toByteArray(ownAddress.getUuid());
+      theirId = UuidUtil.toByteArray(theirAddress.getUuid());
     } else {
       // Version 1: E164 user
       version = 1;

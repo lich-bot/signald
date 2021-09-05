@@ -17,8 +17,6 @@
 
 package io.finn.signald;
 
-import static org.signal.storageservice.protos.groups.AccessControl.AccessRequired.UNSATISFIABLE;
-
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.finn.signald.clientprotocol.v1.JsonGroupJoinInfo;
 import io.finn.signald.db.RecipientsTable;
@@ -28,18 +26,6 @@ import io.finn.signald.storage.GroupsV2Storage;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
 import io.finn.signald.storage.ProfileCredentialStore;
 import io.finn.signald.util.GroupsUtil;
-import java.io.ByteArrayOutputStream;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.storageservice.protos.groups.AccessControl;
@@ -67,6 +53,21 @@ import org.whispersystems.signalservice.internal.push.exceptions.NotInGroupExcep
 import org.whispersystems.signalservice.internal.util.Util;
 import org.whispersystems.util.Base64;
 import org.whispersystems.util.Base64UrlSafe;
+
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
+import static org.signal.storageservice.protos.groups.AccessControl.AccessRequired.UNSATISFIABLE;
 
 public class GroupsV2Manager {
   private final GroupsV2Api groupsV2Api;
@@ -134,7 +135,7 @@ public class GroupsV2Manager {
     Group group = storage.get(groupID);
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
     GroupsV2Operations.GroupOperations groupOperations = groupsV2Operations.forGroup(groupSecretParams);
-    GroupChange.Actions.Builder change = GroupChange.Actions.newBuilder().setModifyDescription(groupOperations.createModifyGroupDescription(description));
+    GroupChange.Actions.Builder change = GroupChange.Actions.newBuilder().setModifyDescription(groupOperations.createModifyGroupDescriptionAction(description));
     change.setSourceUuid(UuidUtil.toByteString(self));
     Pair<DecryptedGroup, GroupChange> groupChangePair = commitChange(group, change);
     group.group = groupChangePair.first();
@@ -193,10 +194,10 @@ public class GroupsV2Manager {
         profileKeyCredential = Optional.fromNullable(profileAndCredentialEntry.getProfileKeyCredential());
       }
       SignalServiceAddress address = new RecipientsTable(self).resolve(profileAndCredentialEntry.getServiceAddress());
-      if (!address.getUuid().isPresent()) {
+      if (address.getUuid() != null) {
         logger.warn("cannot add member to group because we do not know their UUID!");
       } else {
-        UUID uuid = address.getUuid().get();
+        UUID uuid = address.getUuid();
         candidates.add(new GroupCandidate(uuid, profileKeyCredential));
       }
     }
@@ -468,7 +469,7 @@ public class GroupsV2Manager {
   }
 
   private GroupCandidate buildGroupCandidate(SignalServiceAddress address) {
-    UUID uuid = address.getUuid().get();
+    UUID uuid = address.getUuid();
     ProfileKeyCredential profileCredential = profileCredentialStore.getProfileKeyCredential(uuid);
     return new GroupCandidate(uuid, Optional.fromNullable(profileCredential));
   }

@@ -22,20 +22,22 @@ import io.finn.signald.JsonReceiptMessage;
 import io.finn.signald.JsonTypingMessage;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Deprecated;
+import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
+import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.signalservice.api.messages.SignalServiceContent;
+import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
+import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
+
 import java.io.IOException;
 import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.signalservice.api.messages.SignalServiceContent;
-import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 
 @Deprecated(1641027661)
 public class JsonMessageEnvelope {
@@ -44,7 +46,7 @@ public class JsonMessageEnvelope {
   public JsonAddress source;
   public int sourceDevice;
   public String type;
-  public String relay;
+  @Doc("this field is no longer available and will never be populated") public String relay;
   @ExampleValue(ExampleValue.MESSAGE_ID) public long timestamp;
   public String timestampISO;
   public long serverTimestamp; // newer versions of signal call this serverReceivedTimestamp
@@ -67,7 +69,7 @@ public class JsonMessageEnvelope {
     }
 
     Manager m = Manager.get(username);
-    if (envelope.hasSource()) {
+    if (envelope.isUnidentifiedSender()) {
       source = new JsonAddress(m.getResolver().resolve(envelope.getSourceAddress()));
     } else if (c != null) {
       source = new JsonAddress(m.getResolver().resolve(c.getSender()));
@@ -75,12 +77,6 @@ public class JsonMessageEnvelope {
 
     if (envelope.hasSourceDevice()) {
       sourceDevice = envelope.getSourceDevice();
-    }
-
-    if (source != null) {
-      if (source.getSignalServiceAddress().getRelay().isPresent()) {
-        relay = source.getSignalServiceAddress().getRelay().get();
-      }
     }
 
     type = SignalServiceProtos.Envelope.Type.forNumber(envelope.getType()).toString();

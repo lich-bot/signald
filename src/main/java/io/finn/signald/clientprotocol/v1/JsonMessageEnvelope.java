@@ -25,16 +25,17 @@ import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.signalservice.api.messages.SignalServiceContent;
+import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
+import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
+
 import java.io.IOException;
 import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.signalservice.api.messages.SignalServiceContent;
-import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 
 public class JsonMessageEnvelope {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) public String username;
@@ -65,7 +66,7 @@ public class JsonMessageEnvelope {
     }
 
     Manager m = Utils.getManager(username);
-    if (envelope.hasSource()) {
+    if (envelope.isUnidentifiedSender()) {
       source = new JsonAddress(m.getResolver().resolve(envelope.getSourceAddress()));
     } else if (c != null) {
       source = new JsonAddress(m.getResolver().resolve(c.getSender()));
@@ -73,12 +74,6 @@ public class JsonMessageEnvelope {
 
     if (envelope.hasSourceDevice()) {
       sourceDevice = envelope.getSourceDevice();
-    }
-
-    if (source != null) {
-      if (source.getSignalServiceAddress().getRelay().isPresent()) {
-        relay = source.getSignalServiceAddress().getRelay().get();
-      }
     }
 
     type = SignalServiceProtos.Envelope.Type.forNumber(envelope.getType()).toString();

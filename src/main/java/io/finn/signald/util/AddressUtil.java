@@ -19,11 +19,12 @@ package io.finn.signald.util;
 
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.storage.AddressResolver;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.util.UuidUtil;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-import org.whispersystems.signalservice.api.util.UuidUtil;
 
 public class AddressUtil implements AddressResolver {
   // Used to resolve local accounts
@@ -32,7 +33,7 @@ public class AddressUtil implements AddressResolver {
 
   public static SignalServiceAddress fromIdentifier(String identifier) {
     if (UuidUtil.isUuid(identifier)) {
-      return new SignalServiceAddress(UuidUtil.parseOrNull(identifier), null);
+      return new SignalServiceAddress(UuidUtil.parseOrNull(identifier));
     } else {
       return new SignalServiceAddress(null, identifier);
     }

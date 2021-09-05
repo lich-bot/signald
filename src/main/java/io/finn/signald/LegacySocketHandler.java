@@ -37,6 +37,19 @@ import io.finn.signald.storage.ProfileAndCredentialEntry;
 import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.JSONUtil;
 import io.finn.signald.util.KeyUtil;
+import java.io.*;
+import java.net.Socket;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.*;
@@ -58,20 +71,6 @@ import org.whispersystems.signalservice.api.push.exceptions.CaptchaRequiredExcep
 import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.signalservice.internal.push.LockedException;
 import org.whispersystems.util.Base64;
-
-import java.io.*;
-import java.net.Socket;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 
 public class LegacySocketHandler {
   private BufferedReader reader;

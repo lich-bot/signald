@@ -28,12 +28,6 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.storage.AddressResolver;
 import io.finn.signald.storage.Group;
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import org.signal.storageservice.protos.groups.Member;
 import org.signal.zkgroup.VerificationFailedException;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -41,6 +35,13 @@ import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 @ProtocolType("create_group")
 public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
@@ -72,7 +73,7 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
       SignalServiceAddress address = resolver.resolve(member.getSignalServiceAddress());
       m.getRecipientProfileKeyCredential(address);
       resolvedMembers.add(address);
-      if (!address.getUuid().isPresent()) {
+      if (address.getUuid() == null) {
         throw new NoKnownUUID(address.getNumber().orNull());
       }
     }

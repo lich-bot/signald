@@ -16,9 +16,6 @@
  */
 package io.finn.signald;
 
-import static java.nio.file.attribute.PosixFilePermission.*;
-import static org.whispersystems.signalservice.internal.util.Util.isEmpty;
-
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.db.*;
@@ -26,22 +23,6 @@ import io.finn.signald.exceptions.*;
 import io.finn.signald.jobs.*;
 import io.finn.signald.storage.*;
 import io.finn.signald.util.*;
-import java.io.*;
-import java.net.URI;
-import java.net.URLDecoder;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.PosixFilePermissions;
-import java.sql.SQLException;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.GroupNotFoundException;
@@ -54,7 +35,10 @@ import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.thoughtcrime.securesms.util.Hex;
-import org.whispersystems.libsignal.*;
+import org.whispersystems.libsignal.IdentityKey;
+import org.whispersystems.libsignal.IdentityKeyPair;
+import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.InvalidMessageException;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
@@ -65,13 +49,9 @@ import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.Medium;
 import org.whispersystems.libsignal.util.guava.Optional;
-import org.whispersystems.signalservice.api.InvalidMessageStructureException;
-import org.whispersystems.signalservice.api.SignalServiceAccountManager;
-import org.whispersystems.signalservice.api.SignalServiceMessageReceiver;
-import org.whispersystems.signalservice.api.SignalServiceMessageSender;
+import org.whispersystems.signalservice.api.*;
 import org.whispersystems.signalservice.api.account.AccountAttributes;
 import org.whispersystems.signalservice.api.crypto.*;
-import org.whispersystems.signalservice.api.groupsv2.ClientZkOperations;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
 import org.whispersystems.signalservice.api.profiles.ProfileAndCredential;
@@ -90,6 +70,26 @@ import org.whispersystems.signalservice.internal.push.UnsupportedDataMessageExce
 import org.whispersystems.signalservice.internal.push.VerifyAccountResponse;
 import org.whispersystems.signalservice.internal.util.concurrent.ListenableFuture;
 import org.whispersystems.util.Base64;
+
+import java.io.*;
+import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
+
+import static java.nio.file.attribute.PosixFilePermission.*;
+import static org.whispersystems.signalservice.internal.util.Util.isEmpty;
 
 public class Manager {
   private final Logger logger;
@@ -150,13 +150,9 @@ public class Manager {
     return m;
   }
 
-  public static Manager get(String e164) throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    AddressResolver resolver = new AddressUtil();
-    SignalServiceAddress address = resolver.resolve(e164);
-    if (address.getUuid() == null) {
-      throw new NoSuchAccountException(e164);
-    }
-    return Manager.get(address.getUuid());
+  public static Manager get(String e164) throws NoSuchAccountException, SQLException, InvalidProxyException, ServerNotFoundException, InvalidKeyException, IOException {
+    UUID uuid = AccountsTable.getUUID(e164);
+    return Manager.get(uuid);
   }
 
   public static List<Manager> getAll() {
@@ -185,7 +181,7 @@ public class Manager {
     ServersTable.Server server = AccountsTable.getServer(accountData.getUUID());
     serviceConfiguration = server.getSignalServiceConfiguration();
     unidentifiedSenderTrustRoot = server.getUnidentifiedSenderRoot();
-    dependencies = new SignalDependencies(a.getUUID(), server.getSignalServiceConfiguration(), accountData.getCredentialsProvider());
+    dependencies = new SignalDependencies(a.getUUID(), server, accountData.getCredentialsProvider());
     groupsV2Manager = new GroupsV2Manager(getAccountManager().getGroupsV2Api(), a.groupsV2, accountData.profileCredentialStore, a.getUUID(), serviceConfiguration);
     logger.info("Created a manager for " + Util.redact(accountData.username));
     synchronized (managers) { managers.put(a.username, this); }
@@ -619,7 +615,7 @@ public class Manager {
   }
 
   public void sendSyncMessage(SignalServiceSyncMessage message) throws IOException, org.whispersystems.signalservice.api.crypto.UntrustedIdentityException {
-    SignalServiceMessageSender messageSender = getMessageSender();
+    SignalServiceMessageSender messageSender = dependencies.getMessageSender();
     try {
       messageSender.sendSyncMessage(message, getAccessPairFor(getOwnAddress()));
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
@@ -636,7 +632,7 @@ public class Manager {
 
     address = accountData.getResolver().resolve(address);
 
-    SignalServiceMessageSender messageSender = getMessageSender();
+    SignalServiceMessageSender messageSender = dependencies.getMessageSender();
 
     try {
       // TODO: this just calls sendMessage() under the hood. We should call sendMessage() directly so we can get the return value
@@ -656,7 +652,7 @@ public class Manager {
 
     address = accountData.getResolver().resolve(address);
 
-    SignalServiceMessageSender messageSender = getMessageSender();
+    SignalServiceMessageSender messageSender = dependencies.getMessageSender();
 
     try {
       // TODO: this just calls sendMessage() under the hood. We should call sendMessage() directly so we can get the return value
@@ -695,7 +691,7 @@ public class Manager {
 
     SignalServiceDataMessage message = null;
     try {
-      SignalServiceMessageSender messageSender = getMessageSender();
+      SignalServiceMessageSender messageSender = dependencies.getMessageSender();
       message = messageBuilder.build();
 
       if (message.getGroupContext().isPresent()) {
@@ -703,6 +699,7 @@ public class Manager {
           final boolean isRecipientUpdate = false;
 
           List<SendMessageResult> result = messageSender.sendDataMessage(new ArrayList<>(recipients), getAccessPairFor(recipients), isRecipientUpdate, ContentHint.DEFAULT, message,
+                                                                         SignalServiceMessageSender.LegacyGroupEvents.EMPTY,
                                                                          sendResult -> logger.trace("Partial message send result: {}", sendResult.isSuccess()), () -> false);
           for (SendMessageResult r : result) {
             if (r.getIdentityFailure() != null) {
@@ -813,6 +810,10 @@ public class Manager {
       throw new InvalidRecipientException();
     }
   }
+
+  public SignalServiceMessageReceiver getMessageReceiver() { return dependencies.getMessageReceiver(); }
+
+  public SignalServiceMessageSender getMessageSender() { return dependencies.getMessageSender(); }
 
   public interface ReceiveMessageHandler {
     void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent decryptedContent, Throwable e);
@@ -1040,7 +1041,10 @@ public class Manager {
     retryFailedReceivedMessages(handler, ignoreAttachments);
     accountData.saveIfNeeded();
 
-    final SignalServiceMessageReceiver messageReceiver = getMessageReceiver();
+    final SignalServiceMessageReceiver messageReceiver = dependencies.getMessageReceiver();
+
+    SignalWebSocket websocket = dependencies.getWebSocket();
+    websocket.connect();
 
     try {
       while (true) {
@@ -1049,7 +1053,7 @@ public class Manager {
         Exception exception = null;
         MutableLong databaseId = new MutableLong();
         try {
-          envelope = messagePipe.read(timeout, unit, new SignalServiceMessagePipe.MessagePipeCallback() {
+          Optional<SignalServiceEnvelope> result = websocket.readOrEmpty(unit.toMillis(timeout), new SignalWebSocket.MessageReceivedCallback() {
             @Override
             public void onMessage(SignalServiceEnvelope envelope) {
               // store message on disk, before acknowledging receipt to the server
@@ -1061,12 +1065,14 @@ public class Manager {
               }
             }
           });
+          if (result.isPresent()) {
+            envelope = result.get();
+          } else {
+            continue;
+          }
         } catch (TimeoutException e) {
           if (returnOnTimeout)
             return;
-          continue;
-        } catch (InvalidVersionException e) {
-          logger.info("Ignoring error: " + e.getMessage());
           continue;
         }
 
@@ -1101,13 +1107,12 @@ public class Manager {
     if (content == null) {
       return;
     }
-    SignalServiceAddress source = envelope.hasSource() ? envelope.getSourceAddress() : content.getSender();
+    SignalServiceAddress source = (envelope.isUnidentifiedSender() && envelope.hasSourceUuid()) ? envelope.getSourceAddress() : content.getSender();
     AddressResolver resolver = accountData.getResolver();
     resolver.resolve(source);
     if (content.getDataMessage().isPresent()) {
       if (content.isNeedsReceipt()) {
-        SignalServiceAddress sender = envelope.isUnidentifiedSender() && envelope.hasSource() ? envelope.getSourceAddress() : content.getSender();
-        jobs.add(new SendDeliveryReceiptJob(this, sender, content.getTimestamp()));
+        jobs.add(new SendDeliveryReceiptJob(this, source, content.getTimestamp()));
       }
       SignalServiceDataMessage message = content.getDataMessage().get();
       jobs.addAll(handleSignalServiceDataMessage(message, false, source, accountData.address.getSignalServiceAddress(), ignoreAttachments));
@@ -1119,10 +1124,12 @@ public class Manager {
 
     if (content.getSyncMessage().isPresent()) {
       SignalServiceSyncMessage syncMessage = content.getSyncMessage().get();
+
       if (syncMessage.getSent().isPresent()) {
         SignalServiceDataMessage message = syncMessage.getSent().get().getMessage();
         jobs.addAll(handleSignalServiceDataMessage(message, true, source, syncMessage.getSent().get().getDestination().orNull(), ignoreAttachments));
       }
+
       if (syncMessage.getRequest().isPresent()) {
         RequestMessage rm = syncMessage.getRequest().get();
         if (rm.isContactsRequest()) {
@@ -1134,36 +1141,13 @@ public class Manager {
       }
 
       if (syncMessage.getGroups().isPresent()) {
-        File tmpFile = null;
-        try {
-          tmpFile = Util.createTempFile();
-          try (InputStream attachmentAsStream = retrieveAttachmentAsStream(syncMessage.getGroups().get().asPointer(), tmpFile)) {
-            DeviceGroupsInputStream s = new DeviceGroupsInputStream(attachmentAsStream);
-            DeviceGroup g;
-            logger.debug("Sync message included new groups!");
-            while ((g = s.read()) != null) {
-              accountData.groupStore.updateGroup(new GroupInfo(g));
-              if (g.getAvatar().isPresent()) {
-                retrieveGroupAvatarAttachment(g.getAvatar().get(), g.getId());
-              }
-              g.getMembers().stream().map(resolver::resolve);
-            }
-          }
-        } catch (Exception e) {
-          logger.catching(e);
-        } finally {
-          if (tmpFile != null) {
-            try {
-              Files.delete(tmpFile.toPath());
-            } catch (IOException e) {
-              logger.warn("Failed to delete received groups temp file “" + tmpFile + "”: " + e.getMessage());
-            }
-          }
-        }
-        if (syncMessage.getBlockedList().isPresent()) {
-          // TODO store list of blocked numbers
-        }
+        logger.warn("Received a group v1 sync message, that can't be handled anymore, ignoring.");
       }
+
+      if (syncMessage.getBlockedList().isPresent()) {
+        // TODO store list of blocked numbers
+      }
+
       if (syncMessage.getContacts().isPresent()) {
         File tmpFile = null;
         try {
@@ -1344,7 +1328,7 @@ public class Manager {
       }
     }
 
-    final SignalServiceMessageReceiver messageReceiver = getMessageReceiver();
+    final SignalServiceMessageReceiver messageReceiver = dependencies.getMessageReceiver();
 
     File tmpFile = Util.createTempFile();
     try (InputStream input = messageReceiver.retrieveAttachment(pointer, tmpFile, MAX_ATTACHMENT_SIZE)) {
@@ -1370,7 +1354,7 @@ public class Manager {
   }
 
   private InputStream retrieveAttachmentAsStream(SignalServiceAttachmentPointer pointer, File tmpFile) throws IOException, InvalidMessageException, MissingConfigurationException {
-    final SignalServiceMessageReceiver messageReceiver = getMessageReceiver();
+    final SignalServiceMessageReceiver messageReceiver = dependencies.getMessageReceiver();
     return messageReceiver.retrieveAttachment(pointer, tmpFile, MAX_ATTACHMENT_SIZE);
   }
 
@@ -1552,21 +1536,10 @@ public class Manager {
   }
 
   public SignalServiceProfile getSignalServiceProfile(SignalServiceAddress address, ProfileKey profileKey) throws InterruptedException, ExecutionException, TimeoutException {
-    final SignalServiceMessageReceiver messageReceiver = getMessageReceiver();
+    final SignalServiceMessageReceiver messageReceiver = dependencies.getMessageReceiver();
     ListenableFuture<ProfileAndCredential> profile =
         messageReceiver.retrieveProfile(address, Optional.of(profileKey), getUnidentifiedAccess(), SignalServiceProfile.RequestType.PROFILE);
     return profile.get(10, TimeUnit.SECONDS).getProfile();
-  }
-
-  public SignalServiceMessageSender getMessageSender() {
-    return new SignalServiceMessageSender(serviceConfiguration, accountData.getCredentialsProvider(), accountData.axolotlStore, new SessionLock(getUUID()),
-                                          BuildConfig.SIGNAL_AGENT, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(),
-                                          ClientZkOperations.create(serviceConfiguration).getProfileOperations(), null, 0, true);
-  }
-
-  public SignalServiceMessageReceiver getMessageReceiver() {
-    return new SignalServiceMessageReceiver(serviceConfiguration, accountData.getCredentialsProvider(), USER_AGENT, null, sleepTimer,
-                                            ClientZkOperations.create(serviceConfiguration).getProfileOperations(), true);
   }
 
   public RecipientsTable getResolver() { return accountData.getResolver(); }
@@ -1612,7 +1585,7 @@ public class Manager {
 
   public SignalProfile decryptProfile(final SignalServiceAddress address, final ProfileKey profileKey, final SignalServiceProfile encryptedProfile) throws IOException {
     File localAvatarPath = null;
-    if (address.getUuid().isPresent()) {
+    if (address.getUuid() != null) {
       localAvatarPath = getProfileAvatarFile(address);
       if (encryptedProfile.getAvatar() != null) {
         createPrivateDirectories(avatarsPath);
@@ -1673,7 +1646,7 @@ public class Manager {
 
   private void retrieveProfileAvatar(String avatarsPath, ProfileKey profileKey, OutputStream outputStream) throws IOException {
     File tmpFile = Util.createTempFile();
-    try (InputStream input = getMessageReceiver().retrieveProfileAvatar(avatarsPath, tmpFile, profileKey, AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE)) {
+    try (InputStream input = dependencies.getMessageReceiver().retrieveProfileAvatar(avatarsPath, tmpFile, profileKey, AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE)) {
       Util.copyStream(input, outputStream, (int)AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE);
     } finally {
       try {
@@ -1686,7 +1659,7 @@ public class Manager {
 
   public void deleteAccount(boolean remote) throws IOException, SQLException {
     accountData.markForDeletion();
-    shutdownMessagePipe(); // disconnect all subscribers
+    dependencies.shutdown();
     if (remote) {
       getAccountManager().deleteAccount();
     }

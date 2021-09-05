@@ -82,12 +82,8 @@ public class JsonAddress {
       }
     }
 
-    if (address.getUuid().isPresent()) {
-      uuid = address.getUuid().get().toString();
-    }
-
-    if (address.getRelay().isPresent()) {
-      relay = address.getRelay().get();
+    if (address.getUuid() != null) {
+      uuid = address.getUuid().toString();
     }
   }
 
@@ -162,8 +158,8 @@ public class JsonAddress {
   public boolean matches(SignalServiceAddress other) { return getSignalServiceAddress().matches(other); }
 
   public void update(SignalServiceAddress a) {
-    if (uuid == null && a.getUuid().isPresent()) {
-      uuid = a.getUuid().get().toString();
+    if (uuid == null && a.getUuid() != null) {
+      uuid = a.getUuid().toString();
     }
 
     if (number == null && a.getNumber().isPresent()) {

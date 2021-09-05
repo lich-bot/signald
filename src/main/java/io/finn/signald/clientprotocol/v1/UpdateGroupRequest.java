@@ -17,8 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import static io.finn.signald.annotations.ExactlyOneOfRequired.GROUP_MODIFICATION;
-
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
@@ -29,8 +27,6 @@ import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
 import io.finn.signald.util.GroupsUtil;
-import java.util.*;
-import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.storageservice.protos.groups.AccessControl;
@@ -39,6 +35,11 @@ import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static io.finn.signald.annotations.ExactlyOneOfRequired.GROUP_MODIFICATION;
 
 @ProtocolType("update_group")
 @Doc("modify a group. Note that only one modification action may be performed at once")
@@ -114,11 +115,11 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
         Set<UUID> members = new HashSet<>();
         for (JsonAddress member : removeMembers) {
           SignalServiceAddress signalServiceAddress = m.getResolver().resolve(member.getSignalServiceAddress());
-          if (!signalServiceAddress.getUuid().isPresent()) {
+          if (signalServiceAddress.getUuid() == null) {
             logger.warn("cannot remove member " + new JsonAddress(signalServiceAddress).toRedactedString() +
                         " from group if we do not have their UUID! How did they get into the group if we don't know their UUID?");
           }
-          members.add(signalServiceAddress.getUuid().get());
+          members.add(signalServiceAddress.getUuid());
         }
         output = m.getGroupsV2Manager().removeMembers(groupID, members);
       } else if (updateRole != null) {
