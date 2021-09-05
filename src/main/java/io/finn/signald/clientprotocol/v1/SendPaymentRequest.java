@@ -33,7 +33,6 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 import org.asamk.signal.GroupNotFoundException;
-import org.asamk.signal.NotAGroupMemberException;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
@@ -67,7 +66,7 @@ public class SendPaymentRequest implements RequestType<SendResponse> {
       results = m.send(messageBuilder, address, null);
     } catch (io.finn.signald.exceptions.InvalidRecipientException e) {
       throw new InvalidRecipientException();
-    } catch (io.finn.signald.exceptions.UnknownGroupException | GroupNotFoundException | NotAGroupMemberException e) {
+    } catch (io.finn.signald.exceptions.UnknownGroupException | GroupNotFoundException e) {
       throw new UnknownGroupException();
     }
     return new SendResponse(results, when);
