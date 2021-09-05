@@ -202,9 +202,14 @@ public class SessionsTable implements SessionStore {
     List<SignalServiceAddress> addressList = list.stream().map(AddressUtil::fromIdentifier).collect(Collectors.toList());
     try {
       List<Pair<Integer, SignalServiceAddress>> recipientList = recipientsTable.get(addressList);
+
       String query = "SELECT " + RecipientsTable.TABLE_NAME + "." + RecipientsTable.UUID + "," + DEVICE_ID + "," + RECORD + " FROM " + TABLE_NAME + "," +
-                     RecipientsTable.TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RecipientsTable.TABLE_NAME + "." + RecipientsTable.ROW_ID + " = " + RECIPIENT +
-                     " AND (" + (RECIPIENT + " = ? OR".repeat(recipientList.size() - 1)) + ")";
+                     RecipientsTable.TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RecipientsTable.TABLE_NAME + "." + RecipientsTable.ROW_ID + " = " + RECIPIENT + " AND (";
+      for (int i = 0; i < recipientList.size() - 1; i++) {
+        query += RECIPIENT + " = ? OR";
+      }
+      query += RECIPIENT + " = ?)";
+
       PreparedStatement statement = Database.getConn().prepareStatement(query);
       int i = 0;
       statement.setString(i++, uuid.toString());

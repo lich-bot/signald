@@ -23,6 +23,11 @@ import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
+import java.io.IOException;
+import java.net.Socket;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.metadata.InvalidMetadataMessageException;
@@ -34,12 +39,6 @@ import org.whispersystems.libsignal.InvalidMessageException;
 import org.whispersystems.libsignal.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-
-import java.io.IOException;
-import java.net.Socket;
-import java.sql.SQLException;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
   final String username;
@@ -82,11 +81,11 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
     }
     if (removed && receivers.get(username).sockets.size() == 0) {
       logger.info("Last client for " + Util.redact(username) + " unsubscribed, shutting down message pipe");
-//      try {
-//        Manager.get(username).shutdownMessagePipe();
-//      } catch (IOException | NoSuchAccountException | SQLException | InvalidKeyException | ServerNotFoundException | InvalidProxyException e) {
-//        logger.catching(e);
-//      }
+      //      try {
+      //        Manager.get(username).shutdownMessagePipe();
+      //      } catch (IOException | NoSuchAccountException | SQLException | InvalidKeyException | ServerNotFoundException | InvalidProxyException e) {
+      //        logger.catching(e);
+      //      }
       receivers.remove(username);
     }
     return removed;

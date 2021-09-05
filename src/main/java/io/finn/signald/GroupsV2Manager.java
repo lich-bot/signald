@@ -17,6 +17,8 @@
 
 package io.finn.signald;
 
+import static org.signal.storageservice.protos.groups.AccessControl.AccessRequired.UNSATISFIABLE;
+
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.finn.signald.clientprotocol.v1.JsonGroupJoinInfo;
 import io.finn.signald.db.RecipientsTable;
@@ -26,6 +28,18 @@ import io.finn.signald.storage.GroupsV2Storage;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
 import io.finn.signald.storage.ProfileCredentialStore;
 import io.finn.signald.util.GroupsUtil;
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.storageservice.protos.groups.AccessControl;
@@ -53,21 +67,6 @@ import org.whispersystems.signalservice.internal.push.exceptions.NotInGroupExcep
 import org.whispersystems.signalservice.internal.util.Util;
 import org.whispersystems.util.Base64;
 import org.whispersystems.util.Base64UrlSafe;
-
-import java.io.ByteArrayOutputStream;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
-import static org.signal.storageservice.protos.groups.AccessControl.AccessRequired.UNSATISFIABLE;
 
 public class GroupsV2Manager {
   private final GroupsV2Api groupsV2Api;

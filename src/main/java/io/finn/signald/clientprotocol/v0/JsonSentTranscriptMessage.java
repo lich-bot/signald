@@ -22,14 +22,13 @@ import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
+import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 @Deprecated(1641027661)
 public class JsonSentTranscriptMessage {

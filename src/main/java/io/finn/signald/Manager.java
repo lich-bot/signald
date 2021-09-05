@@ -16,13 +16,35 @@
  */
 package io.finn.signald;
 
+import static java.nio.file.attribute.PosixFilePermission.*;
+import static org.whispersystems.signalservice.internal.util.Util.isEmpty;
+
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.db.*;
 import io.finn.signald.exceptions.*;
 import io.finn.signald.jobs.*;
 import io.finn.signald.storage.*;
-import io.finn.signald.util.*;
+import io.finn.signald.util.AttachmentUtil;
+import io.finn.signald.util.GroupsUtil;
+import io.finn.signald.util.MutableLong;
+import io.finn.signald.util.SafetyNumberHelper;
+import java.io.*;
+import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.GroupNotFoundException;
@@ -70,26 +92,6 @@ import org.whispersystems.signalservice.internal.push.UnsupportedDataMessageExce
 import org.whispersystems.signalservice.internal.push.VerifyAccountResponse;
 import org.whispersystems.signalservice.internal.util.concurrent.ListenableFuture;
 import org.whispersystems.util.Base64;
-
-import java.io.*;
-import java.net.URI;
-import java.net.URLDecoder;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.PosixFilePermissions;
-import java.sql.SQLException;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
-
-import static java.nio.file.attribute.PosixFilePermission.*;
-import static org.whispersystems.signalservice.internal.util.Util.isEmpty;
 
 public class Manager {
   private final Logger logger;
@@ -787,21 +789,13 @@ public class Manager {
   private void handleEndSession(SignalServiceAddress address) { accountData.axolotlStore.deleteAllSessions(address); }
 
   public List<SendMessageResult> send(SignalServiceDataMessage.Builder messageBuilder, JsonAddress recipientAddress, String recipientGroupId)
-      throws GroupNotFoundException, NotAGroupMemberException, IOException, InvalidRecipientException, UnknownGroupException {
+      throws GroupNotFoundException, IOException, InvalidRecipientException, UnknownGroupException {
     if (recipientGroupId != null && recipientAddress == null) {
-      if (recipientGroupId.length() == 24) { // redirect to new group if it exists
-        recipientGroupId = accountData.getMigratedGroupId(recipientGroupId);
+      Group group = accountData.groupsV2.get(recipientGroupId);
+      if (group == null) {
+        throw new GroupNotFoundException(recipientGroupId);
       }
-      if (recipientGroupId.length() == 44) {
-        Group group = accountData.groupsV2.get(recipientGroupId);
-        if (group == null) {
-          throw new GroupNotFoundException("Unknown group requested");
-        }
-        return sendGroupV2Message(messageBuilder, group.getSignalServiceGroupV2());
-      } else {
-        byte[] groupId = Base64.decode(recipientGroupId);
-        return sendGroupMessage(messageBuilder, groupId);
-      }
+      return sendGroupV2Message(messageBuilder, group.getSignalServiceGroupV2());
     } else if (recipientAddress != null && recipientGroupId == null) {
       List<SignalServiceAddress> r = new ArrayList<>();
       r.add(recipientAddress.getSignalServiceAddress());

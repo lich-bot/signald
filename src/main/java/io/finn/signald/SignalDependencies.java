@@ -19,6 +19,9 @@ package io.finn.signald;
 
 import io.finn.signald.db.DatabaseProtocolStore;
 import io.finn.signald.db.ServersTable;
+import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.signal.zkgroup.profiles.ClientZkProfileOperations;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceDataStore;
@@ -32,10 +35,6 @@ import org.whispersystems.signalservice.api.websocket.WebSocketFactory;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
 import org.whispersystems.signalservice.internal.websocket.WebSocketConnection;
-
-import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class SignalDependencies {
   private final SignalServiceConfiguration serviceConfiguration;
