@@ -119,16 +119,17 @@ func checkDiff() (response checkOutput, err error) {
 					response.failures = append(response.failures, "removed type: "+version+"."+typeName)
 				}
 
-			}
-			for fieldName := range t.Fields {
-				_, ok = oldType.Fields[fieldName]
-				if !ok {
-					if version == "v0" {
-						response.warnings = append(response.warnings, "field in "+version+"."+typeName+" removed: "+fieldName)
-					} else {
-						response.failures = append(response.failures, "field in "+version+"."+typeName+" removed: "+fieldName)
+			} else {
+				for fieldName := range t.Fields {
+					_, ok = oldType.Fields[fieldName]
+					if !ok {
+						if version == "v0" {
+							response.warnings = append(response.warnings, "field in "+version+"."+typeName+" removed: "+fieldName)
+						} else {
+							response.failures = append(response.failures, "field in "+version+"."+typeName+" removed: "+fieldName)
+						}
+						continue
 					}
-					continue
 				}
 			}
 		}
