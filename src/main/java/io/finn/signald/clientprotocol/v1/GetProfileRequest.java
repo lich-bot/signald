@@ -56,7 +56,7 @@ public class GetProfileRequest implements RequestType<Profile> {
   public Profile run(Request request) throws IOException, SQLException, NoSuchAccount, ProfileUnavailable, InterruptedException, ExecutionException, TimeoutException,
                                              InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException {
     Manager m = Utils.getManager(account);
-    Recipient recipient = m.getRecipientsTable().get(requestedAddress.getSignalServiceAddress());
+    Recipient recipient = m.getRecipientsTable().get(requestedAddress);
     ContactStore.ContactInfo contact = m.getAccountData().contactStore.getContact(recipient);
     ProfileAndCredentialEntry profileEntry = m.getAccountData().profileCredentialStore.get(recipient);
     if (profileEntry == null) {

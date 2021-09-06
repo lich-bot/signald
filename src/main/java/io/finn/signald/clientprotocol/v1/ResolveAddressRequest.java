@@ -42,6 +42,6 @@ public class ResolveAddressRequest implements RequestType<JsonAddress> {
   @Override
   public JsonAddress run(Request request)
       throws IOException, NoSuchAccount, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException {
-    return new JsonAddress(Utils.getManager(account).getRecipientsTable().get(partial.getSignalServiceAddress()));
+    return new JsonAddress(Utils.getManager(account).getRecipientsTable().get(partial));
   }
 }

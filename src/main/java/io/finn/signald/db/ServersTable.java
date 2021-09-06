@@ -90,7 +90,8 @@ public class ServersTable {
   public static Server getServer(UUID uuid) throws SQLException, IOException, ServerNotFoundException, InvalidProxyException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + SERVER_UUID + "," + SERVICE_URL + ", " + CDN_URLS + "," + CONTACT_DISCOVERY_URL + ", " +
                                                                       KEY_BACKUP_URL + ", " + STORAGE_URL + ", " + ZK_GROUP_PUBLIC_PARAMS + ", " + UNIDENTIFIED_SENDER_ROOT + "," +
-                                                                      PROXY + "," + CA + " FROM " + TABLE_NAME + " WHERE " + SERVER_UUID + " = ?");
+                                                                      PROXY + "," + CA + "," + KEY_BACKUP_SERVICE_NAME + "," + KEY_BACKUP_SERVICE_ID + "," + KEY_BACKUP_MRENCLAVE +
+                                                                      "," + CDS_MRENCLAVE + "," + IAS_CA + " FROM " + TABLE_NAME + " WHERE " + SERVER_UUID + " = ?");
     statement.setString(1, uuid.toString());
     ResultSet rows = statement.executeQuery();
 
@@ -134,7 +135,8 @@ public class ServersTable {
 
     PreparedStatement statement =
         Database.getConn().prepareStatement("SELECT " + SERVER_UUID + "," + SERVICE_URL + ", " + CDN_URLS + "," + CONTACT_DISCOVERY_URL + ", " + KEY_BACKUP_URL + ", " +
-                                            STORAGE_URL + ", " + ZK_GROUP_PUBLIC_PARAMS + ", " + UNIDENTIFIED_SENDER_ROOT + "," + PROXY + "," + CA + " FROM " + TABLE_NAME);
+                                            STORAGE_URL + ", " + ZK_GROUP_PUBLIC_PARAMS + ", " + UNIDENTIFIED_SENDER_ROOT + "," + PROXY + "," + CA + "," + KEY_BACKUP_SERVICE_NAME +
+                                            "," + KEY_BACKUP_SERVICE_ID + "," + KEY_BACKUP_MRENCLAVE + "," + CDS_MRENCLAVE + "," + IAS_CA + " FROM " + TABLE_NAME);
     ResultSet rows = statement.executeQuery();
     while (rows.next()) {
       UUID serverUUID = UUID.fromString(rows.getString(SERVER_UUID));
