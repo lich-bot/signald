@@ -76,7 +76,6 @@ import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.Medium;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.*;
-import org.whispersystems.signalservice.api.account.AccountAttributes;
 import org.whispersystems.signalservice.api.crypto.*;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
@@ -103,14 +102,7 @@ public class Manager {
   private final Logger logger;
   private final SignalServiceConfiguration serviceConfiguration;
   private final ECPublicKey unidentifiedSenderTrustRoot;
-  private final static String USER_AGENT = BuildConfig.USER_AGENT;
-  private static final AccountAttributes.Capabilities SERVICE_CAPABILITIES = new AccountAttributes.Capabilities(false, true, false, true, false, false);
   private final static int ACCOUNT_REFRESH_VERSION = 3;
-
-  public final static int PREKEY_MINIMUM_COUNT = 20;
-  private final static int PREKEY_BATCH_SIZE = 100;
-  private final static int MAX_ATTACHMENT_SIZE = 150 * 1024 * 1024;
-  public final static long AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE = 10 * 1024 * 1024;
 
   private static final ConcurrentHashMap<String, Manager> managers = new ConcurrentHashMap<>();
 
@@ -119,7 +111,7 @@ public class Manager {
   private static String avatarsPath;
   private static String stickersPath;
 
-  private AccountData accountData;
+  private final AccountData accountData;
   private final UUID accountUUID;
   private final Recipient self;
   private GroupsV2Manager groupsV2Manager;
@@ -271,7 +263,7 @@ public class Manager {
   private List<PreKeyRecord> generatePreKeys() throws IOException {
     List<PreKeyRecord> records = new LinkedList<>();
 
-    for (int i = 0; i < PREKEY_BATCH_SIZE; i++) {
+    for (int i = 0; i < ServiceConfig.PREKEY_BATCH_SIZE; i++) {
       int preKeyId = (accountData.preKeyIdOffset + i) % Medium.MAX_VALUE;
       ECKeyPair keyPair = Curve.generateKeyPair();
       PreKeyRecord record = new PreKeyRecord(preKeyId, keyPair);
@@ -280,7 +272,7 @@ public class Manager {
       records.add(record);
     }
 
-    accountData.preKeyIdOffset = (accountData.preKeyIdOffset + PREKEY_BATCH_SIZE + 1) % Medium.MAX_VALUE;
+    accountData.preKeyIdOffset = (accountData.preKeyIdOffset + ServiceConfig.PREKEY_BATCH_SIZE + 1) % Medium.MAX_VALUE;
     accountData.save();
 
     return records;
@@ -1278,7 +1270,7 @@ public class Manager {
     final SignalServiceMessageReceiver messageReceiver = dependencies.getMessageReceiver();
 
     File tmpFile = Util.createTempFile();
-    try (InputStream input = messageReceiver.retrieveAttachment(pointer, tmpFile, MAX_ATTACHMENT_SIZE)) {
+    try (InputStream input = messageReceiver.retrieveAttachment(pointer, tmpFile, ServiceConfig.MAX_ATTACHMENT_SIZE)) {
       try (OutputStream output = new FileOutputStream(outputFile)) {
         byte[] buffer = new byte[4096];
         int read;
@@ -1302,7 +1294,7 @@ public class Manager {
 
   private InputStream retrieveAttachmentAsStream(SignalServiceAttachmentPointer pointer, File tmpFile) throws IOException, InvalidMessageException, MissingConfigurationException {
     final SignalServiceMessageReceiver messageReceiver = dependencies.getMessageReceiver();
-    return messageReceiver.retrieveAttachment(pointer, tmpFile, MAX_ATTACHMENT_SIZE);
+    return messageReceiver.retrieveAttachment(pointer, tmpFile, ServiceConfig.MAX_ATTACHMENT_SIZE);
   }
 
   private void sendVerifiedMessage(Recipient destination, IdentityKey identityKey, TrustLevel trustLevel)
@@ -1501,7 +1493,7 @@ public class Manager {
     String signalingKey = AccountDataTable.getString(accountUUID, AccountDataTable.Key.SIGNALING_KEY);
     int localRegistrationId = AccountDataTable.getInt(accountUUID, AccountDataTable.Key.LOCAL_REGISTRATION_ID);
     getAccountManager().setAccountAttributes(deviceName, signalingKey, localRegistrationId, true, null, null, accountData.getSelfUnidentifiedAccessKey(), true,
-                                             SERVICE_CAPABILITIES, true);
+                                             ServiceConfig.CAPABILITIES, true);
     if (accountData.lastAccountRefresh < ACCOUNT_REFRESH_VERSION) {
       accountData.lastAccountRefresh = ACCOUNT_REFRESH_VERSION;
       accountData.save();
@@ -1596,8 +1588,8 @@ public class Manager {
 
   private void retrieveProfileAvatar(String avatarsPath, ProfileKey profileKey, OutputStream outputStream) throws IOException {
     File tmpFile = Util.createTempFile();
-    try (InputStream input = dependencies.getMessageReceiver().retrieveProfileAvatar(avatarsPath, tmpFile, profileKey, AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE)) {
-      Util.copyStream(input, outputStream, (int)AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE);
+    try (InputStream input = dependencies.getMessageReceiver().retrieveProfileAvatar(avatarsPath, tmpFile, profileKey, ServiceConfig.AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE)) {
+      Util.copyStream(input, outputStream, (int)ServiceConfig.AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE);
     } finally {
       try {
         Files.delete(tmpFile.toPath());

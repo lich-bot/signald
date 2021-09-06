@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.protobuf.ByteString;
 import io.finn.signald.Manager;
+import io.finn.signald.ServiceConfig;
 import io.finn.signald.Util;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.util.GroupsUtil;
@@ -173,7 +174,7 @@ public class Group {
     GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(m.getServiceConfiguration()).forGroup(groupSecretParams);
 
     File tmpFile = Util.createTempFile();
-    try (InputStream input = m.getMessageReceiver().retrieveGroupsV2ProfileAvatar(group.getAvatar(), tmpFile, Manager.AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE)) {
+    try (InputStream input = m.getMessageReceiver().retrieveGroupsV2ProfileAvatar(group.getAvatar(), tmpFile, ServiceConfig.AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE)) {
       byte[] encryptedData = Util.readFully(input);
       byte[] decryptedData = groupOperations.decryptAvatar(encryptedData);
       OutputStream outputStream = new FileOutputStream(avatarFile);

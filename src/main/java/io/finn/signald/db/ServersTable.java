@@ -23,17 +23,6 @@ import io.finn.signald.BuildConfig;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.util.JSONUtil;
-import okhttp3.Interceptor;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.ecc.Curve;
-import org.whispersystems.libsignal.ecc.ECPublicKey;
-import org.whispersystems.libsignal.util.guava.Optional;
-import org.whispersystems.signalservice.api.push.TrustStore;
-import org.whispersystems.signalservice.internal.configuration.*;
-import org.whispersystems.util.Base64;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -45,6 +34,16 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import okhttp3.Interceptor;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.ecc.Curve;
+import org.whispersystems.libsignal.ecc.ECPublicKey;
+import org.whispersystems.libsignal.util.guava.Optional;
+import org.whispersystems.signalservice.api.push.TrustStore;
+import org.whispersystems.signalservice.internal.configuration.*;
+import org.whispersystems.util.Base64;
 
 public class ServersTable {
   public static final UUID DEFAULT_SERVER = UUID.fromString(BuildConfig.DEFAULT_SERVER_UUID);

@@ -20,6 +20,7 @@ package io.finn.signald.jobs;
 import static io.finn.signald.db.AccountDataTable.Key.LAST_PRE_KEY_REFRESH;
 
 import io.finn.signald.Manager;
+import io.finn.signald.ServiceConfig;
 import io.finn.signald.db.AccountDataTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
@@ -43,7 +44,7 @@ public class RefreshPreKeysJob implements Job {
   @Override
   public void run() throws IOException, SQLException, NoSuchAccountException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Manager.get(uuid);
-    if (m.getAccountManager().getPreKeysCount() < Manager.PREKEY_MINIMUM_COUNT) {
+    if (m.getAccountManager().getPreKeysCount() < ServiceConfig.PREKEY_MINIMUM_COUNT) {
       logger.info("insufficient number of pre keys available, refreshing");
       m.refreshPreKeys();
     }
