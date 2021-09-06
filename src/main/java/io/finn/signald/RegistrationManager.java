@@ -33,11 +33,14 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.asamk.signal.util.RandomUtils;
 import org.signal.zkgroup.InvalidInputException;
+import org.signal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.KeyHelper;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
+import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.internal.ServiceResponse;
@@ -98,11 +101,17 @@ public class RegistrationManager {
     verificationCode = verificationCode.replace("-", "");
     String signalingKey = Util.getSecret(52);
     int registrationID = PendingAccountDataTable.getInt(e164, PendingAccountDataTable.Key.LOCAL_REGISTRATION_ID);
+
+    byte[] key = new byte[32];
+    RandomUtils.getSecureRandom().nextBytes(key);
+    ProfileKey profileKey = new ProfileKey(key);
+    byte[] selfUnidentifiedAccessKey = UnidentifiedAccess.deriveAccessKeyFrom(profileKey);
     ServiceResponse<VerifyAccountResponse> r =
-        accountManager.verifyAccount(verificationCode, registrationID, true, accountData.getSelfUnidentifiedAccessKey(), false, ServiceConfig.CAPABILITIES, true);
+        accountManager.verifyAccount(verificationCode, registrationID, true, selfUnidentifiedAccessKey, false, ServiceConfig.CAPABILITIES, true);
     VerifyAccountResponse result = r.getResult().get();
     UUID accountUUID = UUID.fromString(result.getUuid());
     accountData.setUUID(accountUUID);
+    accountData.setProfileKey(profileKey);
     String server = PendingAccountDataTable.getString(e164, PendingAccountDataTable.Key.SERVER_UUID);
     AccountsTable.add(e164, accountUUID, getFileName(), server == null ? null : UUID.fromString(server));
     accountData.save();

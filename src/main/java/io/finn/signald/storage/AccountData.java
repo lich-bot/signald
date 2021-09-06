@@ -356,6 +356,12 @@ public class AccountData {
     }
     return entry.getProfileKey();
   }
+
+  @JsonIgnore
+  public void setProfileKey(ProfileKey profileKey) {
+    profileCredentialStore.storeProfileKey(self, profileKey);
+  }
+
   // Jackson getters and setters
 
   // migrate old threadStore which tracked expiration timers, now moved to groups and contacts
