@@ -35,7 +35,7 @@ import org.whispersystems.libsignal.InvalidKeyException;
 
 @Doc("get all known identity keys")
 @ProtocolType("get_all_identities")
-public class GetAllIdentitiesRequest implements RequestType<AllIdentityKeyList> {
+public class GetAllIdentities implements RequestType<AllIdentityKeyList> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
   @Override
