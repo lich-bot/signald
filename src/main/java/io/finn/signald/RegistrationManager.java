@@ -108,6 +108,16 @@ public class RegistrationManager {
     byte[] selfUnidentifiedAccessKey = UnidentifiedAccess.deriveAccessKeyFrom(profileKey);
     ServiceResponse<VerifyAccountResponse> r =
         accountManager.verifyAccount(verificationCode, registrationID, true, selfUnidentifiedAccessKey, false, ServiceConfig.CAPABILITIES, true);
+
+    final var throwableOptional = r.getExecutionError().or(r.getApplicationError());
+    if (throwableOptional.isPresent()) {
+      if (throwableOptional.get() instanceof IOException) {
+        throw(IOException) throwableOptional.get();
+      } else {
+        throw new IOException(throwableOptional.get());
+      }
+    }
+
     VerifyAccountResponse result = r.getResult().get();
     UUID accountUUID = UUID.fromString(result.getUuid());
     accountData.setUUID(accountUUID);
