@@ -28,6 +28,7 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import java.io.IOException;
 import java.sql.SQLException;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -41,7 +42,7 @@ public class DeleteAccountRequest implements RequestType<Empty> {
   @Doc("delete account information from the server as well (default false)") public boolean server = false;
 
   @Override
-  public Empty run(Request request) throws SQLException, IOException, NoSuchAccount, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+  public Empty run(Request request) throws SQLException, IOException, NoSuchAccount, InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException {
     Manager m = Utils.getManager(account);
     m.deleteAccount(server);
     return new Empty();

@@ -24,14 +24,15 @@ import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
+import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidAddressException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import java.io.IOException;
 import java.sql.SQLException;
 import org.asamk.signal.TrustLevel;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.fingerprint.FingerprintParsingException;
 import org.whispersystems.libsignal.fingerprint.FingerprintVersionMismatchException;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
 
 @ProtocolType("trust")
@@ -57,8 +58,9 @@ public class TrustRequest implements RequestType<Empty> {
   public String trustLevel = "TRUSTED_VERIFIED";
 
   @Override
-  public Empty run(Request request) throws SQLException, IOException, NoSuchAccount, InvalidRequestException, FingerprintVersionMismatchException, FingerprintParsingException,
-                                           UnknownIdentityKey, InvalidAddressException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+  public Empty run(Request request)
+      throws SQLException, IOException, NoSuchAccount, InvalidRequestException, FingerprintVersionMismatchException, FingerprintParsingException, UnknownIdentityKey,
+             InvalidAddressException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException {
     TrustLevel level;
     try {
       level = TrustLevel.valueOf(trustLevel.toUpperCase());
@@ -67,13 +69,13 @@ public class TrustRequest implements RequestType<Empty> {
     }
 
     Manager m = Utils.getManager(account);
-    SignalServiceAddress addr = m.getResolver().resolve(address.getSignalServiceAddress());
+    Recipient recipient = m.getRecipientsTable().get(address.getSignalServiceAddress());
 
     boolean result;
     if (safetyNumber != null) {
-      result = m.trustIdentitySafetyNumber(addr, safetyNumber, level);
+      result = m.trustIdentitySafetyNumber(recipient, safetyNumber, level);
     } else {
-      result = m.trustIdentitySafetyNumber(addr, Base64.decode(qrCodeData), level);
+      result = m.trustIdentitySafetyNumber(recipient, Base64.decode(qrCodeData), level);
     }
     if (!result) {
       throw new UnknownIdentityKey();

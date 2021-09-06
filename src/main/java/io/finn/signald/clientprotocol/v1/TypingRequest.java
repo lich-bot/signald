@@ -29,9 +29,13 @@ import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import io.finn.signald.clientprotocol.v1.exceptions.UnknownGroupException;
+import io.finn.signald.db.Recipient;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.storage.Group;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.TrustLevel;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -39,7 +43,6 @@ import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceTypingMessage;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
 
 @ProtocolType("typing")
@@ -53,7 +56,7 @@ public class TypingRequest implements RequestType<Empty> {
 
   @Override
   public Empty run(Request request) throws SQLException, IOException, NoSuchAccount, UntrustedIdentityException, InvalidKeyException, ServerNotFoundException,
-                                           InvalidProxyException, GroupNotFoundException, RequestValidationFailure, UnknownGroupException {
+                                           InvalidProxyException, GroupNotFoundException, RequestValidationFailure, UnknownGroupException, NoSuchAccountException {
     Manager m = Utils.getManager(account);
 
     byte[] groupId = null;
@@ -73,9 +76,9 @@ public class TypingRequest implements RequestType<Empty> {
     SignalServiceMessageSender messageSender = m.getMessageSender();
 
     if (address != null) {
-      SignalServiceAddress addr = m.getResolver().resolve(address.getSignalServiceAddress());
+      Recipient recipient = m.getRecipientsTable().get(address.getSignalServiceAddress());
       try {
-        messageSender.sendTyping(addr, m.getAccessPairFor(addr), message);
+        messageSender.sendTyping(recipient.getAddress(), m.getAccessPairFor(recipient), message);
       } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
         m.getAccountData().axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
         throw e;
@@ -90,7 +93,8 @@ public class TypingRequest implements RequestType<Empty> {
       if (g == null) {
         throw new GroupNotFoundException("Unknown group requested");
       }
-      messageSender.sendTyping(g.getMembers(), m.getAccessPairFor(g.getMembers()), message, null);
+      List<Recipient> recipients = m.getRecipientsTable().get(g.getMembers());
+      messageSender.sendTyping(recipients.stream().map(Recipient::getAddress).collect(Collectors.toList()), m.getAccessPairFor(recipients), message, null);
     } else {
       throw new RequestValidationFailure("address or group must be specified");
     }

@@ -33,7 +33,18 @@ public class AccountDataTable {
   private static final String KEY = "key";
   private static final String VALUE = "value";
 
-  public enum Key { OWN_IDENTITY_KEY_PAIR, LOCAL_REGISTRATION_ID, LAST_PRE_KEY_REFRESH, DEVICE_NAME, SENDER_CERTIFICATE, SENDER_CERTIFICATE_REFRESH_TIME, MULTI_DEVICE }
+  public enum Key {
+    OWN_IDENTITY_KEY_PAIR,
+    LOCAL_REGISTRATION_ID,
+    LAST_PRE_KEY_REFRESH,
+    DEVICE_NAME,
+    SENDER_CERTIFICATE,
+    SENDER_CERTIFICATE_REFRESH_TIME,
+    MULTI_DEVICE,
+    DEVICE_ID,
+    PASSWORD,
+    SIGNALING_KEY
+  }
 
   public static byte[] getBytes(UUID uuid, Key key) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + ACCOUNT_UUID + " = ?");

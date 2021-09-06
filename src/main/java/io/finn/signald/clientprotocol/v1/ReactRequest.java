@@ -26,7 +26,9 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidRecipientException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.UnknownGroupException;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -48,20 +50,25 @@ public class ReactRequest implements RequestType<SendResponse> {
   public long timestamp;
 
   @Override
-  public SendResponse run(Request request) throws IOException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException, InvalidInputException,
-                                                  UnknownGroupException, SQLException, NoSuchAccount, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+  public SendResponse run(Request request)
+      throws IOException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException, InvalidInputException, UnknownGroupException, SQLException, NoSuchAccount,
+             InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException {
     Manager m = Utils.getManager(username);
     if (timestamp > 0) {
       timestamp = System.currentTimeMillis();
     }
+    Recipient recipient = null;
+    if (recipientAddress != null) {
+      recipient = m.getRecipientsTable().get(recipientAddress);
+    }
 
-    reaction.resolve(m.getResolver());
-
+    Recipient reactionTarget = m.getRecipientsTable().get(reaction.targetAuthor);
+    reaction.targetAuthor = new JsonAddress(reactionTarget);
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
     messageBuilder.withReaction(reaction.getReaction());
     List<SendMessageResult> results = null;
     try {
-      results = m.send(messageBuilder, recipientAddress, recipientGroupId);
+      results = m.send(messageBuilder, recipient, recipientGroupId);
     } catch (io.finn.signald.exceptions.InvalidRecipientException e) {
       throw new InvalidRecipientException();
     } catch (io.finn.signald.exceptions.UnknownGroupException e) {

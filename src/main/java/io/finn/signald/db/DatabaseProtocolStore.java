@@ -17,7 +17,7 @@
 
 package io.finn.signald.db;
 
-import io.finn.signald.exceptions.InvalidAddressException;
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
@@ -31,7 +31,6 @@ import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.signalservice.api.SignalServiceDataStore;
 import org.whispersystems.signalservice.api.push.DistributionId;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class DatabaseProtocolStore implements SignalServiceDataStore {
   private final PreKeysTable preKeys;
@@ -75,9 +74,9 @@ public class DatabaseProtocolStore implements SignalServiceDataStore {
     return identityKeys.saveIdentity(address, identityKey);
   }
 
-  public boolean saveIdentity(String identifier, IdentityKey key, TrustLevel level) { return identityKeys.saveIdentity(identifier, key, level); }
+  public boolean saveIdentity(String identifier, IdentityKey key, TrustLevel level) throws IOException, SQLException { return identityKeys.saveIdentity(identifier, key, level); }
 
-  public boolean saveIdentity(SignalServiceAddress identifier, IdentityKey key, TrustLevel level) { return identityKeys.saveIdentity(identifier, key, level); }
+  public boolean saveIdentity(Recipient recipient, IdentityKey key, TrustLevel level) { return identityKeys.saveIdentity(recipient, key, level); }
 
   @Override
   public boolean isTrustedIdentity(SignalProtocolAddress address, IdentityKey identityKey, Direction direction) {
@@ -89,9 +88,7 @@ public class DatabaseProtocolStore implements SignalServiceDataStore {
     return identityKeys.getIdentity(address);
   }
 
-  public List<IdentityKeysTable.IdentityKeyRow> getIdentities(SignalServiceAddress address) throws SQLException, InvalidKeyException, InvalidAddressException {
-    return identityKeys.getIdentities(address);
-  }
+  public List<IdentityKeysTable.IdentityKeyRow> getIdentities(Recipient recipient) throws SQLException, InvalidKeyException { return identityKeys.getIdentities(recipient); }
 
   public List<IdentityKeysTable.IdentityKeyRow> getIdentities() throws SQLException, InvalidKeyException { return identityKeys.getIdentities(); }
 
@@ -150,7 +147,7 @@ public class DatabaseProtocolStore implements SignalServiceDataStore {
     sessions.deleteAllSessions(name);
   }
 
-  public void deleteAllSessions(SignalServiceAddress address) { sessions.deleteAllSessions(address); }
+  public void deleteAllSessions(Recipient recipient) { sessions.deleteAllSessions(recipient); }
 
   @Override
   public SignedPreKeyRecord loadSignedPreKey(int signedPreKeyId) throws InvalidKeyIdException {

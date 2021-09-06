@@ -26,13 +26,13 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import java.io.IOException;
 import java.sql.SQLException;
 import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
-@Doc(
-    "Resolve a partial JsonAddress with only a number or UUID to one with both. Anywhere that signald accepts a JsonAddress will except a partial, this is a convenience function for client authors, mostly because signald doesn't resolve all the partials it returns")
+@Doc("Resolve a partial JsonAddress with only a number or UUID to one with both. Anywhere that signald accepts a JsonAddress will except a partial, this is a convenience "
+     + "function for client authors, mostly because signald doesn't resolve all the partials it returns.")
 @ProtocolType("resolve_address")
 public class ResolveAddressRequest implements RequestType<JsonAddress> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The signal account to use") @Required public String account;
@@ -40,9 +40,8 @@ public class ResolveAddressRequest implements RequestType<JsonAddress> {
   @Doc("The partial address, missing fields") @Required public JsonAddress partial;
 
   @Override
-  public JsonAddress run(Request request) throws IOException, NoSuchAccount, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    SignalServiceAddress resolved;
-    resolved = Utils.getManager(account).getResolver().resolve(partial.getSignalServiceAddress());
-    return new JsonAddress(resolved);
+  public JsonAddress run(Request request)
+      throws IOException, NoSuchAccount, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException {
+    return new JsonAddress(Utils.getManager(account).getRecipientsTable().get(partial.getSignalServiceAddress()));
   }
 }

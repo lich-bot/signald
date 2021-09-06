@@ -30,6 +30,7 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.util.JSONUtil;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -82,7 +83,7 @@ public class SubscribeRequest implements RequestType<Empty> {
       try {
         IncomingMessage message = new IncomingMessage(envelope, content, account);
         broadcast(new ClientMessageWrapper(message));
-      } catch (SQLException | NoSuchAccount | InvalidKeyException | ServerNotFoundException | InvalidProxyException e) {
+      } catch (SQLException | NoSuchAccount | InvalidKeyException | ServerNotFoundException | InvalidProxyException | NoSuchAccountException e) {
         logger.warn("Exception while broadcasting incoming message: " + e.toString());
       }
     }

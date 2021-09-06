@@ -28,6 +28,7 @@ import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.OwnProfileKeyDoesNotExist;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
@@ -59,7 +60,7 @@ public class AcceptInvitationRequest implements RequestType<JsonGroupV2Info> {
   @Override
   public JsonGroupV2Info run(Request request)
       throws IOException, NoSuchAccount, VerificationFailedException, InterruptedException, ExecutionException, TimeoutException, UnknownGroupException, SQLException,
-             OwnProfileKeyDoesNotExist, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+             OwnProfileKeyDoesNotExist, InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException {
     Manager m = Utils.getManager(account);
     AccountData accountData = m.getAccountData();
     Group group = null;
@@ -70,7 +71,7 @@ public class AcceptInvitationRequest implements RequestType<JsonGroupV2Info> {
     }
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
     GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(m.getServiceConfiguration()).forGroup(groupSecretParams);
-    ProfileKeyCredential ownProfileKeyCredential = m.getRecipientProfileKeyCredential(m.getOwnAddress()).getProfileKeyCredential();
+    ProfileKeyCredential ownProfileKeyCredential = m.getRecipientProfileKeyCredential(m.getOwnRecipient()).getProfileKeyCredential();
 
     if (ownProfileKeyCredential == null) {
       throw new OwnProfileKeyDoesNotExist();

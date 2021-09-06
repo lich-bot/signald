@@ -21,6 +21,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.finn.signald.Util;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.db.Recipient;
 import io.finn.signald.storage.AddressResolver;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
@@ -86,6 +87,7 @@ public class JsonAddress {
       uuid = address.getUuid().toString();
     }
   }
+  public JsonAddress(Recipient recipient) { this(recipient.getAddress()); }
 
   public JsonAddress(String identifier) {
     if (identifier.startsWith("+")) {

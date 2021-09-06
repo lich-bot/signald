@@ -15,21 +15,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.clientprotocol.v1;
+package io.finn.signald.exceptions;
 
-import io.finn.signald.db.AccountsTable;
-import io.finn.signald.exceptions.NoSuchAccountException;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
-public class AccountList {
-  public final List<Account> accounts;
-  public AccountList() throws SQLException, NoSuchAccountException {
-    accounts = new ArrayList<>();
-    for (UUID uuid : AccountsTable.getAll()) {
-      accounts.add(new Account(uuid));
-    }
+public class UserAlreadyExistsException extends Exception {
+  private final UUID uuid;
+  public UserAlreadyExistsException(UUID uuid) {
+    super("a user with that UUID is already registered");
+    this.uuid = uuid;
   }
+
+  public UUID getUuid() { return uuid; }
 }

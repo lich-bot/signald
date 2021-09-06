@@ -21,6 +21,7 @@ import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -38,7 +39,7 @@ public class JsonSentTranscriptMessage {
   public boolean isRecipientUpdate;
 
   JsonSentTranscriptMessage(SentTranscriptMessage s, String username)
-      throws IOException, NoSuchAccount, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+      throws IOException, NoSuchAccount, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException {
     if (s.getDestination().isPresent()) {
       destination = new JsonAddress(s.getDestination().get());
     }

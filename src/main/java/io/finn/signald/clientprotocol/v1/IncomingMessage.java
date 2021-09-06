@@ -23,6 +23,7 @@ import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import java.io.IOException;
 import java.sql.SQLException;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -49,7 +50,7 @@ public class IncomingMessage {
   @JsonProperty("server_guid") public String serverGuid;
 
   public IncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content, String a)
-      throws SQLException, IOException, NoSuchAccount, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+      throws SQLException, IOException, NoSuchAccount, InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException {
     account = a;
 
     if (envelope.hasServerGuid()) {
@@ -58,9 +59,9 @@ public class IncomingMessage {
 
     Manager m = Utils.getManager(account);
     if (envelope.isUnidentifiedSender()) {
-      source = new JsonAddress(m.getResolver().resolve(envelope.getSourceAddress()));
+      source = new JsonAddress(m.getRecipientsTable().get(envelope.getSourceAddress()));
     } else if (content != null) {
-      source = new JsonAddress(m.getResolver().resolve(content.getSender()));
+      source = new JsonAddress(m.getRecipientsTable().get(content.getSender()));
     }
 
     if (envelope.hasSourceDevice()) {

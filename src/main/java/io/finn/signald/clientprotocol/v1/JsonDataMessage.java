@@ -26,6 +26,7 @@ import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -84,7 +85,7 @@ public class JsonDataMessage {
 
   public JsonDataMessage(SignalServiceDataMessage dataMessage, String username) throws IOException, NoSuchAccount, SQLException, InvalidKeyException,
                                                                                        io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException,
-                                                                                       io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException {
+                                                                                       io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException, NoSuchAccountException {
     timestamp = dataMessage.getTimestamp();
 
     if (dataMessage.getAttachments().isPresent()) {

@@ -30,6 +30,7 @@ import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import io.finn.signald.db.AccountDataTable;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import java.io.IOException;
 import java.sql.SQLException;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -41,7 +42,7 @@ public class SetDeviceNameRequest implements RequestType<Empty> {
 
   @JsonProperty("device_name") @Doc("The device name") public String deviceName;
   @Override
-  public Empty run(Request request) throws SQLException, IOException, NoSuchAccount, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+  public Empty run(Request request) throws SQLException, IOException, NoSuchAccount, InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException {
     Manager m = Utils.getManager(account);
     AccountDataTable.set(m.getUUID(), AccountDataTable.Key.DEVICE_NAME, deviceName);
     m.refreshAccount();

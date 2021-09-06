@@ -26,6 +26,7 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.storage.ContactStore;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -41,7 +42,7 @@ public class UpdateContactRequest implements RequestType<Profile> {
   @JsonProperty("inbox_position") public Integer inboxPosition;
 
   @Override
-  public Profile run(Request request) throws SQLException, IOException, NoSuchAccount, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+  public Profile run(Request request) throws SQLException, IOException, NoSuchAccount, InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException {
     ContactStore.ContactInfo c = new ContactStore.ContactInfo();
     c.address = address;
     c.name = name;

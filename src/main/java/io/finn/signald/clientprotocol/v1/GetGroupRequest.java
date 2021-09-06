@@ -29,6 +29,7 @@ import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import io.finn.signald.clientprotocol.v1.exceptions.UnknownGroupException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.storage.Group;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -48,7 +49,7 @@ public class GetGroupRequest implements RequestType<JsonGroupV2Info> {
 
   @Override
   public JsonGroupV2Info run(Request request) throws IOException, NoSuchAccount, InvalidGroupStateException, VerificationFailedException, UnknownGroupException, SQLException,
-                                                     InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+                                                     InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException {
     Manager m = Utils.getManager(account);
     GroupsV2Manager groupsV2Manager = m.getGroupsV2Manager();
     Group group;

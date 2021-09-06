@@ -28,6 +28,8 @@ import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ProfileUnavailable;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.db.Recipient;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.jobs.RefreshProfileJob;
 import io.finn.signald.storage.ContactStore;
@@ -37,7 +39,6 @@ import java.sql.SQLException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 @Doc("Get all information available about a user")
 @ProtocolType("get_profile")
@@ -53,11 +54,11 @@ public class GetProfileRequest implements RequestType<Profile> {
 
   @Override
   public Profile run(Request request) throws IOException, SQLException, NoSuchAccount, ProfileUnavailable, InterruptedException, ExecutionException, TimeoutException,
-                                             InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+                                             InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException {
     Manager m = Utils.getManager(account);
-    SignalServiceAddress address = m.getResolver().resolve(requestedAddress.getSignalServiceAddress());
-    ContactStore.ContactInfo contact = m.getAccountData().contactStore.getContact(address);
-    ProfileAndCredentialEntry profileEntry = m.getAccountData().profileCredentialStore.get(address);
+    Recipient recipient = m.getRecipientsTable().get(requestedAddress.getSignalServiceAddress());
+    ContactStore.ContactInfo contact = m.getAccountData().contactStore.getContact(recipient);
+    ProfileAndCredentialEntry profileEntry = m.getAccountData().profileCredentialStore.get(recipient);
     if (profileEntry == null) {
       if (contact == null) {
         throw new ProfileUnavailable();
@@ -75,7 +76,7 @@ public class GetProfileRequest implements RequestType<Profile> {
       action.run();
     }
 
-    Profile profile = new Profile(profileEntry.getProfile(), address, contact);
+    Profile profile = new Profile(profileEntry.getProfile(), recipient, contact);
     profile.populateAvatar(m);
     return profile;
   }

@@ -25,6 +25,7 @@ import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.text.DateFormat;
@@ -57,7 +58,7 @@ public class JsonMessageEnvelope {
   public JsonTypingMessage typing;
 
   public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, String username)
-      throws IOException, NoSuchAccount, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+      throws IOException, NoSuchAccount, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException {
     this.username = username;
 
     if (envelope.hasServerGuid()) {
@@ -66,9 +67,9 @@ public class JsonMessageEnvelope {
 
     Manager m = Utils.getManager(username);
     if (envelope.isUnidentifiedSender()) {
-      source = new JsonAddress(m.getResolver().resolve(envelope.getSourceAddress()));
+      source = new JsonAddress(m.getRecipientsTable().get(envelope.getSourceAddress()));
     } else if (c != null) {
-      source = new JsonAddress(m.getResolver().resolve(c.getSender()));
+      source = new JsonAddress(m.getRecipientsTable().get(c.getSender()));
     }
 
     if (envelope.hasSourceDevice()) {

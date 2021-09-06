@@ -17,17 +17,16 @@
 
 package io.finn.signald;
 
-import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.db.Recipient;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 // a basic class that logs individual send events
 public class IndividualSendEventsLogger implements SignalServiceMessageSender.IndividualSendEvents {
   private final Logger logger;
 
-  public IndividualSendEventsLogger(SignalServiceAddress r) { logger = LogManager.getLogger("send-to-" + new JsonAddress(r).toRedactedString()); }
+  public IndividualSendEventsLogger(Recipient r) { logger = LogManager.getLogger("send-to-" + r.toRedactedString()); }
 
   @Override
   public void onMessageEncrypted() {

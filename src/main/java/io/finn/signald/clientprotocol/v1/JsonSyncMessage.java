@@ -22,6 +22,7 @@ import io.finn.signald.JsonStickerPackOperationMessage;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -45,7 +46,7 @@ public class JsonSyncMessage {
   public JsonMessageRequestResponseMessage messageRequestResponse;
 
   public JsonSyncMessage(SignalServiceSyncMessage syncMessage, String username)
-      throws IOException, NoSuchAccount, SQLException, InvalidKeyException, InvalidProxyException, ServerNotFoundException {
+      throws IOException, NoSuchAccount, SQLException, InvalidKeyException, InvalidProxyException, ServerNotFoundException, NoSuchAccountException {
     if (syncMessage.getSent().isPresent()) {
       this.sent = new JsonSentTranscriptMessage(syncMessage.getSent().get(), username);
     }

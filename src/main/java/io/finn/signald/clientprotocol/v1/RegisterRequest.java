@@ -28,15 +28,11 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.CaptchaRequired;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
-import io.finn.signald.db.PendingAccountDataTable;
-import io.finn.signald.util.KeyUtil;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.UUID;
 import org.signal.zkgroup.InvalidInputException;
-import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.util.KeyHelper;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.push.exceptions.CaptchaRequiredException;
 
@@ -64,16 +60,8 @@ public class RegisterRequest implements RequestType<Account> {
       throw new ServerNotFoundException(e);
     }
 
-    IdentityKeyPair identityKey = KeyUtil.generateIdentityKeyPair();
-    PendingAccountDataTable.set(account, PendingAccountDataTable.Key.LOCAL_REGISTRATION_ID, identityKey.serialize());
-
-    int registrationId = KeyHelper.generateRegistrationId(false);
-    PendingAccountDataTable.set(account, PendingAccountDataTable.Key.OWN_IDENTITY_KEY_PAIR, registrationId);
-
-    PendingAccountDataTable.set(account, PendingAccountDataTable.Key.SERVER_UUID, server);
-
     try {
-      m.register(voice, Optional.fromNullable(captcha));
+      m.register(voice, Optional.fromNullable(captcha), UUID.fromString(server));
     } catch (CaptchaRequiredException e) {
       throw new CaptchaRequired();
     }

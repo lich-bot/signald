@@ -18,9 +18,13 @@
 package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.finn.signald.Manager;
 import io.finn.signald.RegistrationManager;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.db.AccountDataTable;
+import io.finn.signald.db.AccountsTable;
+import io.finn.signald.exceptions.NoSuchAccountException;
+import java.sql.SQLException;
+import java.util.UUID;
 
 @Doc("A local account in signald")
 public class Account {
@@ -31,14 +35,15 @@ public class Account {
   @Doc("The primary identifier on the account, included with all requests to signald for this account. Previously called 'username'")
   @JsonProperty("account_id")
   public String accountID;
+
   @Doc("The address of this account") public JsonAddress address;
 
   @Doc("indicates the account has not completed registration") public Boolean pending;
 
-  public Account(Manager m) {
-    accountID = m.getE164();
-    deviceID = m.getDeviceId();
-    address = new JsonAddress(m.getOwnAddress());
+  public Account(UUID accountUUID) throws SQLException, NoSuchAccountException {
+    accountID = AccountsTable.getE164(accountUUID);
+    deviceID = AccountDataTable.getInt(accountUUID, AccountDataTable.Key.DEVICE_ID);
+    address = new JsonAddress(accountID, accountUUID);
   }
 
   public Account(RegistrationManager m) {

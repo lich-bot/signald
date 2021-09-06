@@ -61,7 +61,7 @@ public class RequestUtil {
       UpdateContactRequest.class,                                                                                        // v1        update_contact
       SetExpirationRequest.class,                                                                                        // v1        set_expiration
       SetDeviceNameRequest.class,                                                                                        // v1        set_device_name
-      GetAllIdentities.class,                                                                                            // v1        get_all_identities
+      GetAllIdentitiesRequest.class,                                                                                     // v1        get_all_identities
       SubscribeRequest.class,                                                                                            // v1        subscribe
       UnsubscribeRequest.class,                                                                                          // v1        unsubscribe
       RemoteDeleteRequest.class,                                                                                         // v1        remote_delete

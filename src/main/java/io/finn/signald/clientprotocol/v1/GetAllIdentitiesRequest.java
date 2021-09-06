@@ -24,23 +24,24 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import io.finn.signald.exceptions.InvalidAddressException;
-import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
-import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
 import org.whispersystems.libsignal.InvalidKeyException;
 
 @Doc("get all known identity keys")
 @ProtocolType("get_all_identities")
-public class GetAllIdentities implements RequestType<AllIdentityKeyList> {
+public class GetAllIdentitiesRequest implements RequestType<AllIdentityKeyList> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
   @Override
   public AllIdentityKeyList run(Request request)
-      throws SQLException, IOException, NoSuchAccountException, InvalidAddressException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager m = Manager.get(account);
-    return new AllIdentityKeyList(m.getOwnAddress(), m.getIdentity(), m.getIdentities());
+      throws SQLException, IOException, NoSuchAccountException, InvalidAddressException, InvalidKeyException, InvalidProxyException, NoSuchAccount, ServerNotFoundException {
+    Manager m = Utils.getManager(account);
+    return new AllIdentityKeyList(m.getOwnRecipient(), m.getIdentity(), m.getIdentities());
   }
 }

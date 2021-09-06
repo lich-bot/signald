@@ -32,6 +32,7 @@ import io.finn.signald.clientprotocol.v1.exceptions.AccountLocked;
 import io.finn.signald.clientprotocol.v1.exceptions.ExceptionWrapper;
 import io.finn.signald.db.PendingAccountDataTable;
 import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -53,7 +54,7 @@ public class VerifyRequest implements RequestType<Account> {
 
   @Override
   public Account run(Request request)
-      throws SQLException, IOException, InvalidInputException, ExceptionWrapper, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+      throws SQLException, IOException, InvalidInputException, ExceptionWrapper, InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException {
 
     String server = PendingAccountDataTable.getString(account, PendingAccountDataTable.Key.SERVER_UUID);
     if (server == null) {
@@ -67,7 +68,7 @@ public class VerifyRequest implements RequestType<Account> {
     } else {
       try {
         Manager m = rm.verifyAccount(code);
-        return new Account(m);
+        return new Account(m.getUUID());
       } catch (LockedException e) {
         logger.warn("Failed to register phone number with PIN lock. See https://gitlab.com/signald/signald/-/issues/47");
         throw new AccountLocked();

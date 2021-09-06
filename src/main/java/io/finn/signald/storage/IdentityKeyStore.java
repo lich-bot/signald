@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.db.AccountDataTable;
 import io.finn.signald.db.IdentityKeysTable;
+import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.util.AddressUtil;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -166,16 +167,17 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
 
   public List<IdentityKeyStore.Identity> getIdentities(SignalServiceAddress address) { return getKeys(address); }
 
-  public void migrateToDB(UUID u) throws SQLException {
+  public void migrateToDB(UUID u) throws SQLException, IOException {
     IdentityKeysTable table = new IdentityKeysTable(u);
     logger.info("migrating " + trustedKeys.size() + " identity keys to the database");
     Iterator<Identity> iterator = trustedKeys.iterator();
+    RecipientsTable recipientsTable = new RecipientsTable(u);
     while (iterator.hasNext()) {
       Identity entry = iterator.next();
       if (entry.identityKey == null) {
         continue;
       }
-      table.saveIdentity(entry.address.getSignalServiceAddress(), entry.identityKey, entry.trustLevel, entry.added);
+      table.saveIdentity(recipientsTable.get(entry.address), entry.identityKey, entry.trustLevel, entry.added);
       iterator.remove();
     }
 
@@ -192,7 +194,7 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
 
   // Getters and setters for Jackson
   @JsonSetter("identityKey")
-  public void setIdentityKey(String identityKey) throws IOException, InvalidKeyException {
+  public void setIdentityKey(String identityKey) throws IOException {
     identityKeyPair = new IdentityKeyPair(org.whispersystems.util.Base64.decode(identityKey));
   }
 
@@ -278,7 +280,7 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
     @JsonGetter("trust")
     public String getTrustLevelString() {
       if (trustLevel == null) {
-        return trustLevel.TRUSTED_UNVERIFIED.name();
+        return TrustLevel.TRUSTED_UNVERIFIED.name();
       }
       return trustLevel.name();
     }

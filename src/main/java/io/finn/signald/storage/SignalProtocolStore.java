@@ -63,7 +63,7 @@ public class SignalProtocolStore {
     }
   }
 
-  public void migrateToDB(UUID u) throws SQLException {
+  public void migrateToDB(UUID u) throws SQLException, IOException {
     legacyPreKeys.migrateToDB(u);
     legacySessionStore.migrateToDB(u);
     legacySignedPreKeyStore.migrateToDB(u);

@@ -30,6 +30,7 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.util.AttachmentUtil;
 import java.io.File;
 import java.io.IOException;
@@ -62,7 +63,8 @@ public class SetProfile implements RequestType<Empty> {
   public String mobilecoinAddress;
 
   @Override
-  public Empty run(Request request) throws IOException, NoSuchAccount, InvalidInputException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+  public Empty run(Request request)
+      throws IOException, NoSuchAccount, InvalidInputException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException {
     File avatar = avatarFile == null ? null : new File(avatarFile);
 
     Manager m = Utils.getManager(account);

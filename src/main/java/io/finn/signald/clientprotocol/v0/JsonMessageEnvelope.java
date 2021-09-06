@@ -69,9 +69,9 @@ public class JsonMessageEnvelope {
 
     Manager m = Manager.get(username);
     if (envelope.isUnidentifiedSender()) {
-      source = new JsonAddress(m.getResolver().resolve(envelope.getSourceAddress()));
+      source = new JsonAddress(m.getRecipientsTable().get(envelope.getSourceAddress()).getAddress());
     } else if (c != null) {
-      source = new JsonAddress(m.getResolver().resolve(c.getSender()));
+      source = new JsonAddress(m.getRecipientsTable().get(c.getSender()).getAddress());
     }
 
     if (envelope.hasSourceDevice()) {

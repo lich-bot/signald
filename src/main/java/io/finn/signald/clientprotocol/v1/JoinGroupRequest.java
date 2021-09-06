@@ -27,6 +27,7 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
@@ -61,7 +62,7 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
   public JsonGroupJoinInfo run(Request request)
       throws GroupInviteLinkUrl.InvalidGroupLinkException, GroupInviteLinkUrl.UnknownGroupLinkVersionException, IOException, NoSuchAccount, InterruptedException,
              ExecutionException, TimeoutException, GroupLinkNotActiveException, VerificationFailedException, InvalidGroupStateException, UnknownGroupException, SQLException,
-             InvalidInviteURI, OwnProfileKeyDoesNotExist, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+             InvalidInviteURI, OwnProfileKeyDoesNotExist, InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException {
     GroupInviteLinkUrl groupInviteLinkUrl = GroupInviteLinkUrl.fromUri(uri);
     if (groupInviteLinkUrl == null) {
       throw new InvalidInviteURI();
@@ -69,7 +70,7 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(groupInviteLinkUrl.getGroupMasterKey());
 
     Manager m = Utils.getManager(account);
-    ProfileKeyCredential profileKeyCredential = m.getRecipientProfileKeyCredential(m.getOwnAddress()).getProfileKeyCredential();
+    ProfileKeyCredential profileKeyCredential = m.getRecipientProfileKeyCredential(m.getOwnRecipient()).getProfileKeyCredential();
 
     if (profileKeyCredential == null) {
       throw new OwnProfileKeyDoesNotExist();

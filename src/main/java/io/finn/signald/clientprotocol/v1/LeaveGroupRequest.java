@@ -28,6 +28,8 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.db.Recipient;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
@@ -42,7 +44,6 @@ import org.signal.zkgroup.VerificationFailedException;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
 
 @ProtocolType("leave_group")
@@ -53,7 +54,7 @@ public class LeaveGroupRequest implements RequestType<GroupInfo> {
 
   @Override
   public GroupInfo run(Request request) throws IOException, NoSuchAccount, NotAGroupMemberException, GroupNotFoundException, VerificationFailedException, SQLException,
-                                               UnknownGroupException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+                                               UnknownGroupException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException {
     Manager m = Utils.getManager(account);
 
     if (groupID.length() == 24) { // legacy (v1) group
@@ -73,7 +74,7 @@ public class LeaveGroupRequest implements RequestType<GroupInfo> {
       throw new UnknownGroupException();
     }
 
-    List<SignalServiceAddress> recipients = group.group.getMembersList().stream().map(GroupsUtil::getMemberAddress).collect(Collectors.toList());
+    List<Recipient> recipients = m.getRecipientsTable().get(group.group.getMembersList().stream().map(GroupsUtil::getMemberAddress).collect(Collectors.toList()));
 
     GroupsV2Manager groupsV2Manager = m.getGroupsV2Manager();
     Pair<SignalServiceDataMessage.Builder, Group> output;

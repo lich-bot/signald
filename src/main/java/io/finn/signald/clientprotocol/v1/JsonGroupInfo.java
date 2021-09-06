@@ -22,6 +22,7 @@ import io.finn.signald.annotations.Doc;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.storage.GroupInfo;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -41,7 +42,7 @@ public class JsonGroupInfo {
   public long avatarId;
 
   JsonGroupInfo(SignalServiceGroup groupInfo, String username)
-      throws IOException, NoSuchAccount, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+      throws IOException, NoSuchAccount, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException {
     Manager manager = Utils.getManager(username);
     this.groupId = Base64.encodeBytes(groupInfo.getGroupId());
     if (groupInfo.getMembers().isPresent()) {
