@@ -105,13 +105,9 @@ public class RegistrationManager {
       throws IOException, InvalidInputException, SQLException, InvalidProxyException, InvalidKeyException, ServerNotFoundException, NoSuchAccountException {
     verificationCode = verificationCode.replace("-", "");
     int registrationID = PendingAccountDataTable.getInt(e164, PendingAccountDataTable.Key.LOCAL_REGISTRATION_ID);
-    byte[] key = new byte[32];
-    RandomUtils.getSecureRandom().nextBytes(key);
-    ProfileKey profileKey = new ProfileKey(key);
-    byte[] selfUnidentifiedAccessKey = UnidentifiedAccess.deriveAccessKeyFrom(profileKey);
-    ServiceResponse<VerifyAccountResponse> r =
-        accountManager.verifyAccount(verificationCode, registrationID, true, selfUnidentifiedAccessKey, false, ServiceConfig.CAPABILITIES, true);
-
+    ProfileKey profileKey = generateProfileKey();
+    byte[] unidentifiedAccessKey = UnidentifiedAccess.deriveAccessKeyFrom(profileKey);
+    ServiceResponse<VerifyAccountResponse> r = accountManager.verifyAccount(verificationCode, registrationID, true, unidentifiedAccessKey, false, ServiceConfig.CAPABILITIES, true);
     handleResponseException(r);
 
     VerifyAccountResponse result = r.getResult().get();
@@ -136,10 +132,7 @@ public class RegistrationManager {
     accountData.setProfileKey(profileKey);
     accountData.save();
 
-    Manager m = Manager.get(accountUUID);
-    m.refreshPreKeys();
-
-    return m;
+    return Manager.get(accountUUID);
   }
 
   public String getE164() { return e164; }
@@ -159,5 +152,11 @@ public class RegistrationManager {
         throw new IOException(throwableOptional.get());
       }
     }
+  }
+
+  private ProfileKey generateProfileKey() throws InvalidInputException {
+    byte[] key = new byte[32];
+    RandomUtils.getSecureRandom().nextBytes(key);
+    return new ProfileKey(key);
   }
 }
