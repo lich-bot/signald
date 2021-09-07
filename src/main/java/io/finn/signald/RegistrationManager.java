@@ -22,6 +22,7 @@ import io.finn.signald.db.AccountsTable;
 import io.finn.signald.db.PendingAccountDataTable;
 import io.finn.signald.db.ServersTable;
 import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.GroupsUtil;
@@ -45,6 +46,7 @@ import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.internal.ServiceResponse;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
+import org.whispersystems.signalservice.internal.push.RequestVerificationCodeResponse;
 import org.whispersystems.signalservice.internal.push.VerifyAccountResponse;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
 
@@ -52,14 +54,12 @@ public class RegistrationManager {
   private final static Logger logger = LogManager.getLogger();
   private static final ConcurrentHashMap<String, RegistrationManager> registrationManagers = new ConcurrentHashMap<>();
 
-  private final SignalServiceConfiguration serviceConfiguration;
   private final SignalServiceAccountManager accountManager;
   private final AccountData accountData;
   private final String e164;
 
-  public static RegistrationManager get(String e164, UUID server) throws IOException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Logger logger = LogManager.getLogger("registration-manager");
-    String key = getKey(e164, server);
+  public static RegistrationManager get(String e164, UUID server) throws IOException, SQLException, ServerNotFoundException, InvalidProxyException {
+    String key = e164 + server.toString();
     if (registrationManagers.containsKey(key)) {
       return registrationManagers.get(key);
     }
@@ -72,32 +72,37 @@ public class RegistrationManager {
   RegistrationManager(String e164, UUID serverUUID) throws SQLException, ServerNotFoundException, InvalidProxyException, IOException {
     this.e164 = e164;
     ServersTable.Server server = ServersTable.getServer(serverUUID);
-    serviceConfiguration = server.getSignalServiceConfiguration();
+    SignalServiceConfiguration serviceConfiguration = server.getSignalServiceConfiguration();
     accountData = new AccountData(e164);
     accountData.registered = false;
 
-    DynamicCredentialsProvider credentialProvider = new DynamicCredentialsProvider(null, e164, null, SignalServiceAddress.DEFAULT_DEVICE_ID);
+    String password = Util.getSecret(18);
+    PendingAccountDataTable.set(e164, PendingAccountDataTable.Key.PASSWORD, password);
+
+    DynamicCredentialsProvider credentialProvider = new DynamicCredentialsProvider(null, e164, password, SignalServiceAddress.DEFAULT_DEVICE_ID);
     GroupsV2Operations groupsV2Operations = GroupsUtil.GetGroupsV2Operations(serviceConfiguration);
     accountManager = new SignalServiceAccountManager(serviceConfiguration, credentialProvider, BuildConfig.USER_AGENT, groupsV2Operations, ServiceConfig.AUTOMATIC_NETWORK_RETRY);
   }
 
   public void register(boolean voiceVerification, Optional<String> captcha, UUID server) throws IOException, InvalidInputException, SQLException {
-    PendingAccountDataTable.set(e164, PendingAccountDataTable.Key.LOCAL_REGISTRATION_ID, KeyUtil.generateIdentityKeyPair().serialize());
-    PendingAccountDataTable.set(e164, PendingAccountDataTable.Key.OWN_IDENTITY_KEY_PAIR, KeyHelper.generateRegistrationId(false));
+    PendingAccountDataTable.set(e164, PendingAccountDataTable.Key.LOCAL_REGISTRATION_ID, KeyHelper.generateRegistrationId(false));
+    PendingAccountDataTable.set(e164, PendingAccountDataTable.Key.OWN_IDENTITY_KEY_PAIR, KeyUtil.generateIdentityKeyPair().serialize());
     PendingAccountDataTable.set(e164, PendingAccountDataTable.Key.SERVER_UUID, server.toString());
 
+    ServiceResponse<RequestVerificationCodeResponse> r;
     if (voiceVerification) {
-      accountManager.requestVoiceVerificationCode(Locale.getDefault(), captcha, Optional.absent(), Optional.absent());
+      r = accountManager.requestVoiceVerificationCode(Locale.getDefault(), captcha, Optional.absent(), Optional.absent());
     } else {
-      accountManager.requestSmsVerificationCode(false, captcha, Optional.absent(), Optional.absent());
+      r = accountManager.requestSmsVerificationCode(false, captcha, Optional.absent(), Optional.absent());
     }
+    handleResponseException(r);
 
     accountData.init();
     accountData.save();
   }
 
   public Manager verifyAccount(String verificationCode)
-      throws IOException, InvalidInputException, SQLException, InvalidProxyException, InvalidKeyException, ServerNotFoundException {
+      throws IOException, InvalidInputException, SQLException, InvalidProxyException, InvalidKeyException, ServerNotFoundException, NoSuchAccountException {
     verificationCode = verificationCode.replace("-", "");
     int registrationID = PendingAccountDataTable.getInt(e164, PendingAccountDataTable.Key.LOCAL_REGISTRATION_ID);
     byte[] key = new byte[32];
@@ -107,33 +112,31 @@ public class RegistrationManager {
     ServiceResponse<VerifyAccountResponse> r =
         accountManager.verifyAccount(verificationCode, registrationID, true, selfUnidentifiedAccessKey, false, ServiceConfig.CAPABILITIES, true);
 
-    final var throwableOptional = r.getExecutionError().or(r.getApplicationError());
-    if (throwableOptional.isPresent()) {
-      if (throwableOptional.get() instanceof IOException) {
-        throw(IOException) throwableOptional.get();
-      } else {
-        throw new IOException(throwableOptional.get());
-      }
-    }
+    handleResponseException(r);
 
     VerifyAccountResponse result = r.getResult().get();
     UUID accountUUID = UUID.fromString(result.getUuid());
     accountData.setUUID(accountUUID);
-    accountData.setProfileKey(profileKey);
+
     String server = PendingAccountDataTable.getString(e164, PendingAccountDataTable.Key.SERVER_UUID);
     AccountsTable.add(e164, accountUUID, getFileName(), server == null ? null : UUID.fromString(server));
-    accountData.save();
+
+    String password = PendingAccountDataTable.getString(e164, PendingAccountDataTable.Key.PASSWORD);
+    AccountDataTable.set(accountUUID, AccountDataTable.Key.PASSWORD, password);
+
+    byte[] identityKeyPair = PendingAccountDataTable.getBytes(e164, PendingAccountDataTable.Key.OWN_IDENTITY_KEY_PAIR);
+    AccountDataTable.set(accountUUID, AccountDataTable.Key.OWN_IDENTITY_KEY_PAIR, identityKeyPair);
 
     AccountDataTable.set(accountUUID, AccountDataTable.Key.LOCAL_REGISTRATION_ID, registrationID);
+    AccountDataTable.set(accountUUID, AccountDataTable.Key.DEVICE_ID, SignalServiceAddress.DEFAULT_DEVICE_ID);
 
-    byte[] identityKeyPair = PendingAccountDataTable.getBytes(e164, PendingAccountDataTable.Key.LOCAL_REGISTRATION_ID);
-    AccountDataTable.set(accountUUID, AccountDataTable.Key.OWN_IDENTITY_KEY_PAIR, identityKeyPair);
     PendingAccountDataTable.clear(e164);
     accountData.registered = true;
     accountData.init();
+    accountData.setProfileKey(profileKey);
     accountData.save();
 
-    Manager m = new Manager(accountUUID, accountData);
+    Manager m = Manager.get(accountUUID);
     m.refreshPreKeys();
 
     return m;
@@ -147,5 +150,14 @@ public class RegistrationManager {
 
   public boolean isRegistered() { return accountData.registered; }
 
-  private static String getKey(String e164, UUID server) { return e164 + server.toString(); }
+  private void handleResponseException(final ServiceResponse<?> response) throws IOException {
+    final var throwableOptional = response.getExecutionError().or(response.getApplicationError());
+    if (throwableOptional.isPresent()) {
+      if (throwableOptional.get() instanceof IOException) {
+        throw(IOException) throwableOptional.get();
+      } else {
+        throw new IOException(throwableOptional.get());
+      }
+    }
+  }
 }

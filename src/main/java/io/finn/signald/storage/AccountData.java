@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import io.finn.signald.BuildConfig;
 import io.finn.signald.Manager;
-import io.finn.signald.Util;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.db.*;
 import io.finn.signald.exceptions.InvalidStorageFileException;
@@ -97,7 +96,6 @@ public class AccountData {
     address = new JsonAddress(pendingIdentifier);
     axolotlStore = new DatabaseProtocolStore(pendingIdentifier);
     setPending();
-    Util.getSecret(18);
   }
 
   public static AccountData load(File storageFile) throws IOException, SQLException {
@@ -161,6 +159,12 @@ public class AccountData {
       address = new JsonAddress(legacyUsername);
     } else if (address.uuid != null && self == null) {
       self = new RecipientsTable(address.getUUID()).get(address.getUUID());
+      ProfileAndCredentialEntry profileKeyEntry = profileCredentialStore.get(self.getAddress());
+      if (profileKeyEntry != null) {
+        if (profileKeyEntry.getServiceAddress().getUuid() == null && address.uuid != null) {
+          profileKeyEntry.setAddress(self.getAddress());
+        }
+      }
     }
     if (groupsV2 == null) {
       groupsV2 = new GroupsV2Storage();
@@ -171,13 +175,6 @@ public class AccountData {
 
     for (GroupInfo g : groupStore.getGroups()) {
       getMigratedGroupId(Base64.encodeBytes(g.groupId)); // Delete v1 groups that have been migrated to a v2 group
-    }
-
-    ProfileAndCredentialEntry profileKeyEntry = profileCredentialStore.get(self.getAddress());
-    if (profileKeyEntry != null) {
-      if (profileKeyEntry.getServiceAddress().getUuid() == null && address.uuid != null) {
-        profileKeyEntry.setAddress(self.getAddress());
-      }
     }
 
     if (version < VERSION_IMPORT_CONTACT_PROFILES) {
