@@ -58,8 +58,4 @@ public class SafetyNumberHelper {
     }
     return fingerprint.getDisplayableFingerprint().getDisplayText();
   }
-
-  //  public static String computeSafetyNumber(String ownAddress, IdentityKey ownIdentityKey, String theirAddress, IdentityKey theirIdentityKey) {
-  //    return computeSafetyNumber(new SignalServiceAddress(null, ownAddress), ownIdentityKey, new SignalServiceAddress(null, theirAddress), theirIdentityKey);
-  //  }
 }
