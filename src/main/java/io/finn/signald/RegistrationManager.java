@@ -99,9 +99,7 @@ public class RegistrationManager {
   public Manager verifyAccount(String verificationCode)
       throws IOException, InvalidInputException, SQLException, InvalidProxyException, InvalidKeyException, ServerNotFoundException {
     verificationCode = verificationCode.replace("-", "");
-    String signalingKey = Util.getSecret(52);
     int registrationID = PendingAccountDataTable.getInt(e164, PendingAccountDataTable.Key.LOCAL_REGISTRATION_ID);
-
     byte[] key = new byte[32];
     RandomUtils.getSecureRandom().nextBytes(key);
     ProfileKey profileKey = new ProfileKey(key);

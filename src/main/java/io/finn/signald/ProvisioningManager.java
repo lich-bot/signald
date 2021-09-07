@@ -87,7 +87,6 @@ public class ProvisioningManager {
 
   public UUID finishDeviceLink(String deviceName, boolean overwrite)
       throws IOException, TimeoutException, UserAlreadyExistsException, InvalidInputException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    String signalingKey = Util.getSecret(52);
     SignalServiceAccountManager.NewDeviceRegistrationReturn ret = accountManager.getNewDeviceRegistration(identityKey);
     if (overwrite) {
       try {
@@ -102,7 +101,7 @@ public class ProvisioningManager {
       throw new UserAlreadyExistsException(uuid);
     }
 
-    Manager m = new Manager(ret.getUuid(), AccountData.createLinkedAccount(ret, password, registrationId, signalingKey, deviceId, server));
+    Manager m = new Manager(ret.getUuid(), AccountData.createLinkedAccount(ret, password, registrationId, deviceId, server));
     AccountDataTable.set(m.getUUID(), AccountDataTable.Key.DEVICE_NAME, deviceName);
 
     m.refreshPreKeys();

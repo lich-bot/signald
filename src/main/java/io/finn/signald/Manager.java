@@ -1490,10 +1490,9 @@ public class Manager {
       AccountDataTable.set(getUUID(), AccountDataTable.Key.DEVICE_NAME, deviceName);
     }
     deviceName = DeviceNameUtil.encryptDeviceName(deviceName, accountData.axolotlStore.getIdentityKeyPair().getPrivateKey());
-    String signalingKey = AccountDataTable.getString(accountUUID, AccountDataTable.Key.SIGNALING_KEY);
     int localRegistrationId = AccountDataTable.getInt(accountUUID, AccountDataTable.Key.LOCAL_REGISTRATION_ID);
-    getAccountManager().setAccountAttributes(deviceName, signalingKey, localRegistrationId, true, null, null, accountData.getSelfUnidentifiedAccessKey(), true,
-                                             ServiceConfig.CAPABILITIES, true);
+    getAccountManager().setAccountAttributes(deviceName, null, localRegistrationId, true, null, null, accountData.getSelfUnidentifiedAccessKey(), true, ServiceConfig.CAPABILITIES,
+                                             true);
     if (accountData.lastAccountRefresh < ACCOUNT_REFRESH_VERSION) {
       accountData.lastAccountRefresh = ACCOUNT_REFRESH_VERSION;
       accountData.save();
