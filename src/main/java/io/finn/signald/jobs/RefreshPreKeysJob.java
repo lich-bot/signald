@@ -56,7 +56,11 @@ public class RefreshPreKeysJob implements Job {
   }
 
   private void runWithManager(Manager m) throws IOException, SQLException {
-    if (m.getAccountManager().getPreKeysCount() < ServiceConfig.PREKEY_MINIMUM_COUNT) {
+    long lastRefresh = AccountDataTable.getLong(uuid, LAST_PRE_KEY_REFRESH);
+    if (lastRefresh <= 0) {
+      logger.info("generating pre keys");
+      m.refreshPreKeys();
+    } else if (m.getAccountManager().getPreKeysCount() < ServiceConfig.PREKEY_MINIMUM_COUNT) {
       logger.info("insufficient number of pre keys available, refreshing");
       m.refreshPreKeys();
     }
