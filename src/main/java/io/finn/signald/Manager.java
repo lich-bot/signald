@@ -974,28 +974,21 @@ public class Manager {
     retryFailedReceivedMessages(handler, ignoreAttachments);
     accountData.saveIfNeeded();
 
-    final SignalServiceMessageReceiver messageReceiver = dependencies.getMessageReceiver();
-
     SignalWebSocket websocket = dependencies.getWebSocket();
     websocket.connect();
 
     try {
       while (true) {
         SignalServiceEnvelope envelope;
-        SignalServiceContent content = null;
-        Exception exception = null;
         MutableLong databaseId = new MutableLong();
         try {
-          Optional<SignalServiceEnvelope> result = websocket.readOrEmpty(unit.toMillis(timeout), new SignalWebSocket.MessageReceivedCallback() {
-            @Override
-            public void onMessage(SignalServiceEnvelope envelope) {
-              // store message on disk, before acknowledging receipt to the server
-              try {
-                long id = accountData.getDatabase().getMessageQueueTable().storeEnvelope(envelope);
-                databaseId.setValue(id);
-              } catch (SQLException e) {
-                logger.warn("Failed to store encrypted message in sqlite cache, ignoring: " + e.getMessage());
-              }
+          Optional<SignalServiceEnvelope> result = websocket.readOrEmpty(unit.toMillis(timeout), encryptedEnvelope -> {
+            // store message on disk, before acknowledging receipt to the server
+            try {
+              long id = accountData.getDatabase().getMessageQueueTable().storeEnvelope(encryptedEnvelope);
+              databaseId.setValue(id);
+            } catch (SQLException e) {
+              logger.warn("Failed to store encrypted message in sqlite cache, ignoring: " + e.getMessage());
             }
           });
           if (result.isPresent()) {
@@ -1008,6 +1001,9 @@ public class Manager {
             return;
           continue;
         }
+
+        SignalServiceContent content = null;
+        Exception exception = null;
 
         if (!envelope.isReceipt()) {
           try {
@@ -1030,6 +1026,7 @@ public class Manager {
         }
       }
     } finally {
+      websocket.disconnect();
       accountData.save();
     }
   }
