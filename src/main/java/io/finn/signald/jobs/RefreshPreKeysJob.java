@@ -44,17 +44,22 @@ public class RefreshPreKeysJob implements Job {
   @Override
   public void run() throws IOException, SQLException, NoSuchAccountException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Manager.get(uuid);
+    runWithManager(m);
+  }
+
+  public static void runIfNeeded(UUID uuid, Manager m) throws SQLException, IOException {
+    long lastRefresh = AccountDataTable.getLong(uuid, LAST_PRE_KEY_REFRESH);
+    if (System.currentTimeMillis() - lastRefresh > INTERVAL) {
+      RefreshPreKeysJob job = new RefreshPreKeysJob(uuid);
+      job.runWithManager(m);
+    }
+  }
+
+  private void runWithManager(Manager m) throws IOException, SQLException {
     if (m.getAccountManager().getPreKeysCount() < ServiceConfig.PREKEY_MINIMUM_COUNT) {
       logger.info("insufficient number of pre keys available, refreshing");
       m.refreshPreKeys();
     }
     AccountDataTable.set(uuid, LAST_PRE_KEY_REFRESH, System.currentTimeMillis());
-  }
-
-  public static void runIfNeeded(UUID uuid) throws SQLException, IOException, NoSuchAccountException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    if (System.currentTimeMillis() - AccountDataTable.getLong(uuid, LAST_PRE_KEY_REFRESH) > INTERVAL) {
-      RefreshPreKeysJob job = new RefreshPreKeysJob(uuid);
-      job.run();
-    }
   }
 }

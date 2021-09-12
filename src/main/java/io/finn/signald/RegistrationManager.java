@@ -17,10 +17,7 @@
 
 package io.finn.signald;
 
-import io.finn.signald.db.AccountDataTable;
-import io.finn.signald.db.AccountsTable;
-import io.finn.signald.db.PendingAccountDataTable;
-import io.finn.signald.db.ServersTable;
+import io.finn.signald.db.*;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -34,9 +31,11 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.asamk.signal.TrustLevel;
 import org.asamk.signal.util.RandomUtils;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.profiles.ProfileKey;
+import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.KeyHelper;
 import org.whispersystems.libsignal.util.guava.Optional;
@@ -122,6 +121,9 @@ public class RegistrationManager {
 
     byte[] identityKeyPair = PendingAccountDataTable.getBytes(e164, PendingAccountDataTable.Key.OWN_IDENTITY_KEY_PAIR);
     AccountDataTable.set(accountUUID, AccountDataTable.Key.OWN_IDENTITY_KEY_PAIR, identityKeyPair);
+
+    Recipient self = new RecipientsTable(accountUUID).get(accountUUID);
+    new IdentityKeysTable(accountUUID).saveIdentity(self, new IdentityKeyPair(identityKeyPair).getPublicKey(), TrustLevel.TRUSTED_VERIFIED);
 
     AccountDataTable.set(accountUUID, AccountDataTable.Key.LOCAL_REGISTRATION_ID, registrationID);
     AccountDataTable.set(accountUUID, AccountDataTable.Key.DEVICE_ID, SignalServiceAddress.DEFAULT_DEVICE_ID);

@@ -26,7 +26,6 @@ import io.finn.signald.exceptions.*;
 import io.finn.signald.jobs.*;
 import io.finn.signald.storage.*;
 import io.finn.signald.util.AttachmentUtil;
-import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.MutableLong;
 import io.finn.signald.util.SafetyNumberHelper;
 import java.io.*;
@@ -94,7 +93,6 @@ import org.whispersystems.signalservice.internal.contacts.crypto.Unauthenticated
 import org.whispersystems.signalservice.internal.contacts.crypto.UnauthenticatedResponseException;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.signalservice.internal.push.UnsupportedDataMessageException;
-import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
 import org.whispersystems.signalservice.internal.util.concurrent.ListenableFuture;
 import org.whispersystems.util.Base64;
 
@@ -131,14 +129,14 @@ public class Manager {
     }
 
     m.groupsV2Manager = new GroupsV2Manager(m.getAccountManager().getGroupsV2Api(), accountData.groupsV2, accountData.profileCredentialStore, uuid, m.serviceConfiguration);
-    RefreshPreKeysJob.runIfNeeded(uuid);
+    RefreshPreKeysJob.runIfNeeded(uuid, m);
     m.refreshAccountIfNeeded();
     try {
       m.getRecipientProfileKeyCredential(m.self);
     } catch (InterruptedException | ExecutionException | TimeoutException ignored) {
     }
 
-    logger.info("created a manager for " + accountData.address.toRedactedString());
+    logger.info("created a manager for " + m.self.toRedactedString());
     return m;
   }
 
@@ -175,7 +173,7 @@ public class Manager {
     ServersTable.Server server = AccountsTable.getServer(accountUUID);
     serviceConfiguration = server.getSignalServiceConfiguration();
     unidentifiedSenderTrustRoot = server.getUnidentifiedSenderRoot();
-    dependencies = new SignalDependencies(accountUUID, server);
+    dependencies = SignalDependencies.get(accountUUID);
     groupsV2Manager = new GroupsV2Manager(getAccountManager().getGroupsV2Api(), accountData.groupsV2, accountData.profileCredentialStore, accountUUID, serviceConfiguration);
     logger.info("Created a manager for " + Util.redact(accountUUID.toString()));
     synchronized (managers) { managers.put(accountUUID.toString(), this); }
@@ -190,7 +188,7 @@ public class Manager {
 
   public String getE164() throws SQLException, NoSuchAccountException { return AccountsTable.getE164(accountUUID); }
 
-  public UUID getUUID() { return accountData.getUUID(); }
+  public UUID getUUID() { return self.getUUID(); }
 
   public Recipient getOwnRecipient() { return self; }
 
@@ -216,10 +214,7 @@ public class Manager {
 
   public boolean isRegistered() { return accountData.registered; }
 
-  public SignalServiceAccountManager getAccountManager() throws SQLException {
-    DynamicCredentialsProvider credentialsProvider = AccountsTable.getCredentialsProvider(getUUID());
-    return new SignalServiceAccountManager(serviceConfiguration, credentialsProvider, BuildConfig.SIGNAL_AGENT, GroupsUtil.GetGroupsV2Operations(serviceConfiguration), true);
-  }
+  public SignalServiceAccountManager getAccountManager() { return dependencies.getAccountManager(); }
 
   public static Map<String, String> getQueryMap(String query) {
     String[] params = query.split("&");
@@ -1643,7 +1638,7 @@ public class Manager {
 
   private Map<String, UUID> getRegisteredUsers(final Set<String> numbers) throws IOException, InvalidProxyException, SQLException, ServerNotFoundException {
     final Map<String, UUID> registeredUsers;
-    ServersTable.Server server = AccountsTable.getServer(accountData.getUUID());
+    ServersTable.Server server = AccountsTable.getServer(self.getUUID());
     try {
       registeredUsers = getAccountManager().getRegisteredUsers(server.getIASKeyStore(), numbers, server.getCdsMrenclave());
     } catch (InvalidKeyException | KeyStoreException | CertificateException | NoSuchAlgorithmException | Quote.InvalidQuoteFormatException | UnauthenticatedQuoteException |

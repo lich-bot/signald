@@ -102,6 +102,7 @@ public class RecipientsTable {
     int rowid = -1;
     if (results.size() > 0) {
       Recipient result = results.get(0);
+      rowid = result.getId();
 
       if (results.size() > 1) {
         logger.warn("recipient query returned multiple results, merging");
@@ -148,6 +149,11 @@ public class RecipientsTable {
         storeNew(queryUUID, e164);
       }
     }
+
+    if (rowid == -1 && queryUUID != null) {
+      rowid = storeNew(queryUUID, e164);
+    }
+
     return new Recipient(uuid, rowid, new SignalServiceAddress(queryUUID, e164));
   }
 

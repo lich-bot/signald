@@ -85,6 +85,10 @@ public class AccountsTable {
 
   public static void importFromJSON(File f) throws IOException, SQLException {
     AccountData accountData = AccountData.load(f);
+    if (accountData.getUUID() == null) {
+      logger.warn("unable to import account with no UUID: " + accountData.getLegacyUsername());
+      return;
+    }
     logger.info("migrating account if needed: " + accountData.address.toRedactedString());
     add(accountData.getLegacyUsername(), accountData.getUUID(), f.getAbsolutePath(), java.util.UUID.fromString(BuildConfig.DEFAULT_SERVER_UUID));
     boolean needsSave = false;

@@ -37,7 +37,6 @@ import org.signal.zkgroup.profiles.ClientZkProfileOperations;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.*;
 import org.whispersystems.signalservice.api.groupsv2.ClientZkOperations;
-import org.whispersystems.signalservice.api.util.SleepTimer;
 import org.whispersystems.signalservice.api.util.UptimeSleepTimer;
 import org.whispersystems.signalservice.api.websocket.WebSocketFactory;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
@@ -79,25 +78,10 @@ public class SignalDependencies {
     }
   }
 
-  SignalDependencies(UUID account, ServersTable.Server server) throws SQLException {
+  private SignalDependencies(UUID account, ServersTable.Server server) throws SQLException {
     dataStore = new DatabaseProtocolStore(account);
     credentialsProvider = AccountsTable.getCredentialsProvider(account);
     this.server = server;
-
-    final SleepTimer timer = new UptimeSleepTimer();
-    SignalWebSocketHealthMonitor healthMonitor = new SignalWebSocketHealthMonitor(timer);
-    final WebSocketFactory webSocketFactory = new WebSocketFactory() {
-      @Override
-      public WebSocketConnection createWebSocket() {
-        return new WebSocketConnection("normal", server.getSignalServiceConfiguration(), Optional.of(credentialsProvider), BuildConfig.USER_AGENT, healthMonitor);
-      }
-
-      @Override
-      public WebSocketConnection createUnidentifiedWebSocket() {
-        return new WebSocketConnection("unidentified", server.getSignalServiceConfiguration(), Optional.absent(), BuildConfig.USER_AGENT, healthMonitor);
-      }
-    };
-    websocket = new SignalWebSocket(webSocketFactory);
     sessionLock = new SessionLock(account);
   }
 
