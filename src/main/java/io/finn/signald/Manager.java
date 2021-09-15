@@ -1186,6 +1186,7 @@ public class Manager {
             }
           });
         } catch (TimeoutException e) {
+          logger.info("TimeoutException, returnOnTimeout:" + returnOnTimeout, e);
           if (returnOnTimeout)
             return;
           continue;
