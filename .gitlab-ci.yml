@@ -19,7 +19,7 @@ build docker:
          {
            password:  env.BEEPER_DEV_ADMIN_NIGHTLY_PASS,
            bridge:    env.BEEPER_BRIDGE_TYPE,
-           image:     "\(env.CI_REGISTRY_IMAGE):\(env.CI_COMMIT_SHA)-amd64",
+           image:     "\(env.CI_REGISTRY_IMAGE):\(env.CI_COMMIT_SHA)",
            channel:   "STABLE"
          }
         ' | curl "$BEEPER_DEV_ADMIN_API_URL" -H "Content-Type: application/json" -d @-
@@ -28,7 +28,7 @@ build docker:
          {
            password:    env.BEEPER_PROD_ADMIN_NIGHTLY_PASS,
            bridge:      env.BEEPER_BRIDGE_TYPE,
-           image:       "\(env.CI_REGISTRY_IMAGE):\(env.CI_COMMIT_SHA)-amd64",
+           image:       "\(env.CI_REGISTRY_IMAGE):\(env.CI_COMMIT_SHA)",
            channel:     "INTERNAL",
            deployNext:  true
          }
