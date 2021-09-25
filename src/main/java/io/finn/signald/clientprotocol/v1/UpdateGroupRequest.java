@@ -19,7 +19,6 @@ package io.finn.signald.clientprotocol.v1;
 
 import static io.finn.signald.annotations.ExactlyOneOfRequired.GROUP_MODIFICATION;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
@@ -27,7 +26,6 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.db.RecipientsTable;
-import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
 import io.finn.signald.util.GroupsUtil;
@@ -86,7 +84,6 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
                                                NotAGroupMemberException, GroupNotFoundException, io.finn.signald.exceptions.UnknownGroupException, UnknownGroupException,
                                                VerificationFailedException, InterruptedException, ExecutionException, TimeoutException, InvalidRequestException {
     Manager m = Utils.getManager(account);
-    AccountData accountData = m.getAccountData();
     RecipientsTable recipientsTable = m.getRecipientsTable();
 
     if (groupID.length() == 24) { // v1 group
@@ -103,7 +100,7 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
     } else {
       Group group;
       try {
-        group = accountData.groupsV2.get(groupID);
+        group = m.getGroupsV2Storage().get(groupID);
       } catch (io.finn.signald.exceptions.UnknownGroupException e) {
         throw new UnknownGroupException();
       }
@@ -193,8 +190,8 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
 
       m.sendGroupV2Message(output.first(), output.second().getSignalServiceGroupV2(), recipients);
 
-      accountData.groupsV2.update(output.second());
-      accountData.save();
+      m.getGroupsV2Storage().update(output.second());
+      m.saveGroupsV2Storage();
       return new GroupInfo(group.getJsonGroupV2Info(m));
     }
   }

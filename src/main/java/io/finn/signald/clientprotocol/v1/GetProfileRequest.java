@@ -56,8 +56,8 @@ public class GetProfileRequest implements RequestType<Profile> {
                                              InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Utils.getManager(account);
     Recipient recipient = m.getRecipientsTable().get(requestedAddress);
-    ContactStore.ContactInfo contact = m.getAccountData().contactStore.getContact(recipient);
-    ProfileAndCredentialEntry profileEntry = m.getAccountData().profileCredentialStore.get(recipient);
+    ContactStore.ContactInfo contact = m.getContactStore().getContact(recipient);
+    ProfileAndCredentialEntry profileEntry = m.getProfileCredentialStore().get(recipient);
     if (profileEntry == null) {
       if (contact == null) {
         throw new ProfileUnavailable();

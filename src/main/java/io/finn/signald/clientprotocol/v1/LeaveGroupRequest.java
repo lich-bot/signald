@@ -30,7 +30,6 @@ import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.UnknownGroupException;
-import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import io.finn.signald.util.GroupsUtil;
 import java.io.IOException;
@@ -58,14 +57,13 @@ public class LeaveGroupRequest implements RequestType<GroupInfo> {
 
     if (groupID.length() == 24) { // legacy (v1) group
       m.sendQuitGroupMessage(Base64.decode(groupID));
-      io.finn.signald.storage.GroupInfo g = m.getAccountData().groupStore.getGroup(groupID);
+      io.finn.signald.storage.GroupInfo g = m.getGroupStore().getGroup(groupID);
       return new GroupInfo(g);
     }
 
-    AccountData accountData = m.getAccountData();
     Group group;
     try {
-      group = accountData.groupsV2.get(groupID);
+      group = m.getGroupsV2Storage().get(groupID);
     } catch (io.finn.signald.exceptions.UnknownGroupException e) {
       throw new UnknownGroupException();
     }
@@ -84,8 +82,8 @@ public class LeaveGroupRequest implements RequestType<GroupInfo> {
     }
 
     m.sendGroupV2Message(output.first(), output.second().getSignalServiceGroupV2(), recipients);
-    accountData.groupsV2.remove(output.second());
-    accountData.save();
+    m.getGroupsV2Storage().remove(output.second());
+    m.saveGroupsV2Storage();
     return new GroupInfo(output.second().getJsonGroupV2Info(m));
   }
 }

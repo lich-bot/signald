@@ -34,10 +34,7 @@ import io.finn.signald.db.Recipient;
 import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.db.ServersTable;
 import io.finn.signald.exceptions.*;
-import io.finn.signald.storage.AccountData;
-import io.finn.signald.storage.Group;
-import io.finn.signald.storage.GroupInfo;
-import io.finn.signald.storage.ProfileAndCredentialEntry;
+import io.finn.signald.storage.*;
 import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.JSONUtil;
 import java.io.*;
@@ -424,9 +421,8 @@ public class LegacySocketHandler {
       }
       m.sendGroupV2Message(output.first(), output.second().getSignalServiceGroupV2(), recipients);
 
-      AccountData accountData = m.getAccountData();
-      accountData.groupsV2.update(output.second());
-      accountData.save();
+      m.getGroupsV2Storage().update(output.second());
+      m.saveGroupsV2Storage();
     } else {
       GroupInfo group = m.updateGroup(groupId, groupName, groupMembers, groupAvatar);
       if (groupId.length != group.groupId.length) {
@@ -445,8 +441,8 @@ public class LegacySocketHandler {
       if (request.recipientGroupId.length() == 44) {
         Pair<SignalServiceDataMessage.Builder, Group> output = m.getGroupsV2Manager().updateGroupTimer(request.recipientGroupId, request.expiresInSeconds);
         results = m.sendGroupV2Message(output.first(), output.second().getSignalServiceGroupV2());
-        m.getAccountData().groupsV2.update(output.second());
-        m.getAccountData().save();
+        m.getGroupsV2Storage().update(output.second());
+        m.saveGroupsV2Storage();
       } else {
         byte[] groupId = Base64.decode(request.recipientGroupId);
         results = m.setExpiration(groupId, request.expiresInSeconds);
@@ -469,8 +465,8 @@ public class LegacySocketHandler {
                                                       VerificationFailedException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Manager.get(request.username);
     if (request.recipientGroupId.length() == 44) {
-      AccountData accountData = m.getAccountData();
-      Group group = accountData.groupsV2.get(request.recipientGroupId);
+      GroupsV2Storage groupsV2Storage = m.getGroupsV2Storage();
+      Group group = groupsV2Storage.get(request.recipientGroupId);
       if (group == null) {
         reply("leave_group_error", "group not found", request.id);
         return;
@@ -482,8 +478,8 @@ public class LegacySocketHandler {
       GroupsV2Manager groupsV2Manager = m.getGroupsV2Manager();
       Pair<SignalServiceDataMessage.Builder, Group> output = groupsV2Manager.leaveGroup(request.recipientGroupId);
       m.sendGroupV2Message(output.first(), output.second().getSignalServiceGroupV2(), recipients);
-      accountData.groupsV2.remove(output.second());
-      accountData.save();
+      groupsV2Storage.remove(output.second());
+      m.saveGroupsV2Storage();
     } else {
       byte[] groupId = Base64.decode(request.recipientGroupId);
       m.sendQuitGroupMessage(groupId);

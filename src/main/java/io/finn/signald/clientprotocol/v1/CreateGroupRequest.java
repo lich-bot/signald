@@ -65,7 +65,7 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
     Manager m = Utils.getManager(account);
     RecipientsTable recipientsTable = m.getRecipientsTable();
     List<Recipient> recipients = new ArrayList<>();
-    if (m.getAccountData().profileCredentialStore.getProfileKeyCredential(m.getUUID()) == null) {
+    if (m.getProfileCredentialStore().getProfileKeyCredential(m.getUUID()) == null) {
       throw new OwnProfileKeyDoesNotExist();
     }
     for (JsonAddress member : members) {

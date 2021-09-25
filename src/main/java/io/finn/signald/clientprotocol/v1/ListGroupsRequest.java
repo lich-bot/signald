@@ -25,7 +25,6 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
-import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -40,13 +39,12 @@ public class ListGroupsRequest implements RequestType<GroupList> {
   public GroupList run(Request request) throws IOException, NoSuchAccount, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     GroupList groups = new GroupList();
     Manager m = Utils.getManager(account);
-    AccountData accountData = m.getAccountData();
 
-    for (Group g : accountData.groupsV2.groups) {
+    for (Group g : m.getGroupsV2Storage().groups) {
       groups.add(g.getJsonGroupV2Info(m));
     }
 
-    for (io.finn.signald.storage.GroupInfo g : accountData.groupStore.getGroups()) {
+    for (io.finn.signald.storage.GroupInfo g : m.getGroupStore().getGroups()) {
       groups.add(new JsonGroupInfo(g));
     }
 

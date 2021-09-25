@@ -64,8 +64,8 @@ public class SetExpirationRequest implements RequestType<SendResponse> {
         } catch (io.finn.signald.exceptions.UnknownGroupException e) {
           throw new UnknownGroupException();
         }
-        m.getAccountData().groupsV2.update(output.second());
-        m.getAccountData().save();
+        m.getGroupsV2Storage().update(output.second());
+        m.saveGroupsV2Storage();
       } else {
         byte[] groupId = Base64.decode(group);
         results = m.setExpiration(groupId, expiration);

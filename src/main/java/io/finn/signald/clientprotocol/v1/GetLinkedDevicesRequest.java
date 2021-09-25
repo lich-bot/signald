@@ -46,7 +46,7 @@ public class GetLinkedDevicesRequest implements RequestType<LinkedDevices> {
   @Override
   public LinkedDevices run(Request request) throws IOException, NoSuchAccount, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Utils.getManager(account);
-    ECPrivateKey profileKey = m.getAccountData().axolotlStore.getIdentityKeyPair().getPrivateKey();
+    ECPrivateKey profileKey = m.getAxolotlStore().getIdentityKeyPair().getPrivateKey();
     List<DeviceInfo> devices;
     try {
       devices = new LinkedDeviceManager(m.getUUID()).getLinkedDevices().stream().map(x -> new DeviceInfo(x, profileKey)).collect(Collectors.toList());
