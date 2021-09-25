@@ -19,7 +19,6 @@ package io.finn.signald.jobs;
 
 import io.finn.signald.Manager;
 import io.finn.signald.Util;
-import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.GroupInfo;
 import java.io.*;
 import java.nio.file.Files;
@@ -42,12 +41,11 @@ public class SendGroupSyncJob implements Job {
   @Override
   public void run() throws IOException, UntrustedIdentityException, SQLException {
     File groupsFile = Util.createTempFile();
-    AccountData accountData = m.getAccountData();
 
     try {
       try (OutputStream fos = new FileOutputStream(groupsFile)) {
         DeviceGroupsOutputStream out = new DeviceGroupsOutputStream(fos);
-        for (GroupInfo record : accountData.groupStore.getGroups()) {
+        for (GroupInfo record : m.getGroupStore().getGroups()) {
           Optional<Integer> expirationTimer = Optional.absent();
           Optional<String> color = Optional.absent();
           out.write(new DeviceGroup(record.groupId, Optional.fromNullable(record.name), record.getMembers(), m.createGroupAvatarAttachment(record.groupId), record.active,

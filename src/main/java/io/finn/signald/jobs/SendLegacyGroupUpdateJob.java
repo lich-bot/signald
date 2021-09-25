@@ -46,13 +46,13 @@ public class SendLegacyGroupUpdateJob implements Job {
 
   @Override
   public void run() throws GroupNotFoundException, NotAGroupMemberException, IOException, SQLException {
-    AccountData accountData = m.getAccountData();
-    GroupInfo g = accountData.groupStore.getGroup(groupId);
+    GroupInfo g = m.getGroupStore().getGroup(groupId);
     if (g == null) {
       logger.info("received group update request for unknown group, unable to respond");
       return;
     }
 
+    AccountData accountData = m.getAccountData();
     if (!g.isMember(accountData.address)) {
       logger.info("received group update request for a group we are no longer part of, unable to respond");
     }

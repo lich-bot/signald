@@ -105,6 +105,11 @@ public class Manager {
   private final AccountData accountData;
   private final UUID accountUUID;
   private final Recipient self;
+  private final DatabaseProtocolStore axolotlStore;
+  private final ProfileCredentialStore profileCredentialStore;
+  private final ContactStore contactStore;
+  private final GroupStore groupStore;
+  private final GroupsV2Storage groupsV2Storage;
   private GroupsV2Manager groupsV2Manager;
   private final SignalDependencies dependencies;
 
@@ -163,6 +168,11 @@ public class Manager {
   Manager(UUID accountUUID, AccountData accountData) throws IOException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     this.accountUUID = accountUUID;
     this.accountData = accountData;
+    axolotlStore = accountData.axolotlStore;
+    profileCredentialStore = accountData.profileCredentialStore;
+    contactStore = accountData.contactStore;
+    groupStore = accountData.groupStore;
+    groupsV2Storage = accountData.groupsV2;
     self = new RecipientsTable(accountUUID).get(accountUUID);
     logger = LogManager.getLogger("manager-" + Util.redact(accountUUID.toString()));
     ServersTable.Server server = AccountsTable.getServer(accountUUID);
@@ -170,7 +180,7 @@ public class Manager {
     unidentifiedSenderTrustRoot = server.getUnidentifiedSenderRoot();
     dependencies = SignalDependencies.get(accountUUID);
     groupsV2Manager =
-        new GroupsV2Manager(dependencies.getAccountManager().getGroupsV2Api(), accountData.groupsV2, accountData.profileCredentialStore, accountUUID, serviceConfiguration);
+        new GroupsV2Manager(dependencies.getAccountManager().getGroupsV2Api(), groupsV2Storage, profileCredentialStore, accountUUID, serviceConfiguration);
     logger.info("Created a manager for " + Util.redact(accountUUID.toString()));
     synchronized (managers) { managers.put(accountUUID.toString(), this); }
   }
@@ -188,7 +198,7 @@ public class Manager {
 
   public Recipient getOwnRecipient() { return self; }
 
-  public IdentityKey getIdentity() { return accountData.axolotlStore.getIdentityKeyPair().getPublicKey(); }
+  public IdentityKey getIdentity() { return axolotlStore.getIdentityKeyPair().getPublicKey(); }
 
   public int getDeviceId() throws SQLException { return AccountDataTable.getInt(accountUUID, AccountDataTable.Key.DEVICE_ID); }
 
@@ -242,7 +252,7 @@ public class Manager {
   }
 
   private void addDevice(String deviceIdentifier, ECPublicKey deviceKey) throws IOException, InvalidKeyException, InvalidInputException {
-    IdentityKeyPair identityKeyPair = accountData.axolotlStore.getIdentityKeyPair();
+    IdentityKeyPair identityKeyPair = axolotlStore.getIdentityKeyPair();
     SignalServiceAccountManager accountManager = dependencies.getAccountManager();
     String verificationCode = accountManager.getNewDeviceVerificationCode();
 
@@ -260,7 +270,7 @@ public class Manager {
       ECKeyPair keyPair = Curve.generateKeyPair();
       PreKeyRecord record = new PreKeyRecord(preKeyId, keyPair);
 
-      accountData.axolotlStore.storePreKey(preKeyId, record);
+      axolotlStore.storePreKey(preKeyId, record);
       records.add(record);
     }
 
@@ -276,7 +286,7 @@ public class Manager {
       byte[] signature = Curve.calculateSignature(identityKeyPair.getPrivateKey(), keyPair.getPublicKey().serialize());
       SignedPreKeyRecord record = new SignedPreKeyRecord(accountData.nextSignedPreKeyId, System.currentTimeMillis(), keyPair, signature);
 
-      accountData.axolotlStore.storeSignedPreKey(accountData.nextSignedPreKeyId, record);
+      axolotlStore.storeSignedPreKey(accountData.nextSignedPreKeyId, record);
       accountData.nextSignedPreKeyId = (accountData.nextSignedPreKeyId + 1) % Medium.MAX_VALUE;
       accountData.save();
 
@@ -288,8 +298,8 @@ public class Manager {
 
   public void refreshPreKeys() throws IOException {
     List<PreKeyRecord> oneTimePreKeys = generatePreKeys();
-    SignedPreKeyRecord signedPreKeyRecord = generateSignedPreKey(accountData.axolotlStore.getIdentityKeyPair());
-    dependencies.getAccountManager().setPreKeys(accountData.axolotlStore.getIdentityKeyPair().getPublicKey(), signedPreKeyRecord, oneTimePreKeys);
+    SignedPreKeyRecord signedPreKeyRecord = generateSignedPreKey(axolotlStore.getIdentityKeyPair());
+    dependencies.getAccountManager().setPreKeys(axolotlStore.getIdentityKeyPair().getPublicKey(), signedPreKeyRecord, oneTimePreKeys);
   }
 
   private static SignalServiceAttachmentStream createAttachment(File attachmentFile) throws IOException { return createAttachment(attachmentFile, Optional.absent()); }
@@ -325,7 +335,7 @@ public class Manager {
   }
 
   private GroupInfo getGroupForSending(byte[] groupId) throws GroupNotFoundException, NotAGroupMemberException {
-    GroupInfo g = accountData.groupStore.getGroup(groupId);
+    GroupInfo g = groupStore.getGroup(groupId);
     if (g == null) {
       throw new GroupNotFoundException(groupId);
     }
@@ -337,18 +347,18 @@ public class Manager {
     return g;
   }
 
-  public List<GroupInfo> getV1Groups() { return accountData.groupStore.getGroups(); }
+  public List<GroupInfo> getV1Groups() { return groupStore.getGroups(); }
 
   public List<JsonGroupV2Info> getGroupsV2Info() {
     List<JsonGroupV2Info> groups = new ArrayList<>();
-    for (Group g : accountData.groupsV2.groups) {
+    for (Group g : groupsV2Storage.groups) {
       groups.add(g.getJsonGroupV2Info(this));
     }
     return groups;
   }
 
   public List<SendMessageResult> sendGroupV2Message(SignalServiceDataMessage.Builder message, SignalServiceGroupV2 group) throws IOException, UnknownGroupException, SQLException {
-    Group g = accountData.groupsV2.get(group);
+    Group g = groupsV2Storage.get(group);
     if (g.group.getDisappearingMessagesTimer() != null && g.group.getDisappearingMessagesTimer().getDuration() != 0) {
       message.withExpiration(g.group.getDisappearingMessagesTimer().getDuration());
     }
@@ -376,7 +386,7 @@ public class Manager {
 
     final GroupInfo g = getGroupForSending(groupId);
     g.members.remove(accountData.address);
-    accountData.groupStore.updateGroup(g);
+    groupStore.updateGroup(g);
 
     List<Recipient> members = getRecipientsTable().get(g.getMembers());
     return sendMessage(messageBuilder, members);
@@ -414,7 +424,7 @@ public class Manager {
       Files.copy(Paths.get(avatarFile), aFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
     }
 
-    accountData.groupStore.updateGroup(g);
+    groupStore.updateGroup(g);
 
     SignalServiceDataMessage.Builder messageBuilder = getGroupUpdateMessageBuilder(g);
 
@@ -446,7 +456,7 @@ public class Manager {
     }
     GroupInfo g = getGroupForSending(groupId);
     g.messageExpirationTime = expiresInSeconds;
-    accountData.groupStore.updateGroup(g);
+    groupStore.updateGroup(g);
     accountData.save();
     SignalServiceDataMessage.Builder messageBuilder = getGroupUpdateMessageBuilder(g);
     messageBuilder.asExpirationUpdate().withExpiration(expiresInSeconds);
@@ -455,9 +465,9 @@ public class Manager {
   }
 
   public List<SendMessageResult> setExpiration(Recipient recipient, int expiresInSeconds) throws IOException, SQLException {
-    ContactStore.ContactInfo contact = accountData.contactStore.getContact(recipient);
+    ContactStore.ContactInfo contact = contactStore.getContact(recipient);
     contact.messageExpirationTime = expiresInSeconds;
-    accountData.contactStore.updateContact(contact);
+    contactStore.updateContact(contact);
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().asExpirationUpdate().withExpiration(expiresInSeconds);
     List<Recipient> recipients = new ArrayList<>(1);
     recipients.add(recipient);
@@ -486,7 +496,7 @@ public class Manager {
       Recipient recipient = new RecipientsTable(accountUUID).get(contact.address.number, null);
       contact.address = new JsonAddress(recipient.getAddress());
     }
-    ContactStore.ContactInfo c = accountData.contactStore.updateContact(contact);
+    ContactStore.ContactInfo c = contactStore.updateContact(contact);
     accountData.save();
     return c;
   }
@@ -550,7 +560,7 @@ public class Manager {
     try {
       messageSender.sendSyncMessage(message, getAccessPairFor(self));
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-      accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+      axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
       throw e;
     }
   }
@@ -562,7 +572,7 @@ public class Manager {
       messageSender.sendTyping(address, getAccessPairFor(recipient), message);
       return null;
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-      accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+      axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
       return SendMessageResult.identityFailure(address, e.getIdentityKey());
     }
   }
@@ -581,7 +591,7 @@ public class Manager {
       }
       return null;
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-      accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+      axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
       return SendMessageResult.identityFailure(address, e.getIdentityKey());
     }
   }
@@ -614,7 +624,7 @@ public class Manager {
             if (r.getIdentityFailure() != null) {
               try {
                 Recipient recipient = getRecipientsTable().get(r.getAddress());
-                accountData.axolotlStore.saveIdentity(recipient, r.getIdentityFailure().getIdentityKey(), TrustLevel.UNTRUSTED);
+                axolotlStore.saveIdentity(recipient, r.getIdentityFailure().getIdentityKey(), TrustLevel.UNTRUSTED);
               } catch (SQLException throwables) {
                 throwables.printStackTrace();
               }
@@ -622,7 +632,7 @@ public class Manager {
           }
           return result;
         } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-          accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+          axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
           return Collections.emptyList();
         }
       } else if (recipients.size() == 1 && recipients.contains(self)) {
@@ -635,7 +645,7 @@ public class Manager {
         try {
           messageSender.sendSyncMessage(syncMessage, unidentifiedAccess);
         } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-          accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+          axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
           results.add(SendMessageResult.identityFailure(self.getAddress(), e.getIdentityKey()));
         }
         return results;
@@ -643,7 +653,7 @@ public class Manager {
         // Send to all individually, so sync messages are sent correctly
         List<SendMessageResult> results = new ArrayList<>(recipients.size());
         for (Recipient recipient : recipients) {
-          ContactStore.ContactInfo contact = accountData.contactStore.getContact(recipient);
+          ContactStore.ContactInfo contact = contactStore.getContact(recipient);
           messageBuilder.withExpiration(contact.messageExpirationTime);
           message = messageBuilder.build();
           try {
@@ -661,7 +671,7 @@ public class Manager {
             }
           } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
             if (e.getIdentityKey() != null) {
-              accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+              axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
             }
             results.add(SendMessageResult.identityFailure(recipient.getAddress(), e.getIdentityKey()));
           }
@@ -683,25 +693,25 @@ public class Manager {
              SelfSendException, UnsupportedDataMessageException, org.whispersystems.libsignal.UntrustedIdentityException, InvalidMessageStructureException, IOException,
              SQLException {
     CertificateValidator certificateValidator = new CertificateValidator(unidentifiedSenderTrustRoot);
-    SignalServiceCipher cipher = new SignalServiceCipher(self.getAddress(), accountData.axolotlStore, new SessionLock(getUUID()), certificateValidator);
+    SignalServiceCipher cipher = new SignalServiceCipher(self.getAddress(), axolotlStore, new SessionLock(getUUID()), certificateValidator);
     try {
       return cipher.decrypt(envelope);
     } catch (ProtocolUntrustedIdentityException e) {
       if (e.getCause() instanceof org.whispersystems.libsignal.UntrustedIdentityException) {
         org.whispersystems.libsignal.UntrustedIdentityException identityException = (org.whispersystems.libsignal.UntrustedIdentityException)e.getCause();
-        accountData.axolotlStore.saveIdentity(identityException.getName(), identityException.getUntrustedIdentity(), TrustLevel.UNTRUSTED);
+        axolotlStore.saveIdentity(identityException.getName(), identityException.getUntrustedIdentity(), TrustLevel.UNTRUSTED);
         throw identityException;
       }
       throw e;
     }
   }
 
-  private void handleEndSession(Recipient address) { accountData.axolotlStore.deleteAllSessions(address); }
+  private void handleEndSession(Recipient address) { axolotlStore.deleteAllSessions(address); }
 
   public List<SendMessageResult> send(SignalServiceDataMessage.Builder messageBuilder, Recipient recipient, String recipientGroupId)
       throws IOException, InvalidRecipientException, UnknownGroupException, SQLException, NoSendPermissionException {
     if (recipientGroupId != null && recipient == null) {
-      Group group = accountData.groupsV2.get(recipientGroupId);
+      Group group = groupsV2Storage.get(recipientGroupId);
       if (group == null) {
         throw new UnknownGroupException();
       }
@@ -743,13 +753,13 @@ public class Manager {
 
       if (groupContext.getGroupV1().isPresent()) {
         groupInfo = groupContext.getGroupV1().get();
-        GroupInfo group = accountData.groupStore.getGroup(groupInfo.getGroupId());
+        GroupInfo group = groupStore.getGroup(groupInfo.getGroupId());
 
         if (message.isExpirationUpdate()) {
           if (group.messageExpirationTime != message.getExpiresInSeconds()) {
             group.messageExpirationTime = message.getExpiresInSeconds();
           }
-          accountData.groupStore.updateGroup(group);
+          groupStore.updateGroup(group);
           accountData.save();
         }
 
@@ -779,7 +789,7 @@ public class Manager {
             group.addMembers(members);
           }
 
-          accountData.groupStore.updateGroup(group);
+          groupStore.updateGroup(group);
           break;
         case DELIVER:
           if (group == null) {
@@ -799,7 +809,7 @@ public class Manager {
             }
           } else {
             group.removeMember(source);
-            accountData.groupStore.updateGroup(group);
+            groupStore.updateGroup(group);
           }
           break;
         case REQUEST_INFO:
@@ -810,10 +820,10 @@ public class Manager {
         }
       }
     } else {
-      ContactStore.ContactInfo c = accountData.contactStore.getContact(isSync ? destination : source);
+      ContactStore.ContactInfo c = contactStore.getContact(isSync ? destination : source);
       if (c.messageExpirationTime != message.getExpiresInSeconds()) {
         c.messageExpirationTime = message.getExpiresInSeconds();
-        accountData.contactStore.updateContact(c);
+        contactStore.updateContact(c);
         accountData.save();
       }
     }
@@ -841,7 +851,7 @@ public class Manager {
       } catch (InvalidInputException e) {
         throw new AssertionError(e);
       }
-      ProfileAndCredentialEntry entry = accountData.profileCredentialStore.storeProfileKey(source, profileKey);
+      ProfileAndCredentialEntry entry = profileCredentialStore.storeProfileKey(source, profileKey);
       RefreshProfileJob j = new RefreshProfileJob(this, entry);
       if (j.needsRefresh()) {
         jobs.add(j);
@@ -1069,19 +1079,19 @@ public class Manager {
           try (InputStream attachmentAsStream = retrieveAttachmentAsStream(contactsMessage.getContactsStream().asPointer(), tmpFile)) {
             DeviceContactsInputStream s = new DeviceContactsInputStream(attachmentAsStream);
             if (contactsMessage.isComplete()) {
-              accountData.contactStore.clear();
+              contactStore.clear();
             }
             DeviceContact c;
             while ((c = s.read()) != null) {
               Recipient recipient = recipientsTable.get(c.getAddress());
-              ContactStore.ContactInfo contact = accountData.contactStore.getContact(recipient);
+              ContactStore.ContactInfo contact = contactStore.getContact(recipient);
               contact.update(c);
               updateContact(contact);
               if (c.getAvatar().isPresent()) {
                 retrieveContactAvatarAttachment(c.getAvatar().get(), recipient);
               }
               if (c.getProfileKey().isPresent()) {
-                accountData.profileCredentialStore.storeProfileKey(recipient, c.getProfileKey().get());
+                profileCredentialStore.storeProfileKey(recipient, c.getProfileKey().get());
               }
             }
           }
@@ -1101,7 +1111,7 @@ public class Manager {
         final VerifiedMessage verifiedMessage = syncMessage.getVerified().get();
         Recipient destination = getRecipientsTable().get(verifiedMessage.getDestination());
         TrustLevel trustLevel = TrustLevel.fromVerifiedState(verifiedMessage.getVerified());
-        accountData.axolotlStore.saveIdentity(destination, verifiedMessage.getIdentityKey(), trustLevel);
+        axolotlStore.saveIdentity(destination, verifiedMessage.getIdentityKey(), trustLevel);
       }
     }
     for (Job job : jobs) {
@@ -1278,22 +1288,22 @@ public class Manager {
   }
 
   public List<ContactStore.ContactInfo> getContacts() {
-    if (accountData.contactStore == null) {
+    if (contactStore == null) {
       return Collections.emptyList();
     }
-    return this.accountData.contactStore.getContacts();
+    return contactStore.getContacts();
   }
 
-  public GroupInfo getGroup(byte[] groupId) { return accountData.groupStore.getGroup(groupId); }
+  public GroupInfo getGroup(byte[] groupId) { return groupStore.getGroup(groupId); }
 
-  public List<IdentityKeysTable.IdentityKeyRow> getIdentities() throws SQLException, InvalidKeyException { return accountData.axolotlStore.getIdentities(); }
+  public List<IdentityKeysTable.IdentityKeyRow> getIdentities() throws SQLException, InvalidKeyException { return axolotlStore.getIdentities(); }
 
   public List<IdentityKeysTable.IdentityKeyRow> getIdentities(Recipient recipient) throws SQLException, InvalidKeyException {
-    return accountData.axolotlStore.getIdentities(recipient);
+    return axolotlStore.getIdentities(recipient);
   }
 
   public boolean trustIdentity(Recipient recipient, byte[] fingerprint, TrustLevel level) throws SQLException, InvalidKeyException {
-    List<IdentityKeysTable.IdentityKeyRow> ids = accountData.axolotlStore.getIdentities(recipient);
+    List<IdentityKeysTable.IdentityKeyRow> ids = axolotlStore.getIdentities(recipient);
     if (ids == null) {
       return false;
     }
@@ -1302,7 +1312,7 @@ public class Manager {
         continue;
       }
 
-      accountData.axolotlStore.saveIdentity(recipient, id.getKey(), level);
+      axolotlStore.saveIdentity(recipient, id.getKey(), level);
       try {
         sendVerifiedMessage(recipient, id.getKey(), level);
       } catch (IOException | org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
@@ -1314,7 +1324,7 @@ public class Manager {
   }
 
   public boolean trustIdentitySafetyNumber(Recipient recipient, String safetyNumber, TrustLevel level) throws SQLException, InvalidKeyException {
-    List<IdentityKeysTable.IdentityKeyRow> ids = accountData.axolotlStore.getIdentities(recipient);
+    List<IdentityKeysTable.IdentityKeyRow> ids = axolotlStore.getIdentities(recipient);
     if (ids == null) {
       return false;
     }
@@ -1322,7 +1332,7 @@ public class Manager {
       if (!safetyNumber.equals(SafetyNumberHelper.computeSafetyNumber(self, getIdentity(), recipient, id.getKey()))) {
         continue;
       }
-      accountData.axolotlStore.saveIdentity(recipient, id.getKey(), level);
+      axolotlStore.saveIdentity(recipient, id.getKey(), level);
       try {
         sendVerifiedMessage(recipient, id.getKey(), level);
       } catch (IOException | org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
@@ -1335,7 +1345,7 @@ public class Manager {
 
   public boolean trustIdentitySafetyNumber(Recipient recipient, byte[] scannedFingerprintData, TrustLevel level)
       throws FingerprintVersionMismatchException, FingerprintParsingException, SQLException, InvalidKeyException {
-    List<IdentityKeysTable.IdentityKeyRow> ids = accountData.axolotlStore.getIdentities(recipient);
+    List<IdentityKeysTable.IdentityKeyRow> ids = axolotlStore.getIdentities(recipient);
     if (ids == null) {
       return false;
     }
@@ -1346,7 +1356,7 @@ public class Manager {
         continue;
       }
 
-      accountData.axolotlStore.saveIdentity(recipient, id.getKey(), level);
+      axolotlStore.saveIdentity(recipient, id.getKey(), level);
       try {
         sendVerifiedMessage(recipient, id.getKey(), level);
       } catch (IOException | org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
@@ -1368,7 +1378,7 @@ public class Manager {
   }
 
   public Optional<UnidentifiedAccessPair> getAccessPairFor(Recipient recipient) {
-    ProfileAndCredentialEntry recipientProfileKeyCredential = accountData.profileCredentialStore.get(recipient);
+    ProfileAndCredentialEntry recipientProfileKeyCredential = profileCredentialStore.get(recipient);
     if (recipientProfileKeyCredential == null) {
       return Optional.absent();
     }
@@ -1438,7 +1448,7 @@ public class Manager {
       deviceName = "signald";
       AccountDataTable.set(getUUID(), AccountDataTable.Key.DEVICE_NAME, deviceName);
     }
-    deviceName = DeviceNameUtil.encryptDeviceName(deviceName, accountData.axolotlStore.getIdentityKeyPair().getPrivateKey());
+    deviceName = DeviceNameUtil.encryptDeviceName(deviceName, axolotlStore.getIdentityKeyPair().getPrivateKey());
     int localRegistrationId = AccountDataTable.getInt(accountUUID, AccountDataTable.Key.LOCAL_REGISTRATION_ID);
     dependencies.getAccountManager().setAccountAttributes(deviceName, null, localRegistrationId, true, null, null, accountData.getSelfUnidentifiedAccessKey(), true,
                                                           ServiceConfig.CAPABILITIES, true);
@@ -1458,16 +1468,40 @@ public class Manager {
 
   public AccountData getAccountData() { return accountData; }
 
+  public DatabaseProtocolStore getAxolotlStore() {
+    return axolotlStore;
+  }
+
+  public GroupStore getGroupStore() {
+    return groupStore;
+  }
+
+  public GroupsV2Storage getGroupsV2Storage() {
+    return groupsV2Storage;
+  }
+
+  public void saveGroupsV2Storage() throws IOException {
+    accountData.save();
+  }
+
+  public ContactStore getContactStore() {
+    return contactStore;
+  }
+
+  public ProfileCredentialStore getProfileCredentialStore() {
+    return profileCredentialStore;
+  }
+
   public ProfileAndCredentialEntry getRecipientProfileKeyCredential(Recipient recipient)
       throws InterruptedException, ExecutionException, TimeoutException, IOException, SQLException {
-    ProfileAndCredentialEntry profileEntry = accountData.profileCredentialStore.get(recipient);
+    ProfileAndCredentialEntry profileEntry = profileCredentialStore.get(recipient);
     if (profileEntry == null) {
       return null;
     }
     RefreshProfileJob action = new RefreshProfileJob(this, profileEntry);
     if (action.needsRefresh()) {
       action.run();
-      return accountData.profileCredentialStore.get(recipient);
+      return profileCredentialStore.get(recipient);
     } else {
       return profileEntry;
     }

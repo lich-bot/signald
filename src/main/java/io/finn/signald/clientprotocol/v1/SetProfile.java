@@ -83,7 +83,7 @@ public class SetProfile implements RequestType<Empty> {
 
     if (mobilecoinAddress != null && !mobilecoinAddress.equals("")) {
       byte[] decodedAddress = Base64.decode(mobilecoinAddress);
-      IdentityKeyPair identityKeyPair = m.getAccountData().axolotlStore.getIdentityKeyPair();
+      IdentityKeyPair identityKeyPair = m.getAxolotlStore().getIdentityKeyPair();
       SignalServiceProtos.PaymentAddress signedAddress = signPaymentsAddress(decodedAddress, identityKeyPair);
 
       SignalServiceProtos.PaymentAddress.Builder paymentAddressBuilder = SignalServiceProtos.PaymentAddress.newBuilder();

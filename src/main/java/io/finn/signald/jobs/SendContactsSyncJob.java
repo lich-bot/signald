@@ -22,7 +22,6 @@ import io.finn.signald.Util;
 import io.finn.signald.db.IdentityKeysTable;
 import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.exceptions.InvalidAddressException;
-import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.ContactStore;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
 import java.io.*;
@@ -47,15 +46,14 @@ public class SendContactsSyncJob implements Job {
   @Override
   public void run() throws IOException, UntrustedIdentityException, SQLException, InvalidKeyException, InvalidAddressException {
     File contactsFile = Util.createTempFile();
-    AccountData accountData = m.getAccountData();
     RecipientsTable recipientsTable = m.getRecipientsTable();
 
     try {
       try (OutputStream fos = new FileOutputStream(contactsFile)) {
         DeviceContactsOutputStream out = new DeviceContactsOutputStream(fos);
-        for (ContactStore.ContactInfo record : accountData.contactStore.getContacts()) {
+        for (ContactStore.ContactInfo record : m.getContactStore().getContacts()) {
           VerifiedMessage verifiedMessage = null;
-          List<IdentityKeysTable.IdentityKeyRow> identities = accountData.axolotlStore.getIdentities(recipientsTable.get(record.address));
+          List<IdentityKeysTable.IdentityKeyRow> identities = m.getAxolotlStore().getIdentities(recipientsTable.get(record.address));
           if (identities.size() == 0) {
             continue;
           }
@@ -73,7 +71,7 @@ public class SendContactsSyncJob implements Job {
 
           // TODO: Don't hard code `false` value for blocked argument
           Optional<Integer> expirationTimer = Optional.absent();
-          ProfileAndCredentialEntry profileAndCredential = accountData.profileCredentialStore.get(record.address.getSignalServiceAddress());
+          ProfileAndCredentialEntry profileAndCredential = m.getProfileCredentialStore().get(record.address.getSignalServiceAddress());
           ProfileKey profileKey = profileAndCredential == null ? null : profileAndCredential.getProfileKey();
           out.write(new DeviceContact(record.address.getSignalServiceAddress(), Optional.fromNullable(record.name),
                                       m.createContactAvatarAttachment(recipientsTable.get(record.address)), Optional.fromNullable(record.color),
@@ -96,6 +94,7 @@ public class SendContactsSyncJob implements Job {
         logger.warn("Failed to delete contacts temp file " + contactsFile + ": " + e.getMessage());
       }
     }
-    accountData.save();
+
+    m.getAccountData().save();
   }
 }

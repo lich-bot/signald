@@ -19,7 +19,6 @@ package io.finn.signald.jobs;
 
 import io.finn.signald.Manager;
 import io.finn.signald.db.Recipient;
-import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
 import io.finn.signald.storage.SignalProfile;
 import java.io.IOException;
@@ -57,7 +56,6 @@ public class RefreshProfileJob implements Job {
 
   @Override
   public void run() throws InterruptedException, ExecutionException, TimeoutException, IOException, SQLException {
-    AccountData accountData = m.getAccountData();
     if (profileEntry == null) {
       logger.debug("refresh job scheduled for address with no stored profile key. skipping");
       return;
@@ -80,11 +78,11 @@ public class RefreshProfileJob implements Job {
     final ProfileAndCredentialEntry.UnidentifiedAccessMode unidentifiedAccessMode =
         getUnidentifiedAccessMode(profile.getUnidentifiedAccess(), profile.isUnrestrictedUnidentifiedAccess());
 
-    accountData.profileCredentialStore.update(profileEntry.getServiceAddress(), profileEntry.getProfileKey(), now, profile, profileKeyCredential, unidentifiedAccessMode);
+    m.getProfileCredentialStore().update(profileEntry.getServiceAddress(), profileEntry.getProfileKey(), now, profile, profileKeyCredential, unidentifiedAccessMode);
   }
 
   private ProfileAndCredentialEntry.UnidentifiedAccessMode getUnidentifiedAccessMode(String unidentifiedAccessVerifier, boolean unrestrictedUnidentifiedAccess) {
-    ProfileAndCredentialEntry currentEntry = m.getAccountData().profileCredentialStore.get(profileEntry.getServiceAddress());
+    ProfileAndCredentialEntry currentEntry = m.getProfileCredentialStore().get(profileEntry.getServiceAddress());
     ProfileKey profileKey = currentEntry.getProfileKey();
 
     if (unrestrictedUnidentifiedAccess && unidentifiedAccessVerifier != null) {

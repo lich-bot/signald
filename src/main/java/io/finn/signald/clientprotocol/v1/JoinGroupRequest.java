@@ -28,7 +28,6 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.exceptions.UnknownGroupException;
-import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import io.finn.signald.util.GroupsUtil;
 import java.io.IOException;
@@ -100,9 +99,8 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
       throw new UnknownGroupException();
     }
 
-    AccountData accountData = m.getAccountData();
-    accountData.groupsV2.update(group);
-    accountData.save();
+    m.getGroupsV2Storage().update(group);
+    m.saveGroupsV2Storage();
 
     return new JsonGroupJoinInfo(groupJoinInfo, groupInviteLinkUrl.getGroupMasterKey());
   }

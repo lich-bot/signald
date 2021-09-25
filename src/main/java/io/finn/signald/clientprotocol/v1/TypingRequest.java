@@ -79,13 +79,13 @@ public class TypingRequest implements RequestType<Empty> {
       try {
         messageSender.sendTyping(recipient.getAddress(), m.getAccessPairFor(recipient), message);
       } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-        m.getAccountData().axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+        m.getAxolotlStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
         throw e;
       }
     } else if (group != null) {
       Group g;
       try {
-        g = m.getAccountData().groupsV2.get(group);
+        g = m.getGroupsV2Storage().get(group);
       } catch (io.finn.signald.exceptions.UnknownGroupException e) {
         throw new UnknownGroupException();
       }

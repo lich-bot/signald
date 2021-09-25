@@ -54,8 +54,8 @@ public class ListContactsRequest implements RequestType<ProfileList> {
     Manager m = Utils.getManager(account);
     RecipientsTable recipientsTable = m.getRecipientsTable();
     ProfileList list = new ProfileList();
-    for (ContactStore.ContactInfo c : m.getAccountData().contactStore.getContacts()) {
-      ProfileAndCredentialEntry profileEntry = m.getAccountData().profileCredentialStore.get(c.address.getSignalServiceAddress());
+    for (ContactStore.ContactInfo c : m.getContactStore().getContacts()) {
+      ProfileAndCredentialEntry profileEntry = m.getProfileCredentialStore().get(c.address.getSignalServiceAddress());
       if (profileEntry == null) {
         list.profiles.add(new Profile(c));
         continue;

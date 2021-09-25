@@ -29,7 +29,6 @@ import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.OwnProfileKeyDoesNotExist;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import io.finn.signald.exceptions.UnknownGroupException;
-import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import io.finn.signald.util.GroupsUtil;
 import java.io.IOException;
@@ -61,10 +60,9 @@ public class AcceptInvitationRequest implements RequestType<JsonGroupV2Info> {
       throws IOException, NoSuchAccount, VerificationFailedException, InterruptedException, ExecutionException, TimeoutException, UnknownGroupException, SQLException,
              OwnProfileKeyDoesNotExist, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Utils.getManager(account);
-    AccountData accountData = m.getAccountData();
     Group group;
     try {
-      group = accountData.groupsV2.get(groupID);
+      group = m.getGroupsV2Storage().get(groupID);
     } catch (io.finn.signald.exceptions.UnknownGroupException e) {
       throw new UnknownGroupException();
     }
@@ -95,8 +93,8 @@ public class AcceptInvitationRequest implements RequestType<JsonGroupV2Info> {
       throw new UnknownGroupException();
     }
 
-    accountData.groupsV2.update(group);
-    accountData.save();
+    m.getGroupsV2Storage().update(group);
+    m.saveGroupsV2Storage();
     return group.getJsonGroupV2Info(m);
   }
 }
