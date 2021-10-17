@@ -144,6 +144,17 @@ public class RecipientsTable {
 
     if (storedUUID == null) {
       storedUUID = getRegisteredUser(e164);
+      // add e164 to existing storedUUID (if possible)
+      if (rowid < 0 && storedUUID != null && queryUUID == null) {
+        statement.setString(1, storedUUID.toString());
+        statement.setString(2, null);
+        rows = statement.executeQuery();
+        if (rows.next()) {
+          rowid = rows.getInt(ROW_ID);
+          update(E164, e164, rowid);
+        }
+      }
+
       if (rowid > 0) {
         update(UUID, storedUUID.toString(), rowid);
       } else {
