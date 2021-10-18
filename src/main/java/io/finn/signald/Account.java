@@ -140,4 +140,6 @@ public class Account {
   public void setNextSignedPreKeyId(int nextSignedPreKeyId) throws SQLException {
     AccountDataTable.set(accountUUID, AccountDataTable.Key.NEXT_SIGNED_PRE_KEY_ID, nextSignedPreKeyId);
   }
+
+  public boolean exists() throws SQLException { return AccountsTable.exists(accountUUID); }
 }
