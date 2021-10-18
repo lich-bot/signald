@@ -24,7 +24,8 @@ public class ProtocolValidationTest {
   @MethodSource("allRequestTypes")
   void TestNoCrossVersionErrors(Class<? extends RequestType<?>> r) throws NoSuchMethodException {
     for (Class<?> exception : r.getMethod("run", Request.class).getExceptionTypes()) {
-      Assertions.assertEquals(RequestUtil.getVersion(r), RequestUtil.getVersion(exception));
+      Assertions.assertEquals(RequestUtil.getVersion(r), RequestUtil.getVersion(exception),
+                              r.getCanonicalName() + " throws exception of different version: " + exception.getCanonicalName());
       Assertions.assertTrue(exception.getPackageName().startsWith("io.finn.signald"));
     }
   }

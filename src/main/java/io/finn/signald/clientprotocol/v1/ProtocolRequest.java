@@ -175,7 +175,7 @@ public class ProtocolRequest implements RequestType<JsonNode> {
       output.put("removal_date", type.getAnnotation(Deprecated.class).value());
     }
 
-    if (type.getName().startsWith("io.finn.signald.clientprotocol.v1.exceptions")) {
+    if (type.getName().startsWith("io.finn.signald.clientprotocol.v1.exceptions") || type.getName().startsWith("io.finn.signald.clientprotocol.v2alpha1.exceptions")) {
       output.put("error", true);
     }
 

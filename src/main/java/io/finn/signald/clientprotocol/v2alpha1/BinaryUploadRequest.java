@@ -11,14 +11,13 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 
 @ProtocolType("binary_upload")
 public class BinaryUploadRequest implements RequestType<BinaryTransfer> {
   @Required @Doc("the size of the file to be transferred, in bytes") public long size;
 
   @Override
-  public BinaryTransfer run(Request request) throws InternalError {
+  public BinaryTransfer run(Request request) {
     return new BinaryTransfer(size);
   }
 }
