@@ -26,6 +26,8 @@ import java.lang.annotation.RetentionPolicy;
  */
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ExampleValue {
+  String JPEG_CONTENT_TYPE = "\"image/jpeg\"";
+
   String value();
 
   String LOCAL_PHONE_NUMBER = "\"+12024561414\"";

@@ -20,7 +20,7 @@ import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 
 @Doc("a file attached to a message")
 public class Attachment {
-  @JsonProperty("content_type") @ExampleValue("image/jpeg") public String contentType;
+  @JsonProperty("content_type") @ExampleValue(ExampleValue.JPEG_CONTENT_TYPE) public String contentType;
   @JsonProperty("original_filename") public String originalFilename;
   @JsonProperty("voice_note") public boolean voiceNote;
   public boolean borderless;
