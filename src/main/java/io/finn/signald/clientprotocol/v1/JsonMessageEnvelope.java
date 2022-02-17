@@ -16,7 +16,7 @@ import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
-import io.finn.signald.db.AccountsTable;
+import io.finn.signald.db.Database;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import java.sql.SQLException;
 import java.text.DateFormat;
@@ -50,7 +50,7 @@ public class JsonMessageEnvelope {
 
   public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, ACI aci) throws NoSuchAccountError, InternalError, ServerNotFoundError, InvalidProxyError {
     try {
-      this.username = AccountsTable.getE164(aci);
+      this.username = Database.Get().AccountsTable.getE164(aci);
     } catch (NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
     } catch (SQLException e) {
@@ -63,9 +63,9 @@ public class JsonMessageEnvelope {
 
     Manager m = Common.getManager(aci);
     if (!envelope.isUnidentifiedSender()) {
-      source = new JsonAddress(Common.getRecipient(m.getRecipientsTable(), envelope.getSourceAddress()));
+      source = new JsonAddress(Common.getRecipient(m.getACI(), envelope.getSourceAddress()));
     } else if (c != null) {
-      source = new JsonAddress(Common.getRecipient(m.getRecipientsTable(), (c.getSender())));
+      source = new JsonAddress(Common.getRecipient(m.getACI(), (c.getSender())));
     }
 
     if (envelope.hasSourceDevice()) {

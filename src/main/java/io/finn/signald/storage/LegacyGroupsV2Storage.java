@@ -17,8 +17,7 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.finn.signald.Account;
-import io.finn.signald.db.GroupCredentialsTable;
-import io.finn.signald.db.GroupsTable;
+import io.finn.signald.db.Database;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -45,18 +44,17 @@ public class LegacyGroupsV2Storage {
     boolean needsSave = false;
 
     if (credentials != null) {
-      GroupCredentialsTable credentialsTable = new GroupCredentialsTable(account.getACI());
       HashMap<Integer, AuthCredentialResponse> credentialResponseHashMap = new HashMap<>();
       for (Map.Entry<Integer, JsonAuthCredential> entry : credentials.entrySet()) {
         credentialResponseHashMap.put(entry.getKey(), entry.getValue().credential);
       }
-      credentialsTable.setCredentials(credentialResponseHashMap);
+      Database.Get(account.getACI()).GroupCredentialsTable.setCredentials(credentialResponseHashMap);
       credentials = null;
       needsSave = true;
     }
 
     if (groups != null) {
-      GroupsTable groupsTable = account.getGroupsTable();
+      var groupsTable = Database.Get(account.getACI()).GroupsTable;
       for (Group g : groups) {
         groupsTable.upsert(g.getMasterKey(), g.revision, g.getGroup(), g.getDistributionId(), g.getLastAvatarFetch());
       }

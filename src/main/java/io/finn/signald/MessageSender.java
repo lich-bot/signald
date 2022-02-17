@@ -1,9 +1,7 @@
 package io.finn.signald;
 
-import io.finn.signald.db.GroupsTable;
+import io.finn.signald.db.Database;
 import io.finn.signald.db.Recipient;
-import io.finn.signald.db.SenderKeySharedTable;
-import io.finn.signald.db.SenderKeysTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -52,17 +50,17 @@ public class MessageSender {
 
   public MessageSender(Account account) throws SQLException, IOException {
     this.account = account;
-    self = account.getRecipients().get(account.getACI());
+    self = Database.Get(account.getACI()).RecipientsTable.get(account.getACI());
   }
 
   public List<SendMessageResult> sendGroupMessage(SignalServiceDataMessage.Builder message, GroupIdentifier recipientGroupId, List<Recipient> members)
       throws UnknownGroupException, SQLException, IOException, InvalidInputException, NoSuchAccountException, ServerNotFoundException, InvalidProxyException, InvalidKeyException,
              InvalidCertificateException, InvalidRegistrationIdException, TimeoutException, ExecutionException, InterruptedException {
-    Optional<GroupsTable.Group> groupOptional = account.getGroupsTable().get(recipientGroupId);
+    var groupOptional = Database.Get(account.getACI()).GroupsTable.get(recipientGroupId);
     if (!groupOptional.isPresent()) {
       throw new UnknownGroupException();
     }
-    GroupsTable.Group group = groupOptional.get();
+    var group = groupOptional.get();
     if (members == null) {
       members = group.getMembers().stream().filter(x -> !self.equals(x)).collect(Collectors.toList());
     }
@@ -172,7 +170,7 @@ public class MessageSender {
     for (SendMessageResult r : results) {
       if (r.getIdentityFailure() != null) {
         try {
-          Recipient recipient = account.getRecipients().get(r.getAddress());
+          Recipient recipient = Database.Get(account.getACI()).RecipientsTable.get(r.getAddress());
           account.getProtocolStore().saveIdentity(recipient, r.getIdentityFailure().getIdentityKey(), Config.getNewKeyTrustLevel());
         } catch (SQLException e) {
           logger.error("error storing new identity", e);
@@ -185,16 +183,14 @@ public class MessageSender {
 
   private void rotateOurKey(DistributionId distributionId) throws NoSuchAccountException, SQLException, ServerNotFoundException, IOException, InvalidProxyException {
     SessionLock lock = account.getSignalDependencies().getSessionLock();
-    SenderKeysTable senderKeysTable = account.getProtocolStore().getSenderKeys();
-    SenderKeySharedTable senderKeySharedTable = account.getProtocolStore().getSenderKeyShared();
     try (SignalSessionLock.Lock ignored = lock.acquire()) {
-      senderKeysTable.deleteAllFor(account.getACI().toString(), distributionId);
-      senderKeySharedTable.deleteAllFor(distributionId);
+      Database.Get(account.getACI()).SenderKeysTable.deleteAllFor(account.getACI().toString(), distributionId);
+      Database.Get(account.getACI()).SenderKeySharedTable.deleteAllFor(distributionId);
     }
   }
 
   private long getCreateTimeForOurKey(DistributionId distributionId) throws SQLException {
     SignalProtocolAddress address = new SignalProtocolAddress(account.getACI().toString(), account.getDeviceId());
-    return account.getProtocolStore().getSenderKeys().getCreatedTime(address, distributionId.asUuid());
+    return Database.Get(account.getACI()).SenderKeysTable.getCreatedTime(address, distributionId.asUuid());
   }
 }

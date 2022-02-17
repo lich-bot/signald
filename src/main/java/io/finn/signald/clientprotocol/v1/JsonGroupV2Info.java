@@ -14,7 +14,8 @@ import io.finn.signald.Account;
 import io.finn.signald.GroupInviteLinkUrl;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
-import io.finn.signald.db.GroupsTable;
+import io.finn.signald.db.Database;
+import io.finn.signald.db.IGroupsTable;
 import io.finn.signald.util.GroupsUtil;
 import io.sentry.Sentry;
 import java.io.IOException;
@@ -72,7 +73,7 @@ public class JsonGroupV2Info {
     update(o);
   }
 
-  public JsonGroupV2Info(GroupsTable.Group g) { this(g.getSignalServiceGroupV2(), g.getDecryptedGroup()); }
+  public JsonGroupV2Info(IGroupsTable.IGroup g) { this(g.getSignalServiceGroupV2(), g.getDecryptedGroup()); }
 
   // format a group for an incoming message
   public JsonGroupV2Info(SignalServiceGroupV2 group, ACI aci) {
@@ -80,9 +81,9 @@ public class JsonGroupV2Info {
     id = Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(group.getMasterKey()).serialize());
     revision = group.getRevision();
 
-    Optional<GroupsTable.Group> localState;
+    Optional<IGroupsTable.IGroup> localState;
     try {
-      localState = new Account(aci).getGroupsTable().get(group);
+      localState = Database.Get(aci).GroupsTable.get(group);
     } catch (InvalidProtocolBufferException | InvalidInputException | SQLException e) {
       logger.error("error fetching group state from local db");
       Sentry.captureException(e);

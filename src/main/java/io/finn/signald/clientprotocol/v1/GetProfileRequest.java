@@ -44,7 +44,7 @@ public class GetProfileRequest implements RequestType<Profile> {
   @Override
   public Profile run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, ProfileUnavailableError, UnregisteredUserError {
     Manager m = Common.getManager(account);
-    Recipient recipient = Common.getRecipient(m.getRecipientsTable(), requestedAddress);
+    Recipient recipient = Common.getRecipient(m.getACI(), requestedAddress);
     ContactStore.ContactInfo contact = m.getAccountData().contactStore.getContact(recipient);
     ProfileAndCredentialEntry profileEntry = m.getAccountData().profileCredentialStore.get(recipient);
     if (profileEntry == null) {

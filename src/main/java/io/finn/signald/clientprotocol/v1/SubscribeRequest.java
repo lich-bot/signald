@@ -19,7 +19,7 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.db.AccountsTable;
+import io.finn.signald.db.Database;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.util.JSONUtil;
 import java.io.IOException;
@@ -51,7 +51,7 @@ public class SubscribeRequest implements RequestType<Empty> {
   public Empty run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError {
     ACI aci;
     try {
-      aci = AccountsTable.getACI(account);
+      aci = Database.Get().AccountsTable.getACI(account);
     } catch (NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
     } catch (SQLException e) {

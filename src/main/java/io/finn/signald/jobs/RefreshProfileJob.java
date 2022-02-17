@@ -9,6 +9,7 @@ package io.finn.signald.jobs;
 
 import io.finn.signald.Manager;
 import io.finn.signald.SignalDependencies;
+import io.finn.signald.db.Database;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
@@ -34,7 +35,6 @@ import org.whispersystems.signalservice.api.profiles.ProfileAndCredential;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.NonSuccessfulResponseCodeException;
-import org.whispersystems.signalservice.api.push.exceptions.NotFoundException;
 import org.whispersystems.signalservice.api.push.exceptions.RateLimitException;
 import org.whispersystems.signalservice.api.services.ProfileService;
 import org.whispersystems.signalservice.internal.ServiceResponse;
@@ -88,7 +88,7 @@ public class RefreshProfileJob implements Job {
     }
     long now = System.currentTimeMillis();
     ProfileKeyCredential profileKeyCredential = profileAndCredential.getProfileKeyCredential().orNull();
-    Recipient recipient = m.getRecipientsTable().get(entry.getServiceAddress());
+    Recipient recipient = Database.Get(m.getACI()).RecipientsTable.get(entry.getServiceAddress());
     final SignalProfile profile = m.decryptProfile(recipient, entry.getProfileKey(), profileAndCredential.getProfile());
     final ProfileAndCredentialEntry.UnidentifiedAccessMode unidentifiedAccessMode =
         getUnidentifiedAccessMode(profile.getUnidentifiedAccess(), profile.isUnrestrictedUnidentifiedAccess());

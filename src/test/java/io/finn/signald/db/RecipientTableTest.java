@@ -29,7 +29,7 @@ public class RecipientTableTest {
   private static final SignalServiceAddress ADDRESS_A = new SignalServiceAddress(ACI.from(UUID.fromString("356db4e7-5a90-4574-81ab-52340ae4218d")), "+12024561414");
   private static final SignalServiceAddress ADDRESS_B = new SignalServiceAddress(ACI.from(UUID.fromString("ede05132-54e8-4cbc-bf5d-75204c9415da")));
 
-  private final RecipientsTable recipientsTable = new RecipientsTable(SELF_ADDRESS.getAci());
+  private final IRecipientsTable recipientsTable = Database.Get(SELF_ADDRESS.getAci()).RecipientsTable;
   private File databaseFile;
 
   @BeforeEach
@@ -38,7 +38,7 @@ public class RecipientTableTest {
     databaseFile = File.createTempFile("test", "sqlite", tmpDirectory);
     String db = "jdbc:sqlite:" + databaseFile.getAbsolutePath();
 
-    Flyway flyway = Flyway.configure().dataSource(db, null, null).load();
+    Flyway flyway = Flyway.configure().locations("db/migration/sqlite").dataSource(db, null, null).load();
     flyway.migrate();
 
     Config.testInit(db);

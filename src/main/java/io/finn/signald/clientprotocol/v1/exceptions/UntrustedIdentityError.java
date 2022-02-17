@@ -12,9 +12,7 @@ import io.finn.signald.Manager;
 import io.finn.signald.clientprotocol.v1.Common;
 import io.finn.signald.clientprotocol.v1.IdentityKey;
 import io.finn.signald.db.Recipient;
-import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.util.SafetyNumberHelper;
-import java.util.UUID;
 import org.whispersystems.libsignal.fingerprint.Fingerprint;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.push.ACI;
@@ -27,7 +25,7 @@ public class UntrustedIdentityError extends ExceptionWrapper {
       throws InternalError, ServerNotFoundError, InvalidProxyError, NoSuchAccountError {
     this.identifier = identifier;
     Manager m = Common.getManager(aci);
-    Recipient recipient = Common.getRecipient(new RecipientsTable(aci), identifier);
+    Recipient recipient = Common.getRecipient(aci, identifier);
     if (libsignalIdentityKey != null) {
       Fingerprint fingerprint = SafetyNumberHelper.computeFingerprint(m.getOwnRecipient(), m.getIdentity(), recipient, libsignalIdentityKey);
       if (fingerprint != null) {

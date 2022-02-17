@@ -8,9 +8,9 @@
 package io.finn.signald;
 
 import io.finn.signald.clientprotocol.v1.JsonGroupJoinInfo;
-import io.finn.signald.db.AccountsTable;
-import io.finn.signald.db.GroupCredentialsTable;
-import io.finn.signald.db.GroupsTable;
+import io.finn.signald.db.Database;
+import io.finn.signald.db.IGroupCredentialsTable;
+import io.finn.signald.db.IGroupsTable;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
@@ -24,11 +24,8 @@ import java.nio.file.Files;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.storageservice.protos.groups.GroupInviteLink;
 import org.signal.storageservice.protos.groups.Member;
@@ -48,17 +45,14 @@ import org.whispersystems.signalservice.api.groupsv2.*;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
 import org.whispersystems.signalservice.api.push.ACI;
-import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.push.exceptions.NotInGroupException;
 import org.whispersystems.util.Base64UrlSafe;
 
 public class Groups {
-  private final static Logger logger = LogManager.getLogger();
-
   private final GroupsV2Api groupsV2Api;
-  private final GroupCredentialsTable credentials;
-  private final GroupsTable groupsTable;
+  private final IGroupCredentialsTable credentials;
+  private final IGroupsTable groupsTable;
   private final ACI aci;
   private final GroupsV2Operations groupsV2Operations;
   private final SignalServiceConfiguration serviceConfiguration;
@@ -66,21 +60,21 @@ public class Groups {
   public Groups(ACI aci) throws SQLException, ServerNotFoundException, IOException, InvalidProxyException, NoSuchAccountException {
     this.aci = aci;
     groupsV2Api = SignalDependencies.get(aci).getAccountManager().getGroupsV2Api();
-    groupsTable = new GroupsTable(aci);
-    credentials = new GroupCredentialsTable(aci);
-    serviceConfiguration = AccountsTable.getServer(aci).getSignalServiceConfiguration();
+    groupsTable = Database.Get(aci).GroupsTable;
+    credentials = Database.Get(aci).GroupCredentialsTable;
+    serviceConfiguration = Database.Get().AccountsTable.getServer(aci).getSignalServiceConfiguration();
     groupsV2Operations = GroupsUtil.GetGroupsV2Operations(serviceConfiguration);
   }
 
-  public Optional<GroupsTable.Group> getGroup(GroupMasterKey masterKey, int revision)
+  public Optional<IGroupsTable.IGroup> getGroup(GroupMasterKey masterKey, int revision)
       throws IOException, InvalidInputException, SQLException, VerificationFailedException, InvalidGroupStateException {
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(masterKey);
     return getGroup(groupSecretParams, revision);
   }
 
-  public Optional<GroupsTable.Group> getGroup(GroupSecretParams groupSecretParams, int revision)
+  public Optional<IGroupsTable.IGroup> getGroup(GroupSecretParams groupSecretParams, int revision)
       throws IOException, InvalidInputException, SQLException, VerificationFailedException, InvalidGroupStateException {
-    Optional<GroupsTable.Group> group = groupsTable.get(groupSecretParams.getPublicParams().getGroupIdentifier());
+    var group = groupsTable.get(groupSecretParams.getPublicParams().getGroupIdentifier());
 
     if (!group.isPresent() || group.get().getRevision() < revision || revision < 0) {
       int today = (int)TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
@@ -119,7 +113,7 @@ public class Groups {
     return groupsV2Api.getGroupJoinInfo(groupSecretParams, Optional.of(password), getAuthorizationForToday(groupSecretParams));
   }
 
-  public GroupsTable.Group createGroup(String title, File avatar, List<Recipient> members, Member.Role memberRole, int timer)
+  public IGroupsTable.IGroup createGroup(String title, File avatar, List<Recipient> members, Member.Role memberRole, int timer)
       throws IOException, VerificationFailedException, InvalidGroupStateException, InvalidInputException, SQLException, NoSuchAccountException, ServerNotFoundException,
              InvalidKeyException, InvalidProxyException {
     GroupSecretParams groupSecretParams = GroupSecretParams.generate();
@@ -151,7 +145,7 @@ public class Groups {
     return groupsV2Api.getGroupsV2AuthorizationString(aci, today, groupSecretParams, authCredential);
   }
 
-  public Pair<SignalServiceDataMessage.Builder, GroupsTable.Group> updateGroup(GroupsTable.Group group, GroupChange.Actions.Builder change)
+  public Pair<SignalServiceDataMessage.Builder, IGroupsTable.IGroup> updateGroup(IGroupsTable.IGroup group, GroupChange.Actions.Builder change)
       throws SQLException, VerificationFailedException, InvalidInputException, IOException {
     change.setSourceUuid(aci.toByteString());
     Pair<DecryptedGroup, GroupChange> groupChangePair = commitChange(group, change);
@@ -164,7 +158,7 @@ public class Groups {
     return new Pair<>(updateMessage, group);
   }
 
-  private Pair<DecryptedGroup, GroupChange> commitChange(GroupsTable.Group group, GroupChange.Actions.Builder change)
+  private Pair<DecryptedGroup, GroupChange> commitChange(IGroupsTable.IGroup group, GroupChange.Actions.Builder change)
       throws IOException, VerificationFailedException, InvalidInputException, SQLException {
     final GroupSecretParams groupSecretParams = group.getSecretParams();
     final GroupsV2Operations.GroupOperations groupOperations = groupsV2Operations.forGroup(groupSecretParams);

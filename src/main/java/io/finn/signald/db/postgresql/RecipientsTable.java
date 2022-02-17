@@ -5,10 +5,12 @@
  *
  */
 
-package io.finn.signald.db;
+package io.finn.signald.db.postgresql;
 
 import io.finn.signald.SignalDependencies;
-import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.db.Database;
+import io.finn.signald.db.IRecipientsTable;
+import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -32,14 +34,10 @@ import org.whispersystems.signalservice.internal.contacts.crypto.Quote;
 import org.whispersystems.signalservice.internal.contacts.crypto.UnauthenticatedQuoteException;
 import org.whispersystems.signalservice.internal.contacts.crypto.UnauthenticatedResponseException;
 
-public class RecipientsTable {
+public class RecipientsTable implements IRecipientsTable {
   private static final Logger logger = LogManager.getLogger();
 
-  static final String TABLE_NAME = "recipients";
-  static final String ROW_ID = "rowid";
-  static final String ACCOUNT_UUID = "account_uuid";
-  static final String UUID = "uuid";
-  static final String E164 = "e164";
+  static final String TABLE_NAME = "signald_recipients";
 
   private final UUID uuid;
 
@@ -47,43 +45,20 @@ public class RecipientsTable {
 
   public RecipientsTable(ACI aci) { uuid = aci.uuid(); }
 
-  public List<Recipient> get(List<SignalServiceAddress> addresses) throws SQLException, IOException {
-    List<Recipient> results = new ArrayList<>();
-    for (SignalServiceAddress address : addresses) {
-      results.add(get(address));
-    }
-    return results;
-  }
-
-  public Recipient get(SignalServiceAddress address) throws SQLException, IOException { return get(address.getNumber().orNull(), address.getAci()); }
-
-  public Recipient get(JsonAddress address) throws IOException, SQLException { return get(address.number, address.getACI()); }
-
-  public Recipient get(UUID query) throws IOException, SQLException { return get(ACI.from(query)); }
-
-  public Recipient get(ACI query) throws SQLException, IOException { return get(null, query); };
-
-  public Recipient get(String identifier) throws IOException, SQLException {
-    if (identifier.startsWith("+")) {
-      return get(identifier, null);
-    } else {
-      return get(null, ACI.from(java.util.UUID.fromString(identifier)));
-    }
-  }
-
+  @Override
   public Recipient get(String e164, ACI aci) throws SQLException, IOException {
     List<Recipient> results = new ArrayList<>();
-    var query = "SELECT " + ROW_ID + "," + E164 + "," + UUID + " FROM " + TABLE_NAME + " WHERE (" + UUID + " = ? OR " + E164 + " = ?) AND " + ACCOUNT_UUID + " = ?";
+    var query = String.format("SELECT %s, %s, %s FROM %s WHERE (%s=? OR %s=?) AND %s=?",
+                              // FIELDS
+                              ROW_ID, E164, UUID,
+                              // FROM
+                              TABLE_NAME,
+                              // WHERE
+                              UUID, E164, ACCOUNT_UUID);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      if (aci != null) {
-        statement.setString(1, aci.toString());
-      }
-
-      if (e164 != null) {
-        statement.setString(2, e164);
-      }
-
-      statement.setString(3, uuid.toString());
+      statement.setObject(1, aci != null ? aci.uuid() : null);
+      statement.setString(2, e164);
+      statement.setObject(3, uuid);
       try (var rows = Database.executeQuery(TABLE_NAME + "_get", statement)) {
         while (rows.next()) {
           int rowid = rows.getInt(ROW_ID);
@@ -126,7 +101,7 @@ public class RecipientsTable {
         rowid = storeNew(aci, e164);
         storedE164 = e164;
       } else {
-        update(UUID, aci.toString(), rowid);
+        update(UUID, aci.uuid(), rowid);
       }
       storedACI = aci;
     }
@@ -150,7 +125,7 @@ public class RecipientsTable {
 
       if (rowid > 0) {
         // if the e164 was in the database already, update the existing row
-        update(UUID, storedACI.toString(), rowid);
+        update(UUID, storedACI.uuid(), rowid);
       } else {
         // if the e164 was not in the database, re-run the get() with both e164 and UUID
         // can't just insert because the newly-discovered UUID might already be in the database
@@ -167,48 +142,44 @@ public class RecipientsTable {
 
   private int storeNew(ACI aci, String e164) throws SQLException {
     Connection connection = Database.getConn();
-    var query = "INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + UUID + "," + E164 + ") VALUES (?, ?, ?)";
+    var query = String.format("INSERT INTO %s (%s, %s, %s) VALUES (?, ?, ?) RETURNING rowid", TABLE_NAME, ACCOUNT_UUID, UUID, E164);
     try (var statement = connection.prepareStatement(query)) {
-      statement.setString(1, uuid.toString());
-      statement.setString(2, aci.toString());
-      if (e164 != null) {
-        statement.setString(3, e164);
-      }
-      Database.executeUpdate(TABLE_NAME + "_store_name", statement);
-    }
-    try (var statement = connection.prepareStatement("SELECT last_insert_rowid()")) {
-      try (var rows = Database.executeQuery(TABLE_NAME + "_get_stored", statement)) {
-        if (!rows.next()) {
+      statement.setObject(1, uuid);
+      statement.setObject(2, aci.uuid());
+      statement.setString(3, e164);
+      try (var envelopeIdReturn = Database.executeQuery(TABLE_NAME + "_store_name", statement)) {
+        if (!envelopeIdReturn.next()) {
           throw new AssertionError("error fetching ID of last row inserted while storing " + aci + "/" + e164);
         }
-        return rows.getInt(1);
+        return envelopeIdReturn.getInt(1);
       }
     }
   }
 
-  private void update(String column, String value, int row) throws SQLException {
-    var query = "UPDATE " + TABLE_NAME + " SET " + column + " = ? WHERE " + ACCOUNT_UUID + " = ? AND " + ROW_ID + " = ?";
+  private void update(String column, Object value, int row) throws SQLException {
+    var query = String.format("UPDATE %s SET %s=? WHERE %s=? AND %s=?", TABLE_NAME, column, ACCOUNT_UUID, ROW_ID);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setString(1, value);
-      statement.setString(2, uuid.toString());
+      statement.setObject(1, value);
+      statement.setObject(2, uuid);
       statement.setInt(3, row);
       Database.executeUpdate(TABLE_NAME + "_update", statement);
     }
   }
 
   private void delete(int row)throws SQLException {
-    var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ROW_ID + " = ? AND " + ACCOUNT_UUID + " = ?";
+    var query = String.format("DELETE FROM %s WHERE %s=? AND %s=?", TABLE_NAME, ROW_ID, ACCOUNT_UUID);
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setInt(1, row);
-      statement.setString(2, uuid.toString());
+      statement.setObject(2, uuid);
       Database.executeUpdate(TABLE_NAME + "_delete", statement);
     }
   }
 
-  public static void deleteAccount(UUID uuid) throws SQLException {
-    var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?";
+  @Override
+  public void deleteAccount(UUID uuid) throws SQLException {
+    var query = String.format("DELETE FROM %s WHERE %s=?", TABLE_NAME, ACCOUNT_UUID);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setString(1, uuid.toString());
+      statement.setObject(1, uuid);
       Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
     }
   }
@@ -235,7 +206,7 @@ public class RecipientsTable {
 
   private Map<String, ACI> getRegisteredUsers(final Set<String> numbers) throws IOException, InvalidProxyException, SQLException, ServerNotFoundException, NoSuchAccountException {
     final Map<String, ACI> registeredUsers;
-    ServersTable.Server server = AccountsTable.getServer(uuid);
+    var server = Database.Get().AccountsTable.getServer(uuid);
     SignalServiceAccountManager accountManager = SignalDependencies.get(uuid).getAccountManager();
     logger.debug("querying server for UUIDs of " + numbers.size() + " e164 identifiers");
     try {

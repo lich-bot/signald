@@ -5,8 +5,11 @@
  *
  */
 
-package io.finn.signald.db;
+package io.finn.signald.db.sqlite;
 
+import io.finn.signald.db.Database;
+import io.finn.signald.db.ISessionsTable;
+import io.finn.signald.db.Recipient;
 import io.finn.signald.util.AddressUtil;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -18,33 +21,23 @@ import org.whispersystems.libsignal.NoSessionException;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.protocol.CiphertextMessage;
 import org.whispersystems.libsignal.state.SessionRecord;
-import org.whispersystems.libsignal.state.SessionStore;
 import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
-public class SessionsTable implements SessionStore {
+public class SessionsTable implements ISessionsTable {
   private static final Logger logger = LogManager.getLogger();
 
   private static final String TABLE_NAME = "sessions";
-  private static final String ROW_ID = "rowid";
-  private static final String ACCOUNT_UUID = "account_uuid";
-  private static final String RECIPIENT = "recipient";
-  private static final String DEVICE_ID = "device_id";
-  private static final String RECORD = "record";
 
   private final ACI aci;
-  private final RecipientsTable recipientsTable;
 
-  public SessionsTable(ACI aci) {
-    this.aci = aci;
-    recipientsTable = new RecipientsTable(aci);
-  }
+  public SessionsTable(ACI aci) { this.aci = aci; }
 
   @Override
   public SessionRecord loadSession(SignalProtocolAddress address) {
     try {
-      Recipient recipient = recipientsTable.get(address.getName());
+      Recipient recipient = Database.Get(aci).RecipientsTable.get(address.getName());
       var query = "SELECT " + RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ? AND " + DEVICE_ID + " = ?";
       try (var statement = Database.getConn().prepareStatement(query)) {
         statement.setString(1, aci.toString());
@@ -69,7 +62,7 @@ public class SessionsTable implements SessionStore {
     List<SessionRecord> sessions = new ArrayList<>();
     for (SignalProtocolAddress address : list) {
       try {
-        Recipient recipient = recipientsTable.get(address.getName());
+        Recipient recipient = Database.Get(aci).RecipientsTable.get(address.getName());
         var query = "SELECT " + RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ? AND " + DEVICE_ID + " = ?";
         try (var statement = Database.getConn().prepareStatement(query)) {
           statement.setString(1, aci.toString());
@@ -92,7 +85,7 @@ public class SessionsTable implements SessionStore {
   @Override
   public List<Integer> getSubDeviceSessions(String name) {
     try {
-      Recipient recipient = recipientsTable.get(name);
+      Recipient recipient = Database.Get(aci).RecipientsTable.get(name);
       var query = "SELECT " + DEVICE_ID + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?";
       try (var statement = Database.getConn().prepareStatement(query)) {
         statement.setString(1, aci.toString());
@@ -117,7 +110,7 @@ public class SessionsTable implements SessionStore {
   @Override
   public void storeSession(SignalProtocolAddress address, SessionRecord record) {
     try {
-      Recipient recipient = recipientsTable.get(address.getName());
+      Recipient recipient = Database.Get(aci).RecipientsTable.get(address.getName());
       var query = "INSERT OR REPLACE INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + RECIPIENT + "," + DEVICE_ID + "," + RECORD + ") VALUES (?, ?, ?, ?)";
       try (var statement = Database.getConn().prepareStatement(query)) {
         statement.setString(1, aci.toString());
@@ -134,7 +127,7 @@ public class SessionsTable implements SessionStore {
   @Override
   public boolean containsSession(SignalProtocolAddress address) {
     try {
-      Recipient recipient = recipientsTable.get(address.getName());
+      Recipient recipient = Database.Get(aci).RecipientsTable.get(address.getName());
       var query = "SELECT " + RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ? AND " + DEVICE_ID + " = ?";
       try (var statement = Database.getConn().prepareStatement(query)) {
         statement.setString(1, aci.toString());
@@ -157,7 +150,7 @@ public class SessionsTable implements SessionStore {
   @Override
   public void deleteSession(SignalProtocolAddress address) {
     try {
-      Recipient recipient = recipientsTable.get(address.getName());
+      Recipient recipient = Database.Get(aci).RecipientsTable.get(address.getName());
       var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ? AND " + DEVICE_ID + " = ?";
       try (var statement = Database.getConn().prepareStatement(query)) {
         statement.setString(1, aci.toString());
@@ -173,7 +166,7 @@ public class SessionsTable implements SessionStore {
   @Override
   public void deleteAllSessions(String name) {
     try {
-      Recipient recipient = recipientsTable.get(name);
+      Recipient recipient = Database.Get(aci).RecipientsTable.get(name);
       var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?";
       try (var statement = Database.getConn().prepareStatement(query)) {
         statement.setString(1, aci.toString());
@@ -185,9 +178,8 @@ public class SessionsTable implements SessionStore {
     }
   }
 
-  public void deleteAllSessions(Recipient recipient) { deleteAllSessions(recipient.getAddress().getIdentifier()); }
-
-  public static void deleteAccount(UUID uuid) throws SQLException {
+  @Override
+  public void deleteAccount(UUID uuid) throws SQLException {
     var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setString(1, uuid.toString());
@@ -195,10 +187,11 @@ public class SessionsTable implements SessionStore {
     }
   }
 
+  @Override
   public Set<SignalProtocolAddress> getAllAddressesWithActiveSessions(List<String> list) {
     List<SignalServiceAddress> addressList = list.stream().map(AddressUtil::fromIdentifier).collect(Collectors.toList());
     try {
-      List<Recipient> recipientList = recipientsTable.get(addressList);
+      List<Recipient> recipientList = Database.Get(aci).RecipientsTable.get(addressList);
 
       String query = "SELECT " + RecipientsTable.TABLE_NAME + "." + RecipientsTable.UUID + "," + DEVICE_ID + "," + RECORD + " FROM " + TABLE_NAME + "," +
                      RecipientsTable.TABLE_NAME + " WHERE " + TABLE_NAME + '.' + ACCOUNT_UUID + " = ? AND " + RecipientsTable.TABLE_NAME + "." + ROW_ID + " = " + RECIPIENT +
@@ -233,6 +226,7 @@ public class SessionsTable implements SessionStore {
     return new HashSet<>();
   }
 
+  @Override
   public void archiveAllSessions(Recipient recipient) throws SQLException {
     var query = "SELECT " + RECORD + "," + DEVICE_ID + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
