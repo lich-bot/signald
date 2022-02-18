@@ -25,7 +25,7 @@ public class AccountsTableTest {
     databaseFile = File.createTempFile("test", "sqlite", tmpDirectory);
     String db = "sqlite:" + databaseFile.getAbsolutePath();
 
-    Flyway flyway = Flyway.configure().locations("db/migration/sqlite").dataSource(db, null, null).load();
+    Flyway flyway = Flyway.configure().locations("db/migration/sqlite").dataSource("jdbc:" + db, null, null).load();
     flyway.migrate();
 
     Config.testInit(db);
