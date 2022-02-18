@@ -31,7 +31,7 @@ public class Config {
   private static boolean userSocket = false;
   @CommandLine.Option(names = {"--system-socket"}, description = "make the socket file accessible system-wide") private static boolean systemSocket = false;
   @CommandLine.Option(names = {"-d", "--data"}, description = "Data storage location") private static String dataPath = System.getProperty("user.home") + "/.config/signald";
-  @CommandLine.Option(names = {"--database"}, description = "jdbc connection string. Defaults to jdbc:sqlite:~/.config/signald/signald.db. Only sqlite is supported at this time.")
+  @CommandLine.Option(names = {"--database"}, description = "jdbc connection string. Defaults to sqlite:~/.config/signald/signald.db (sqlite and postgres supported)")
   private static String db;
   @CommandLine.Option(names = {"--dump-protocol"}, description = "print a machine-readable description of the client protocol to stdout and exit "
                                                                  + "(https://signald.org/articles/protocol/documentation/)")
@@ -132,7 +132,7 @@ public class Config {
     }
 
     if (db == null) {
-      db = "jdbc:sqlite:" + dataPath + "/signald.db";
+      db = "sqlite:" + dataPath + "/signald.db";
     }
 
     if (socketPath == null) {
@@ -164,8 +164,7 @@ public class Config {
   public static boolean getLogHttpRequests() { return logHttpRequests; }
 
   private static Pair<String, String> getUserAndPassword() {
-    // Chop off the "jdbc:" at the start of the string and parse the rest as a URI.
-    URI uri = URI.create(db.substring(5));
+    URI uri = URI.create(db);
 
     // Extract the user and password from the URI
     var userInfo = uri.getUserInfo().split(":");
@@ -174,8 +173,7 @@ public class Config {
   }
 
   public static String getDb() {
-    // Chop off the "jdbc:" at the start of the string and parse the rest as a URI.
-    URI uri = URI.create(db.substring(5));
+    URI uri = URI.create(db);
 
     String hostPort = "";
     if (uri.getHost() != null) {

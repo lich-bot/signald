@@ -1,7 +1,7 @@
 FROM golang:1.16-bullseye as signaldctl
 
 WORKDIR /src
-RUN git clone https://gitlab.com/signald/signald-go.git . \
+RUN git clone -b db-migration https://gitlab.com/signald/signald-go.git . \
     && make signaldctl
 
 FROM gradle:6-jdk${JAVA_VERSION:-11} AS build
@@ -27,4 +27,6 @@ RUN mkdir -p /root/.config/ && echo "socketpath: /signald/signald.sock" > /root/
 
 VOLUME /signald
 
-CMD ["/usr/local/bin/signald", "-d", "/signald", "-s", "/signald/signald.sock"]
+ADD docker-entrypoint.sh /entrypoint.sh
+
+CMD ["/entrypoint.sh"]

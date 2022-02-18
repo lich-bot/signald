@@ -36,7 +36,7 @@ public class RecipientTableTest {
   void setUp() throws IOException, SQLException {
     File tmpDirectory = new File(System.getProperty("java.io.tmpdir"));
     databaseFile = File.createTempFile("test", "sqlite", tmpDirectory);
-    String db = "jdbc:sqlite:" + databaseFile.getAbsolutePath();
+    String db = "sqlite:" + databaseFile.getAbsolutePath();
 
     Flyway flyway = Flyway.configure().locations("db/migration/sqlite").dataSource(db, null, null).load();
     flyway.migrate();
