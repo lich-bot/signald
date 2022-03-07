@@ -88,7 +88,6 @@ public class Config {
       Sentry.init(options -> {
         options.setDsn(System.getenv("SENTRY_DSN"));
         options.setRelease(BuildConfig.NAME + "@" + BuildConfig.VERSION);
-        options.setDebug(verbose);
       });
       logger.info("exception reporting via Sentry enabled");
     }
@@ -126,13 +125,14 @@ public class Config {
         metricsHttpPort = Integer.parseInt(System.getenv("SIGNALD_METRICS_PORT"));
       }
       try {
-        DefaultExports.initialize();
         logger.debug("starting metrics server on port {}", metricsHttpPort);
+        DefaultExports.initialize();
         new HTTPServer(metricsHttpPort);
       } catch (IOException e) {
         logger.error("error starting metrics server:", e);
         Sentry.captureException(e);
       }
+      logger.debug("metrics server started");
     }
 
     if (db == null) {
