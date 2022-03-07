@@ -15,7 +15,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.SocketException;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Paths;
@@ -33,7 +32,6 @@ import org.newsclub.net.unix.AFUNIXSocket;
 import org.newsclub.net.unix.AFUNIXSocketAddress;
 import org.newsclub.net.unix.AFUNIXSocketCredentials;
 import org.whispersystems.libsignal.logging.SignalProtocolLoggerProvider;
-import org.whispersystems.signalservice.api.push.ACI;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
@@ -42,25 +40,27 @@ public class Main {
   private static final Logger logger = LogManager.getLogger();
 
   public static void main(String[] args) {
+    long start = System.currentTimeMillis();
     CommandLine.populateCommand(new Config(), args);
     try {
       Config.init();
 
-      logger.debug("Starting {} {}", BuildConfig.NAME, BuildConfig.VERSION);
-
-      if (getJavaVersion() < 11) {
-        logger.warn(
-            "Support for this version of Java may be going away. Please update your java version. For more information see https://gitlab.com/signald/signald/-/issues/219");
-      }
+      logger.debug("starting {} {} [{}ms]", BuildConfig.NAME, BuildConfig.VERSION, System.currentTimeMillis() - start);
 
       // Workaround for BKS truststore
       Security.insertProviderAt(new SecurityProvider(), 1);
+      logger.debug("provider inserted [{}ms]", System.currentTimeMillis() - start);
       Security.addProvider(new BouncyCastleProvider());
+      logger.debug("bouncycastle provider added [{}ms]", System.currentTimeMillis() - start);
       Manager.setDataPath();
+      logger.debug("data path set [{}ms]", System.currentTimeMillis() - start);
       Manager.createPrivateDirectories(Config.getDataPath());
+      logger.debug("private directories created [{}ms]", System.currentTimeMillis() - start);
 
       sdnotify("STATUS=migrating database " + Config.getDb());
+      logger.debug("preparing db migrations [{}ms]", System.currentTimeMillis() - start);
       var flyway = Flyway.configure().baselineOnMigrate(true).baselineVersion("0.0");
+      logger.debug("setting migration location [{}ms]", System.currentTimeMillis() - start);
       switch (Database.GetConnectionType()) {
       case SQLITE:
         flyway.locations("db/migration/sqlite");
@@ -69,7 +69,9 @@ public class Main {
         flyway.locations("db/migration/postgresql");
         break;
       }
+      logger.debug("about to migrate [{}ms]", System.currentTimeMillis() - start);
       var migrateResult = flyway.dataSource(Config.getDb(), Config.getDbUser(), Config.getDbPassword()).load().migrate();
+      logger.debug("migrated [{}ms]", System.currentTimeMillis() - start);
       for (String w : migrateResult.warnings) {
         logger.warn("db migration warning: " + w);
       }
@@ -80,26 +82,36 @@ public class Main {
       }
 
       if (Config.getTrustAllKeys()) {
+        logger.debug("about to trust all untrusted keys [{}ms]", System.currentTimeMillis() - start);
         Database.Get().IdentityKeysTable.trustAllKeys();
+        logger.debug("trusted all untrusted keys [{}ms]", System.currentTimeMillis() - start);
       }
 
+      logger.debug("checking for json files to migrate [{}ms]", System.currentTimeMillis() - start);
       // Migrate data as supported from the JSON state files:
       File[] allAccounts = new File(Config.getDataPath() + "/data").listFiles();
       if (allAccounts != null) {
+        logger.debug("there are files, iterating over them [{}ms]", System.currentTimeMillis() - start);
         Pattern e164Pattern = Pattern.compile("^\\+?[1-9]\\d{1,14}$");
         for (File f : allAccounts) {
+          logger.debug("checking file {} [{}ms]", f.getAbsolutePath(), System.currentTimeMillis() - start);
           if (f.isDirectory()) {
+            logger.debug("skipping directory [{}ms]", System.currentTimeMillis() - start);
             continue;
           }
           if (e164Pattern.matcher(f.getName()).matches()) {
+            logger.debug("matches, about to run AccountsTable.importFromJSON [{}ms]", System.currentTimeMillis() - start);
             Database.Get().AccountsTable.importFromJSON(f);
+            logger.debug("import complete [{}ms]", System.currentTimeMillis() - start);
           } else {
             logger.warn("account file {} does NOT appear to have a valid phone number in the filename!", f.getAbsolutePath());
           }
         }
       }
+      logger.debug("json migration complete [{}ms]", System.currentTimeMillis() - start);
 
       for (UUID accountUUID : Database.Get().AccountsTable.getAll()) {
+        logger.debug("repairing account if needed [{}ms]", System.currentTimeMillis() - start);
         AccountRepair.repairAccountIfNeeded(new Account(accountUUID));
       }
 
