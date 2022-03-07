@@ -17,12 +17,11 @@ import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.Summary;
 import io.sentry.Sentry;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.newsclub.net.unix.AFUNIXSocket;
@@ -52,7 +51,7 @@ public class ClientConnection implements Runnable {
   @Override
   public void run() {
     try (BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
-      try (PrintWriter w = new PrintWriter(socket.getOutputStream(), true)) {
+      try (PrintWriter w = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true)) {
         try {
           clientsConnectedTotal.inc();
           clientsConnected.inc();
