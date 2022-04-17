@@ -38,7 +38,7 @@ clang-format:
   script:
     - 'export "VERSION=$(./version.sh)"'
     - 'echo "Version: ${VERSION}"'
-    - ./gradlew installDist
+    - LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8 ./gradlew installDist
   artifacts:
     paths:
       - build/
@@ -332,7 +332,7 @@ validate protocol:
   before_script:
     - apt-get update && apt-get install -y openjdk-11-jdk-headless
   script:
-    - build/install/signald/bin/signald --dump-protocol > protocol.json
+    - LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8 build/install/signald/bin/signald --dump-protocol > protocol.json
     - go run ./tools/protocol-validator < protocol.json
   needs: ["build java11 x86_64-unknown-linux-gnu"]
   artifacts:
