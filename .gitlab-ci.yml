@@ -330,7 +330,8 @@ validate protocol:
   image: golang:latest
   stage: docs
   before_script:
-    - apt-get update && apt-get install -y openjdk-11-jdk-headless
+    - apt-get update && apt-get install -y openjdk-11-jdk-headless locale-gen
+    - sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
   script:
     - LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8 build/install/signald/bin/signald --dump-protocol > protocol.json
     - go run ./tools/protocol-validator < protocol.json
