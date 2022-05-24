@@ -134,7 +134,9 @@ public class Database {
 
   private static Connection conn;
   public static Connection getConn() throws SQLException {
-    if (conn == null || conn.isClosed()) {
+    if (conn == null || !conn.isValid(1)) {
+      close();
+
       switch (GetConnectionType()) {
       case SQLITE:
         conn = DriverManager.getConnection(Config.getDb());
@@ -142,6 +144,8 @@ public class Database {
       case POSTGRESQL:
         conn = DriverManager.getConnection(Config.getDb(), Config.getDbUser(), Config.getDbPassword());
         break;
+      default:
+        throw new AssertionError("unsupported database type");
       }
     }
     return conn;
