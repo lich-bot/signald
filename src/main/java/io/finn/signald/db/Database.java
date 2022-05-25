@@ -134,7 +134,7 @@ public class Database {
 
   private static Connection conn;
   public static Connection getConn() throws SQLException {
-    if (conn == null || !conn.isValid(1)) {
+    if (conn == null || conn.isClosed()) {
       close();
 
       switch (GetConnectionType()) {
