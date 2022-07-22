@@ -16,7 +16,7 @@ import org.whispersystems.util.Base64;
 
 public class IceUpdateMessage {
   public final long id;
-  @Doc("the base64 encoded protobuf value. deprecated.") @Deprecated public final String opaque;
+  @Doc("the base64 encoded protobuf value.") @Deprecated public final String opaque;
   public final String sdp;
   public String mid;
   public int line;
