@@ -157,6 +157,29 @@ test {
     }
 }
 
+task getccompiler(type: Exec) {
+    commandLine 'sh', '-c', 'ldd /bin/ls | grep musl'
+    // don't crash gradle when commandline returns non zero exit code
+    ignoreExitValue true
+
+    doLast {
+        boolean muslDetected = false
+        if(executionResult.get().exitValue == 0) {
+            logger.info "musl was detected"
+            muslDetected = true
+        } else {
+            logger.info "musl was not detected"
+        }
+        ext.hasmusl = muslDetected
+    }
+}
+
+task usesgetter(dependsOn: 'getccompiler') {
+    doLast {
+        println("hasmusl: "+getccompiler.hasmusl)
+    }
+}
+
 
 allprojects {
     gradle.projectsEvaluated {
