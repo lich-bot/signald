@@ -46,14 +46,14 @@ static String getTarget() {
     OperatingSystemInternal os = DefaultNativePlatform.getCurrentOperatingSystem()
     if(os.isLinux()) {
         second = "unknown-linux"
-          if(hasMusl()){
+        if(hasMusl()){
             third = "musl"
-          }else{
-        third = "gnu"
+        }else{
+            third = "gnu"
+        }
         if (arch.getName() == "arm-v7") {
             third += "eabihf"
         }
-          }
     }
 
     if(os.isMacOsX()) {
