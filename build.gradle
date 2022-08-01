@@ -46,10 +46,14 @@ static String getTarget() {
     OperatingSystemInternal os = DefaultNativePlatform.getCurrentOperatingSystem()
     if(os.isLinux()) {
         second = "unknown-linux"
+          if(hasMusl()){
+            third = "musl"
+          }else{
         third = "gnu"
         if (arch.getName() == "arm-v7") {
             third += "eabihf"
         }
+          }
     }
 
     if(os.isMacOsX()) {
@@ -79,6 +83,14 @@ static String getVersion() {
     }
     System.out.println("signald version not set")
     return "unversioned"
+}
+
+static boolean hasMusl() {
+    ProcessBuilder builder = new ProcessBuilder();
+    builder.command("sh", "-c", "ldd /bin/ls | grep musl")
+    Process process = builder.start();
+    int exitCode = process.waitFor();
+    return exitCode == 0;
 }
 
 repositories {
@@ -156,30 +168,6 @@ test {
         logger.quiet "Test ${desc.name} [${desc.className}]: ${result.resultType}"
     }
 }
-
-task getccompiler(type: Exec) {
-    commandLine 'sh', '-c', 'ldd /bin/ls | grep musl'
-    // don't crash gradle when commandline returns non zero exit code
-    ignoreExitValue true
-
-    doLast {
-        boolean muslDetected = false
-        if(executionResult.get().exitValue == 0) {
-            logger.info "musl was detected"
-            muslDetected = true
-        } else {
-            logger.info "musl was not detected"
-        }
-        ext.hasmusl = muslDetected
-    }
-}
-
-task usesgetter(dependsOn: 'getccompiler') {
-    doLast {
-        println("hasmusl: "+getccompiler.hasmusl)
-    }
-}
-
 
 allprojects {
     gradle.projectsEvaluated {
