@@ -7,7 +7,7 @@
 
 package io.finn.signald;
 
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -15,7 +15,7 @@ import org.whispersystems.signalservice.api.SignalSessionLock;
 
 public class SessionLock implements SignalSessionLock {
   private final static Logger logger = LogManager.getLogger();
-  private static final ConcurrentHashMap<String, ReentrantLock> locks = new ConcurrentHashMap<>();
+  private static final HashMap<String, ReentrantLock> locks = new HashMap<>();
   private final Account account;
 
   public SessionLock(Account a) { account = a; }
