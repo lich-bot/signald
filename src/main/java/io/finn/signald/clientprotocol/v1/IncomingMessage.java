@@ -8,6 +8,7 @@
 package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.finn.signald.Account;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
@@ -15,8 +16,12 @@ import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import io.finn.signald.db.Database;
+import io.finn.signald.db.IProfileKeysTable;
+import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.NoSuchAccountException;
+import java.io.IOException;
 import java.sql.SQLException;
+import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.api.push.ACI;
@@ -25,6 +30,7 @@ import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 public class IncomingMessage {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) public String account;
   public JsonAddress source;
+  private Recipient sourceRecipient;
   @JsonProperty("source_device") public int sourceDevice;
   public String type;
   @ExampleValue(ExampleValue.MESSAGE_ID) public long timestamp;
@@ -54,12 +60,14 @@ public class IncomingMessage {
     }
 
     if (!envelope.isUnidentifiedSender()) {
-      source = new JsonAddress(Common.getRecipient(aci, envelope.getSourceAddress()));
+      sourceRecipient = Common.getRecipient(aci, envelope.getSourceAddress());
+      source = new JsonAddress(sourceRecipient);
       if (envelope.hasSourceDevice()) {
         sourceDevice = envelope.getSourceDevice();
       }
     } else if (content != null) {
-      source = new JsonAddress(Common.getRecipient(aci, content.getSender()));
+      sourceRecipient = Common.getRecipient(aci, content.getSender());
+      source = new JsonAddress(sourceRecipient);
       sourceDevice = content.getSenderDevice();
     }
 
@@ -80,7 +88,21 @@ public class IncomingMessage {
       }
 
       if (content.getCallMessage().isPresent()) {
-        this.callMessage = new CallMessage(content.getCallMessage().get());
+        Account a = new Account(aci);
+        IProfileKeysTable profileKeysTable = a.getDB().ProfileKeysTable;
+
+        ProfileKey remoteProfileKey = null;
+        if (sourceRecipient != null) {
+          remoteProfileKey = profileKeysTable.getProfileKey(sourceRecipient);
+        }
+
+        ProfileKey localProfileKey;
+        try {
+          localProfileKey = profileKeysTable.getProfileKey(a.getSelf());
+        } catch (IOException e) {
+          throw new InternalError("error looking up local profile key", e);
+        }
+        this.callMessage = new CallMessage(content.getCallMessage().get(), localProfileKey, remoteProfileKey);
       }
 
       if (content.getReceiptMessage().isPresent()) {

@@ -10,7 +10,9 @@ package io.finn.signald.clientprotocol.v1;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.messages.calls.SignalServiceCallMessage;
+import org.whispersystems.util.Base64;
 
 public class CallMessage {
   @JsonProperty("offer_message") public OfferMessage offerMessage;
@@ -20,8 +22,10 @@ public class CallMessage {
   @JsonProperty("ice_update_message") public List<IceUpdateMessage> iceUpdateMessages;
   @JsonProperty("destination_device_id") public Integer destinationDeviceId;
   @JsonProperty("multi_ring") public boolean isMultiRing;
+  @JsonProperty("remote_profile_key") public String remoteProfileKeyString;
+  @JsonProperty("local_profile_key") public String localProfileKeyString;
 
-  public CallMessage(SignalServiceCallMessage callMessage) {
+  public CallMessage(SignalServiceCallMessage callMessage, ProfileKey localProfileKey, ProfileKey remoteProfileKey) {
     if (callMessage.getOfferMessage().isPresent()) {
       offerMessage = new OfferMessage(callMessage.getOfferMessage().get());
     }
@@ -47,5 +51,13 @@ public class CallMessage {
     }
 
     isMultiRing = callMessage.isMultiRing();
+
+    if (localProfileKey != null) {
+      localProfileKeyString = Base64.encodeBytes(localProfileKey.serialize());
+    }
+
+    if (remoteProfileKey != null) {
+      remoteProfileKeyString = Base64.encodeBytes(remoteProfileKey.serialize());
+    }
   }
 }
