@@ -40,10 +40,13 @@ import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
 import org.signal.libsignal.zkgroup.groups.GroupIdentifier;
 import org.signal.storageservice.protos.groups.GroupChange;
+import org.whispersystems.signalservice.api.SignalServiceMessageSender;
+import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
+import org.whispersystems.signalservice.api.messages.calls.SignalServiceCallMessage;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.*;
@@ -358,6 +361,30 @@ public class Common {
       throw new NoSuchAccountError(e);
     } catch (InvalidProxyException e) {
       throw new InvalidProxyError(e);
+    }
+  }
+
+  public static void sendCallMessage(Account account, Recipient recipient, SignalServiceCallMessage callMessage)
+      throws InternalError, ServerNotFoundError, InvalidProxyError, NoSuchAccountError, AuthorizationFailedError, UntrustedIdentityError {
+    SignalServiceMessageSender sender;
+    try {
+      sender = account.getSignalDependencies().getMessageSender();
+    } catch (SQLException | IOException e) {
+      throw new InternalError("error getting account", e);
+    } catch (ServerNotFoundException e) {
+      throw new ServerNotFoundError(e);
+    } catch (InvalidProxyException e) {
+      throw new InvalidProxyError(e);
+    } catch (NoSuchAccountException e) {
+      throw new NoSuchAccountError(e);
+    }
+
+    try {
+      sender.sendCallMessage(recipient.getAddress(), Optional.empty(), callMessage);
+    } catch (IOException e) {
+      throw new InternalError("error sending call message", e);
+    } catch (UntrustedIdentityException e) {
+      throw new UntrustedIdentityError(account.getACI(), e);
     }
   }
 }
