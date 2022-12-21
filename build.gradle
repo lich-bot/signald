@@ -170,5 +170,5 @@ allprojects {
 
 runtime {
     options = ['--strip-java-debug-attributes', '--compress', '2', '--no-header-files', '--no-man-pages']
-    modules = ['java.base', 'java.management', 'java.naming', 'java.sql', 'java.xml', 'jdk.crypto.ec', 'jdk.httpserver', 'java.desktop', 'jdk.unsupported']
+    modules = ['java.base', 'java.management', 'java.naming', 'java.sql', 'java.xml', 'jdk.crypto.ec', 'jdk.httpserver', 'java.desktop', 'jdk.unsupported', 'jdk.jdwp.agent']
 }
