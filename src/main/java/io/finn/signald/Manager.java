@@ -286,12 +286,13 @@ public class Manager {
     SignalServiceAddress address = recipient.getAddress();
     try {
       try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
-        messageSender.sendReceipt(address, getAccessPairFor(recipient), message);
+        final boolean includePNISignature = false; // TODO: figure out when to set this
+        messageSender.sendReceipt(address, getAccessPairFor(recipient), message, includePNISignature);
       }
       if (message.getType() == SignalServiceReceiptMessage.Type.READ) {
         List<ReadMessage> readMessages = new LinkedList<>();
         for (Long ts : message.getTimestamps()) {
-          readMessages.add(new ReadMessage(address, ts));
+          readMessages.add(new ReadMessage(address.getServiceId(), ts));
         }
         try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
           messageSender.sendSyncMessage(SignalServiceSyncMessage.forRead(readMessages), getAccessPairFor(self));
@@ -319,11 +320,12 @@ public class Manager {
       if (message.getGroupContext().isPresent()) {
         try {
           final boolean isRecipientUpdate = false;
+          final boolean isUrgent = false; // TODO: figure out how this should be set
           List<SignalServiceAddress> recipientAddresses = recipients.stream().map(Recipient::getAddress).collect(Collectors.toList());
           List<SendMessageResult> result;
           result = messageSender.sendDataMessage(recipientAddresses, getAccessPairFor(recipients), isRecipientUpdate, ContentHint.DEFAULT, message,
                                                  SignalServiceMessageSender.LegacyGroupEvents.EMPTY,
-                                                 sendResult -> logger.trace("Partial message send result: {}", sendResult.isSuccess()), () -> false);
+                                                 sendResult -> logger.trace("Partial message send result: {}", sendResult.isSuccess()), () -> false, isUrgent);
           for (SendMessageResult r : result) {
             if (r.getIdentityFailure() != null) {
               try {
@@ -344,7 +346,7 @@ public class Manager {
         final Optional<UnidentifiedAccessPair> unidentifiedAccess = getAccessPairFor(self);
         SentTranscriptMessage transcript =
             new SentTranscriptMessage(Optional.of(self.getAddress()), message.getTimestamp(), Optional.of(message), message.getExpiresInSeconds(),
-                                      Collections.singletonMap(self.getAddress(), unidentifiedAccess.isPresent()), false, Optional.empty(), Set.of());
+                                      Collections.singletonMap(self.getAddress().getServiceId(), unidentifiedAccess.isPresent()), false, Optional.empty(), Set.of());
         SignalServiceSyncMessage syncMessage = SignalServiceSyncMessage.forSentTranscript(transcript);
 
         List<SendMessageResult> results = new ArrayList<>(recipients.size());
@@ -367,7 +369,7 @@ public class Manager {
               final Optional<UnidentifiedAccessPair> unidentifiedAccess = getAccessPairFor(recipient);
               SentTranscriptMessage transcript =
                   new SentTranscriptMessage(Optional.of(recipient.getAddress()), message.getTimestamp(), Optional.of(message), message.getExpiresInSeconds(),
-                                            Collections.singletonMap(recipient.getAddress(), unidentifiedAccess.isPresent()), false, Optional.empty(), Set.of());
+                                            Collections.singletonMap(recipient.getAddress().getServiceId(), unidentifiedAccess.isPresent()), false, Optional.empty(), Set.of());
               SignalServiceSyncMessage syncMessage = SignalServiceSyncMessage.forSentTranscript(transcript);
               try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
                 messageSender.sendSyncMessage(syncMessage, unidentifiedAccess);
@@ -376,7 +378,10 @@ public class Manager {
               //              Optional.absent());
             } else {
               try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
-                results.add(messageSender.sendDataMessage(recipient.getAddress(), getAccessPairFor(recipient), ContentHint.DEFAULT, message, IndividualSendEventsLogger.INSTANCE));
+                final boolean isUrgent = false;            // TODO: figure out how to set this
+                final boolean includePNISignature = false; // TODO: figure out when to set this
+                results.add(messageSender.sendDataMessage(recipient.getAddress(), getAccessPairFor(recipient), ContentHint.DEFAULT, message, IndividualSendEventsLogger.INSTANCE,
+                                                          isUrgent, includePNISignature));
               } finally {
                 logger.debug("send complete");
               }

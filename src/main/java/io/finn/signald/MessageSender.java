@@ -170,8 +170,10 @@ public class MessageSender {
       logger.debug("sending group message to {} members via a distribution group", recipientAddresses.size());
       SenderKeyGroupEventsLogger sendEvents = new SenderKeyGroupEventsLogger();
       try {
-        List<SendMessageResult> skdmResults =
-            messageSender.sendGroupDataMessage(distributionId, recipientAddresses, access, isRecipientUpdate, ContentHint.DEFAULT, message.build(), sendEvents);
+        final boolean isUrgent = false;   // TODO: figure out when to set this
+        final boolean isForStory = false; // TODO: figure out when to set this
+        List<SendMessageResult> skdmResults = messageSender.sendGroupDataMessage(distributionId, recipientAddresses, access, isRecipientUpdate, ContentHint.DEFAULT,
+                                                                                 message.build(), sendEvents, isUrgent, isForStory);
         Set<ServiceId> networkFailAddressesForRetry = new HashSet<>();
         if (sendEvents.isSyncMessageSent()) {
           isRecipientUpdate = true; // prevent duplicate sync messages from being sent
@@ -219,8 +221,9 @@ public class MessageSender {
 
           SenderKeyGroupEventsLogger sendEventsRetry = new SenderKeyGroupEventsLogger();
 
-          List<SendMessageResult> senderKeyRetryResults =
-              messageSender.sendGroupDataMessage(distributionId, retryRecipientAddresses, access, isRecipientUpdate, ContentHint.DEFAULT, message.build(), sendEventsRetry);
+          final boolean includePNISignature = false; // TODO: figure out when to set this
+          List<SendMessageResult> senderKeyRetryResults = messageSender.sendGroupDataMessage(distributionId, retryRecipientAddresses, access, isRecipientUpdate,
+                                                                                             ContentHint.DEFAULT, message.build(), sendEventsRetry, isUrgent, includePNISignature);
           if (!isRecipientUpdate && sendEventsRetry.isSyncMessageSent()) {
             isRecipientUpdate = true;
           }
@@ -273,9 +276,10 @@ public class MessageSender {
                    isRecipientUpdate);
       List<SignalServiceAddress> recipientAddresses = legacyTargets.stream().map(Recipient::getAddress).collect(Collectors.toList());
       try {
+        final boolean isUrgent = false; // TODO: figure out when to set this
         results.addAll(messageSender.sendDataMessage(recipientAddresses, ua.getAccessPairFor(legacyTargets), isRecipientUpdate, ContentHint.DEFAULT, message.build(),
                                                      SignalServiceMessageSender.LegacyGroupEvents.EMPTY,
-                                                     sendResult -> logger.trace("Partial message send result: {}", sendResult.isSuccess()), () -> false));
+                                                     sendResult -> logger.trace("Partial message send result: {}", sendResult.isSuccess()), () -> false, isUrgent));
       } catch (UntrustedIdentityException e) {
         account.getProtocolStore().handleUntrustedIdentityException(e);
       }
@@ -352,8 +356,10 @@ public class MessageSender {
         messageBuilder.withExpiration(contact != null ? contact.messageExpirationTime : 0);
         message = messageBuilder.build();
         try (SignalSessionLock.Lock ignored = account.getSignalDependencies().getSessionLock().acquire()) {
+          final boolean isUrgent = false;            // TODO: figure out when to set this
+          final boolean includePNISignature = false; // TODO: figure out when to set this
           results.add(messageSender.sendDataMessage(recipient.getAddress(), new UnidentifiedAccessUtil(account.getACI()).getAccessPairFor(recipient), ContentHint.DEFAULT, message,
-                                                    IndividualSendEventsLogger.INSTANCE));
+                                                    IndividualSendEventsLogger.INSTANCE, isUrgent, includePNISignature));
 
         } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
           if (e.getIdentityKey() != null) {
