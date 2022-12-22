@@ -55,13 +55,6 @@ build:
 build java11 x86_64-unknown-linux-gnu:
   extends: .build
   variables:
-    JAVA_VERSION: 11
-
-build java11 armv7-unknown-linux-gnueabihf:
-  extends: .build
-  variables:
-    JAVA_VERSION: 11
-    SIGNALD_TARGET: armv7-unknown-linux-gnueabihf
 
 build java11 aarch64-unknown-linux-gnu:
   extends: .build
@@ -115,30 +108,6 @@ build deb aarch64-unknown-linux-gnu:
     - when: manual
       allow_failure: true
 
-build deb armv7-unknown-linux-gnueabihf:
-  image: registry.gitlab.com/signald/infrastructure/signald-builder-arm-v7:010941fc
-  stage: build deb
-  needs: []
-  tags: [arm-builder]
-  before_script:
-    - export VERSION="$(./version.sh)"
-    - echo "Building signald version $VERSION"
-    - "sed -i 's/^Architecture:.*/Architecture: armhf/g' debian/control"
-  script:
-    - gbp dch --ignore-branch --debian-tag="%(version)s" --git-author --new-version="${VERSION}"
-    - dpkg-buildpackage -b
-    - mv ../signald_* .
-  artifacts:
-    paths:
-      - "signald_*"
-    expire_in: 30 days
-  rules:
-    - if: '$CI_PROJECT_PATH == "signald/signald" && $CI_COMMIT_REF_PROTECTED == "true"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-
 .docker-buildx:
   image: docker.io/library/debian:stable
   stage: build docker
@@ -171,16 +140,10 @@ container arm64:
   variables:
     PLATFORM: linux/arm64/v8
 
-container armv7:
-  extends: .docker-buildx
-  variables:
-    PLATFORM: linux/arm/v7
-    CONTAINERFILE: arm.Containerfile
-
 container manifest:
   stage: publish
   image: docker.io/library/debian:stable
-  needs: ["container amd64", "container arm64", "container armv7"]
+  needs: ["container amd64", "container arm64"]
   tags: [docker-builder]
   before_script:
     - sudo apt-get update && sudo apt-get install -y podman
@@ -301,7 +264,7 @@ publish debian packages:
   image: registry.gitlab.com/signald/infrastructure/signald-builder-x86:d5e68709
   stage: publish
   tags: [deb-signer]
-  needs: ["build deb x86_64-unknown-linux-gnu", "build deb aarch64-unknown-linux-gnu", "build deb armv7-unknown-linux-gnueabihf"]
+  needs: ["build deb x86_64-unknown-linux-gnu", "build deb aarch64-unknown-linux-gnu"]
   script:
     - tools/aptly-publish.sh
   variables:
@@ -314,7 +277,7 @@ publish stable debian packages:
   image: registry.gitlab.com/signald/infrastructure/signald-builder-x86:d5e68709
   stage: publish
   tags: [deb-signer]
-  needs: ["build deb x86_64-unknown-linux-gnu", "build deb aarch64-unknown-linux-gnu", "build deb armv7-unknown-linux-gnueabihf"]
+  needs: ["build deb x86_64-unknown-linux-gnu", "build deb aarch64-unknown-linux-gnu"]
   script:
     - tools/aptly-publish.sh
   variables:
