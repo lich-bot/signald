@@ -25,7 +25,7 @@ public class ServiceConfig {
                                                                                                        true,  // announcement groups
                                                                                                        true,  // change number
                                                                                                        true,  // stories
-                                                                                                       true,   // gift badges
-          false // pnp
+                                                                                                       true,  // gift badges
+                                                                                                       false  // pnp
   );
 }

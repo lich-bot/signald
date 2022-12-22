@@ -99,8 +99,8 @@ public class MessageQueueTable implements IMessageQueueTable {
         boolean urgent = rows.getBoolean(URGENT);
         String updatedPni = rows.getString(UPDATED_PNI);
         boolean story = rows.getBoolean(STORY);
-        SignalServiceEnvelope signalServiceEnvelope =
-            new SignalServiceEnvelope(type, sender, senderDevice, timestamp, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid, destinationUUID, urgent, updatedPni, story);
+        SignalServiceEnvelope signalServiceEnvelope = new SignalServiceEnvelope(type, sender, senderDevice, timestamp, content, serverReceivedTimestamp, serverDeliveredTimestamp,
+                                                                                uuid, destinationUUID, urgent, updatedPni, story);
         return new StoredEnvelope(id, signalServiceEnvelope);
       }
     }

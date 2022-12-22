@@ -26,12 +26,13 @@ public class MessageQueueTable implements IMessageQueueTable {
 
   @Override
   public long storeEnvelope(SignalServiceEnvelope envelope) throws SQLException {
-    var query = String.format("INSERT INTO %s (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING %s", TABLE_NAME,
-                              // FIELDS
-                              ACCOUNT, VERSION, TYPE, SOURCE_E164, SOURCE_UUID, SOURCE_DEVICE, TIMESTAMP, CONTENT, SERVER_RECEIVED_TIMESTAMP,
-                              SERVER_DELIVERED_TIMESTAMP, SERVER_UUID, DESTINATION_UUID, URGENT, UPDATED_PNI, STORY,
-                              // RETURNING
-                              ID);
+    var query =
+        String.format("INSERT INTO %s (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING %s", TABLE_NAME,
+                      // FIELDS
+                      ACCOUNT, VERSION, TYPE, SOURCE_E164, SOURCE_UUID, SOURCE_DEVICE, TIMESTAMP, CONTENT, SERVER_RECEIVED_TIMESTAMP, SERVER_DELIVERED_TIMESTAMP, SERVER_UUID,
+                      DESTINATION_UUID, URGENT, UPDATED_PNI, STORY,
+                      // RETURNING
+                      ID);
     try (var statement = Database.getConn().prepareStatement(query)) {
       UUID sourceUuid = envelope.getSourceUuid().isPresent() && !envelope.getSourceUuid().get().equals("") ? UUID.fromString(envelope.getSourceUuid().get()) : null;
       int i = 1;
@@ -88,7 +89,7 @@ public class MessageQueueTable implements IMessageQueueTable {
         }
         int senderDevice = rows.getInt(SOURCE_DEVICE);
         long timestamp = rows.getLong(TIMESTAMP);
-//        byte[] legacyMessage = rows.getBytes(LEGACY_MESSAGE);
+        //        byte[] legacyMessage = rows.getBytes(LEGACY_MESSAGE);
         byte[] content = rows.getBytes(CONTENT);
         long serverReceivedTimestamp = rows.getLong(SERVER_RECEIVED_TIMESTAMP);
         long serverDeliveredTimestamp = rows.getLong(SERVER_DELIVERED_TIMESTAMP);
@@ -97,8 +98,8 @@ public class MessageQueueTable implements IMessageQueueTable {
         boolean urgent = rows.getBoolean(URGENT);
         String updatedPni = rows.getString(UPDATED_PNI);
         boolean story = rows.getBoolean(STORY);
-        SignalServiceEnvelope signalServiceEnvelope =
-            new SignalServiceEnvelope(type, sender, senderDevice, timestamp, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid, destinationUUID, urgent, updatedPni, story);
+        SignalServiceEnvelope signalServiceEnvelope = new SignalServiceEnvelope(type, sender, senderDevice, timestamp, content, serverReceivedTimestamp, serverDeliveredTimestamp,
+                                                                                uuid, destinationUUID, urgent, updatedPni, story);
         return new StoredEnvelope(id, signalServiceEnvelope);
       }
     }

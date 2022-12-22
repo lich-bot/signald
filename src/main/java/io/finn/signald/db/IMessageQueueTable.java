@@ -14,7 +14,7 @@ public interface IMessageQueueTable {
   String SOURCE_DEVICE = "source_device";
   String TIMESTAMP = "timestamp";
   String CONTENT = "content";
-//  String LEGACY_MESSAGE = "legacy_message";
+  //  String LEGACY_MESSAGE = "legacy_message";
   String SERVER_RECEIVED_TIMESTAMP = "server_received_timestamp";
   String SERVER_UUID = "server_uuid";
   String SERVER_DELIVERED_TIMESTAMP = "server_delivered_timestamp";

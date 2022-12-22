@@ -99,7 +99,8 @@ public class RegistrationManager {
     int pniRegistrationID = Database.Get().PendingAccountDataTable.getInt(e164, IPendingAccountDataTable.Key.LOCAL_PNI_REGISTRATION_ID);
     ProfileKey profileKey = generateProfileKey();
     byte[] unidentifiedAccessKey = UnidentifiedAccess.deriveAccessKeyFrom(profileKey);
-    ServiceResponse<VerifyAccountResponse> r = accountManager.verifyAccount(verificationCode, registrationID, true, unidentifiedAccessKey, false, ServiceConfig.CAPABILITIES, true, pniRegistrationID);
+    ServiceResponse<VerifyAccountResponse> r =
+        accountManager.verifyAccount(verificationCode, registrationID, true, unidentifiedAccessKey, false, ServiceConfig.CAPABILITIES, true, pniRegistrationID);
     handleResponseException(r);
 
     VerifyAccountResponse result = r.getResult().get();

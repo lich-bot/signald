@@ -37,7 +37,7 @@ public class LegacyProfileCredentialStore {
       Recipient r = db.RecipientsTable.get(entry.getServiceAddress());
       db.ProfileKeysTable.setProfileKey(r, entry.getProfileKey());
       // profile key credential format changed, dont try to migrate it
-//      db.ProfileKeysTable.setExpiringProfileKeyCredential(r, entry.getProfileKeyCredential());
+      //      db.ProfileKeysTable.setExpiringProfileKeyCredential(r, entry.getProfileKeyCredential());
       db.ProfileKeysTable.setUnidentifiedAccessMode(r, entry.getUnidentifiedAccessMode().migrate());
       db.ProfileKeysTable.setRequestPending(r, entry.isRequestPending());
 

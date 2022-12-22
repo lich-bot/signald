@@ -100,7 +100,8 @@ public class ProvisioningManager {
     }
 
     String encryptedDeviceName = DeviceNameUtil.encryptDeviceName(deviceName, newDeviceRegistration.getAciIdentity().getPrivateKey());
-    int deviceId = accountManager.finishNewDeviceRegistration(newDeviceRegistration.getProvisioningCode(), new ConfirmCodeMessage(false, true, registrationId, pniRegistrationId, encryptedDeviceName, null));
+    int deviceId = accountManager.finishNewDeviceRegistration(newDeviceRegistration.getProvisioningCode(),
+                                                              new ConfirmCodeMessage(false, true, registrationId, pniRegistrationId, encryptedDeviceName, null));
 
     ACI aci = newDeviceRegistration.getAci();
     if (Database.Get().AccountsTable.exists(aci)) {
