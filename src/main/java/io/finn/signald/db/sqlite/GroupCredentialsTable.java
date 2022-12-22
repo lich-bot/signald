@@ -59,4 +59,12 @@ public class GroupCredentialsTable implements IGroupCredentialsTable {
       Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
     }
   }
+
+  @Override
+  public void clearAll() throws SQLException{
+    try (var statement = Database.getConn().prepareStatement("DELETE FROM "+TABLE_NAME)) {
+      statement.setObject(1, aci);
+      Database.executeUpdate(TABLE_NAME + "_clear_all", statement);
+    }
+  }
 }

@@ -28,6 +28,7 @@ public interface IGroupCredentialsTable {
 
   void setCredentials(HashMap<Long, AuthCredentialWithPniResponse> credentials) throws SQLException;
   void deleteAccount(ACI aci) throws SQLException;
+  void clearAll() throws SQLException;
   Optional<AuthCredentialWithPniResponse> getCredential(int date) throws SQLException, InvalidInputException;
 
   default AuthCredentialWithPniResponse getCredential(GroupsV2Api groupsV2Api, int today) throws InvalidInputException, SQLException, IOException {

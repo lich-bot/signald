@@ -612,47 +612,6 @@ public class Manager {
         continue;
       }
 
-      for (final File fileEntry : dir.listFiles()) {
-        if (!fileEntry.isFile()) {
-          continue;
-        }
-        SignalServiceEnvelope envelope;
-        try {
-          envelope = loadEnvelope(fileEntry);
-          if (envelope == null) {
-            continue;
-          }
-        } catch (IOException e) {
-          Files.delete(fileEntry.toPath());
-          logger.catching(e);
-          continue;
-        }
-        SignalServiceContent content = null;
-        Exception exception = null;
-        if (!envelope.isReceipt()) {
-          try {
-            content = decryptMessage(envelope);
-          } catch (Exception e) {
-            exception = e;
-          }
-          if (exception == null && content != null) {
-            try {
-              handleMessage(envelope, content, ignoreAttachments);
-            } catch (VerificationFailedException | InvalidKeyException | InvalidMessageException e) {
-              logger.catching(e);
-              Sentry.captureException(e);
-            }
-          }
-        }
-        if (exception != null || content != null) {
-          handler.handleMessage(envelope, content, exception);
-        }
-        try {
-          Files.delete(fileEntry.toPath());
-        } catch (IOException e) {
-          logger.warn("Failed to delete cached message file “" + fileEntry + "”: " + e.getMessage());
-        }
-      }
       // Try to delete directory if empty
       dir.delete();
     }
@@ -921,56 +880,6 @@ public class Manager {
 
     for (Job job : jobs) {
       BackgroundJobRunnerThread.queue(job);
-    }
-  }
-
-  private SignalServiceEnvelope loadEnvelope(File file) throws IOException {
-    logger.debug("Loading cached envelope from " + file.toString());
-    try (FileInputStream f = new FileInputStream(file)) {
-      DataInputStream in = new DataInputStream(f);
-      int version = in.readInt();
-      if (version > 4) {
-        return null;
-      }
-      int type = in.readInt();
-      String source = in.readUTF();
-      ACI sourceACI = null;
-      if (version >= 3) {
-        sourceACI = ACI.parseOrNull(in.readUTF());
-      }
-      int sourceDevice = in.readInt();
-      if (version == 1) {
-        // read legacy relay field
-        in.readUTF();
-      }
-      long timestamp = in.readLong();
-      byte[] content = null;
-      int contentLen = in.readInt();
-      if (contentLen > 0) {
-        content = new byte[contentLen];
-        in.readFully(content);
-      }
-      byte[] legacyMessage = null;
-      int legacyMessageLen = in.readInt();
-      if (legacyMessageLen > 0) {
-        legacyMessage = new byte[legacyMessageLen];
-        in.readFully(legacyMessage);
-      }
-      long serverReceivedTimestamp = 0;
-      String uuid = null;
-      if (version >= 2) {
-        serverReceivedTimestamp = in.readLong();
-        uuid = in.readUTF();
-        if ("".equals(uuid)) {
-          uuid = null;
-        }
-      }
-      long serverDeliveredTimestamp = 0;
-      if (version >= 4) {
-        serverDeliveredTimestamp = in.readLong();
-      }
-      Optional<SignalServiceAddress> sourceAddress = sourceACI == null && source.isEmpty() ? Optional.empty() : Optional.of(new SignalServiceAddress(sourceACI, source));
-      return new SignalServiceEnvelope(type, sourceAddress, sourceDevice, timestamp, legacyMessage, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid, null);
     }
   }
 

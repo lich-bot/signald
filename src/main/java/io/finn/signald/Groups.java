@@ -27,21 +27,20 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.sql.SQLException;
 import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.protocol.util.Pair;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
-import org.signal.libsignal.zkgroup.auth.AuthCredentialResponse;
 import org.signal.libsignal.zkgroup.auth.AuthCredentialWithPniResponse;
 import org.signal.libsignal.zkgroup.groups.GroupMasterKey;
 import org.signal.libsignal.zkgroup.groups.GroupSecretParams;
+import org.signal.libsignal.zkgroup.profiles.ExpiringProfileKeyCredential;
 import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredential;
 import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.storageservice.protos.groups.GroupInviteLink;
@@ -360,8 +359,8 @@ public class Groups {
 
     IProfileKeysTable profileKeysTable = account.getDB().ProfileKeysTable;
     IRecipientsTable recipientsTable = account.getDB().RecipientsTable;
-    ProfileKeyCredential selfProfileKeyCredential = profileKeysTable.getProfileKeyCredential(account.getSelf());
-    GroupCandidate groupCandidateSelf = new GroupCandidate(account.getUUID(), Optional.of(selfProfileKeyCredential));
+    ExpiringProfileKeyCredential selfExpiringProfileKeyCredential = profileKeysTable.getExpiringProfileKeyCredential(account.getSelf());
+    GroupCandidate groupCandidateSelf = new GroupCandidate(account.getUUID(), Optional.of(selfExpiringProfileKeyCredential));
 
     GroupsV2Operations.NewGroup newGroup = groupsV2Operations.createNewGroup(groupSecretParams, title, avatarBytes, groupCandidateSelf, candidates, memberRole, timer);
     groupsV2Api.putNewGroup(newGroup, getAuthorizationForToday(groupSecretParams));
