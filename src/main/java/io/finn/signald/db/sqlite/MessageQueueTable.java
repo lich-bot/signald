@@ -30,8 +30,8 @@ public class MessageQueueTable implements IMessageQueueTable {
   @Override
   public long storeEnvelope(SignalServiceEnvelope envelope) throws SQLException {
     var query = "INSERT INTO " + TABLE_NAME + " (" + ACCOUNT + ", " + VERSION + ", " + TYPE + ", " + SOURCE_E164 + ", " + SOURCE_UUID + ", " + SOURCE_DEVICE + ", " + TIMESTAMP +
-                ", " + CONTENT + ", " + SERVER_RECEIVED_TIMESTAMP + ", " + SERVER_DELIVERED_TIMESTAMP + ", " + SERVER_UUID + ", " + DESTINATION_UUID + ", " + URGENT + ", " + UPDATED_PNI + ", " + STORY +
-                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+                ", " + CONTENT + ", " + SERVER_RECEIVED_TIMESTAMP + ", " + SERVER_DELIVERED_TIMESTAMP + ", " + SERVER_UUID + ", " + DESTINATION_UUID + ", " + URGENT + ", " +
+                UPDATED_PNI + ", " + STORY + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
     try (var statement = Database.getConn().prepareStatement(query)) {
       int i = 1;
       statement.setString(i++, aci.toString());

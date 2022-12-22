@@ -65,8 +65,8 @@ class MessageQueueTableTest {
     String updatedPni = "idk";
     boolean story = false;
 
-    SignalServiceEnvelope originalEnvelope =
-        new SignalServiceEnvelope(type, sender, senderDevice, timestamp, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid, ACCOUNT_ACI.toString(), urgent, updatedPni, story);
+    SignalServiceEnvelope originalEnvelope = new SignalServiceEnvelope(type, sender, senderDevice, timestamp, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid,
+                                                                       ACCOUNT_ACI.toString(), urgent, updatedPni, story);
     messageQueue.storeEnvelope(originalEnvelope);
 
     StoredEnvelope storedEnvelope = messageQueue.nextEnvelope();
