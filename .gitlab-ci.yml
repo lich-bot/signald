@@ -227,7 +227,7 @@ unit tests x86:
   services:
     - postgres
   variables:
-    POSTGRES_DB: $POSTGRES_DB
+    POSTGRES_DB: signald
     POSTGRES_USER: $POSTGRES_USER
     POSTGRES_PASSWORD: $POSTGRES_PASSWORD
     POSTGRES_HOST_AUTH_METHOD: trust
