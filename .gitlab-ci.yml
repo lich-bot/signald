@@ -208,25 +208,7 @@ container manifest:
     - when: manual
       allow_failure: true
 
-
-unit tests x86 sqlite:
-  image: openjdk:11-jdk
-  stage: test
-  needs: []
-  before_script:
-    - cp tools/log4j2.xml src/main/resources/log4j2.xml
-  script:
-    - ./gradlew test
-  rules:
-    - when: on_success
-  artifacts:
-    when: always
-    reports:
-      junit: build/test-results/test/**/TEST-*.xml
-    paths:
-      - build/reports/tests/test
-
-unit tests x86 postgres:
+unit tests x86:
   image: openjdk:11-jdk
   stage: test
   needs: []
