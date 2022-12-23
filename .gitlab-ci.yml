@@ -229,9 +229,8 @@ unit tests x86:
   variables:
     POSTGRES_DB: signald
     POSTGRES_USER: signald
-    POSTGRES_PASSWORD: signald
     POSTGRES_HOST_AUTH_METHOD: trust
-    SIGNALD_POSTGRES_TEST_DATABASE: postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@postgres/$POSTGRES_DB
+    SIGNALD_POSTGRES_TEST_DATABASE: postgresql://$POSTGRES_USER@postgres/$POSTGRES_DB
 
 unit tests aarch64-unknown-linux-gnu:
   image: debian
