@@ -41,6 +41,7 @@ public class Server {
   public Server() {}
 
   public Server(IServersTable.AbstractServer server) {
+    uuid = server.getUuid();
     serviceURL = server.getServiceURL();
     cdnURLs = server.getCdnURLs().entrySet().stream().map(ServerCDN::new).collect(Collectors.toList());
     contactDiscoveryURL = server.getContactDiscoveryURL();
