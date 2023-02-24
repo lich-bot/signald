@@ -46,14 +46,14 @@ public class Server {
     contactDiscoveryURL = server.getContactDiscoveryURL();
     keyBackupURL = server.getKeyBackupURL();
     storageURL = server.getStorageURL();
-    zkParams = Base64.encodeBytes(server.getZkParams());
+    zkParams = server.getZkParams() == null ? null : Base64.encodeBytes(server.getZkParams());
     proxy = server.getProxy();
-    ca = Base64.encodeBytes(server.getCa());
+    ca = server.getCa() == null ? null : Base64.encodeBytes(server.getCa());
     keyBackupServiceName = server.getKeyBackupServiceName();
-    keyBackupServiceId = Base64.encodeBytes(server.getKeyBackupServiceId());
+    keyBackupServiceId = server.getKeyBackupServiceId() == null ? null : Base64.encodeBytes(server.getKeyBackupServiceId());
     keyBackupMrenclave = server.getKeyBackupMrenclave();
     cdsMrenclave = server.getCdsMrenclave();
-    iasCa = Base64.encodeBytes(server.getIasCa());
+    iasCa = server.getIasCa() == null ? null : Base64.encodeBytes(server.getIasCa());
   }
 
   @JsonIgnore
@@ -66,7 +66,7 @@ public class Server {
     byte[] decodedZkParams = Base64.decode(zkParams);
     byte[] decodedUnidentifiedSenderRoot = Base64.decode(unidentifiedSenderRoot);
     byte[] decodedCa = Base64.decode(ca);
-    byte[] decodedKeyBackupServiceId = Base64.decode(keyBackupServiceId);
+    byte[] decodedKeyBackupServiceId = keyBackupServiceId == null ? null : Base64.decode(keyBackupServiceId);
     byte[] decodedIasCa = iasCa == null ? null : Base64.decode(iasCa);
 
     return Database.NewServer(uuid, serviceURL, cdns, contactDiscoveryURL, keyBackupURL, storageURL, decodedZkParams, decodedUnidentifiedSenderRoot, proxy, decodedCa,
