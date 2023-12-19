@@ -26,13 +26,14 @@ import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.multidevice.RequestMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
+import org.whispersystems.signalservice.internal.push.SyncMessage;
 
 public class SendSyncRequestJob implements Job {
   private static final Logger logger = LogManager.getLogger();
   private final Account account;
-  private final SignalServiceProtos.SyncMessage.Request.Type type;
+  private final SyncMessage.Request.Type type;
 
-  public SendSyncRequestJob(Account account, SignalServiceProtos.SyncMessage.Request.Type type) {
+  public SendSyncRequestJob(Account account, SyncMessage.Request.Type type) {
     this.account = account;
     this.type = type;
   }
@@ -41,7 +42,7 @@ public class SendSyncRequestJob implements Job {
   public void run() throws NoSuchAccountException, SQLException, ServerNotFoundException, IOException, InvalidProxyException, UntrustedIdentityException, InvalidKeyException {
     logger.debug("requesting sync of type {}", type.name());
     SignalDependencies dependencies = account.getSignalDependencies();
-    SignalServiceProtos.SyncMessage.Request request = SignalServiceProtos.SyncMessage.Request.newBuilder().setType(type).build();
+    SyncMessage.Request request = new SyncMessage.Request.Builder().type(type).build();
     SignalServiceSyncMessage message = SignalServiceSyncMessage.forRequest(new RequestMessage(request));
     SignalServiceMessageSender messageSender = dependencies.getMessageSender();
     Optional<UnidentifiedAccessPair> access = new UnidentifiedAccessUtil(account.getACI()).getAccessPairFor(account.getSelf());

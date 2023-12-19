@@ -44,22 +44,22 @@ public final class ProfileKeySet {
    * authoritative.
    */
   public void addKeysFromGroupChange(@NonNull DecryptedGroupChange change) throws SQLException, IOException {
-    UUID editor = UuidUtil.fromByteStringOrNull(change.getEditor());
+    UUID editor = UuidUtil.fromByteStringOrNull(change.editorServiceIdBytes);
 
-    for (DecryptedMember member : change.getNewMembersList()) {
+    for (DecryptedMember member : change.newMembers) {
       addMemberKey(member, editor);
     }
 
-    for (DecryptedMember member : change.getPromotePendingMembersList()) {
+    for (DecryptedMember member : change.promotePendingMembers) {
       addMemberKey(member, editor);
     }
 
-    for (DecryptedMember member : change.getModifiedProfileKeysList()) {
+    for (DecryptedMember member : change.modifiedProfileKeys) {
       addMemberKey(member, editor);
     }
 
-    for (DecryptedRequestingMember member : change.getNewRequestingMembersList()) {
-      addMemberKey(editor, member.getUuid(), member.getProfileKey());
+    for (DecryptedRequestingMember member : change.newRequestingMembers) {
+      addMemberKey(editor, member.aciBytes, member.profileKey);
     }
   }
 
@@ -71,16 +71,16 @@ public final class ProfileKeySet {
    * gathered from a group state can only be used to fill in gaps in knowledge.
    */
   public void addKeysFromGroupState(@NonNull DecryptedGroup group) throws SQLException, IOException {
-    for (DecryptedMember member : group.getMembersList()) {
+    for (DecryptedMember member : group.members) {
       addMemberKey(member, null);
     }
   }
 
   private void addMemberKey(@NonNull DecryptedMember member, @Nullable UUID changeSource) throws SQLException, IOException {
-    addMemberKey(changeSource, member.getUuid(), member.getProfileKey());
+    addMemberKey(changeSource, member.aciBytes, member.profileKey);
   }
 
-  private void addMemberKey(@Nullable UUID changeSource, @NonNull ByteString memberUuidBytes, @NonNull ByteString profileKeyBytes) throws SQLException, IOException {
+  private void addMemberKey(@Nullable UUID changeSource, @NonNull okio.ByteString memberUuidBytes, @NonNull okio.ByteString profileKeyBytes) throws SQLException, IOException {
     UUID memberUuid = UuidUtil.fromByteString(memberUuidBytes);
 
     if (UuidUtil.UNKNOWN_UUID.equals(memberUuid)) {
