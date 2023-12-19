@@ -14,7 +14,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
 import org.junit.jupiter.api.*;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 public class AccountsTableTest {
   private File databaseFile;

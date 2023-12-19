@@ -16,7 +16,7 @@ import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.protocol.InvalidKeyIdException;
 import org.signal.libsignal.protocol.InvalidMessageException;
 import org.signal.libsignal.protocol.state.PreKeyRecord;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 public class PreKeysTable implements IPreKeysTable {
   private static final Logger logger = LogManager.getLogger();

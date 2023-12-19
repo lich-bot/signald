@@ -29,7 +29,7 @@ import org.signal.libsignal.protocol.*;
 import org.whispersystems.signalservice.api.NotSavedException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.websocket.WebSocketConnectionState;
 
 public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {

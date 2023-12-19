@@ -10,7 +10,7 @@ package io.finn.signald.storage;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.IOException;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
-import org.whispersystems.util.Base64;
+import org.signal.core.util.Base64;
 @Deprecated
 public class LegacyPaymentAddress {
   @JsonProperty private String address;

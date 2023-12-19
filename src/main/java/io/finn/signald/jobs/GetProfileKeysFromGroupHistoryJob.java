@@ -17,7 +17,7 @@ import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
 import org.signal.libsignal.zkgroup.groups.GroupSecretParams;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
-import org.whispersystems.util.Base64;
+import org.signal.core.util.Base64;
 
 public class GetProfileKeysFromGroupHistoryJob implements Job {
   private static final Logger logger = LogManager.getLogger();

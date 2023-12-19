@@ -9,7 +9,7 @@ package io.finn.signald.db;
 
 import java.sql.SQLException;
 import org.signal.libsignal.protocol.state.PreKeyStore;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 public interface IPreKeysTable extends PreKeyStore {
   String ACCOUNT_UUID = "account_uuid";

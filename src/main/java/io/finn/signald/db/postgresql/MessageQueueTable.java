@@ -14,7 +14,7 @@ import java.sql.SQLException;
 import java.util.Optional;
 import java.util.UUID;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class MessageQueueTable implements IMessageQueueTable {

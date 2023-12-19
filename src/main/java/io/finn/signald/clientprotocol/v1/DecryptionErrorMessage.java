@@ -9,7 +9,7 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Optional;
-import org.whispersystems.util.Base64;
+import org.signal.core.util.Base64;
 
 public class DecryptionErrorMessage {
   public final long timestamp;

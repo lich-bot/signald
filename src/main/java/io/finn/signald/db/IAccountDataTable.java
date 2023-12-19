@@ -9,7 +9,7 @@ package io.finn.signald.db;
 
 import java.nio.ByteBuffer;
 import java.sql.SQLException;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 public interface IAccountDataTable {
   String ACCOUNT_UUID = "account_uuid";

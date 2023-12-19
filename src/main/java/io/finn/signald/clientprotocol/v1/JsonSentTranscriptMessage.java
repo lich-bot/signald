@@ -13,7 +13,7 @@ import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import java.util.HashMap;
 import java.util.Map;
 import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 

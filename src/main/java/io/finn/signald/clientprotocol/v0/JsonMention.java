@@ -12,7 +12,7 @@ import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import java.util.UUID;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 @Deprecated(1641027661)
 public class JsonMention {

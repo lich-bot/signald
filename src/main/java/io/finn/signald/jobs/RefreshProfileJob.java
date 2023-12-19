@@ -38,7 +38,7 @@ import org.whispersystems.signalservice.api.push.exceptions.RateLimitException;
 import org.whispersystems.signalservice.api.services.ProfileService;
 import org.whispersystems.signalservice.internal.ServiceResponse;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
-import org.whispersystems.util.Base64;
+import org.signal.core.util.Base64;
 
 public class RefreshProfileJob implements Job {
   private static final Logger logger = LogManager.getLogger();

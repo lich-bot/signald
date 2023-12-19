@@ -6,7 +6,7 @@ import io.finn.signald.db.Database;
 import io.finn.signald.db.IProfileBadgesTable;
 import io.finn.signald.util.JSONUtil;
 import java.sql.SQLException;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 public class ProfileBadgesTable implements IProfileBadgesTable {
   private static final String TABLE_NAME = "signald_profile_badges";

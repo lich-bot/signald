@@ -4,7 +4,7 @@ import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Set;
 import org.signal.libsignal.protocol.SignalProtocolAddress;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.DistributionId;
 
 public interface ISenderKeySharedTable {

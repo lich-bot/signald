@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Set;
 import org.signal.libsignal.protocol.SignalProtocolAddress;
 import org.signal.libsignal.protocol.state.SessionStore;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 public interface ISessionsTable extends SessionStore {
   String ROW_ID = "rowid";

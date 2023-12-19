@@ -27,7 +27,7 @@ import org.signal.libsignal.zkgroup.groups.GroupSecretParams;
 import org.signal.storageservice.protos.groups.GroupInviteLink;
 import org.signal.storageservice.protos.groups.local.DecryptedGroupJoinInfo;
 import org.whispersystems.signalservice.api.groupsv2.GroupLinkNotActiveException;
-import org.whispersystems.util.Base64UrlSafe;
+import org.signal.core.util.Base64UrlSafe;
 
 @ProtocolType("group_link_info")
 @Doc("Get information about a group from a signal.group link")

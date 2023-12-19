@@ -9,7 +9,7 @@ package io.finn.signald.clientprotocol.v0;
 
 import io.finn.signald.annotations.Deprecated;
 import org.whispersystems.signalservice.api.messages.multidevice.MessageRequestResponseMessage;
-import org.whispersystems.util.Base64;
+import org.signal.core.util.Base64;
 
 @Deprecated(1641027661)
 public class JsonMessageRequestResponseMessage {

@@ -49,11 +49,10 @@ import org.signal.storageservice.protos.groups.local.DecryptedGroupJoinInfo;
 import org.whispersystems.signalservice.api.groupsv2.*;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.push.exceptions.NotInGroupException;
-import org.whispersystems.util.Base64;
-import org.whispersystems.util.Base64UrlSafe;
+import org.signal.core.util.Base64;
 
 public class Groups {
   private final static Logger logger = LogManager.getLogger();
@@ -331,7 +330,7 @@ public class Groups {
     if (encoding == null || encoding.length() == 0) {
       return null;
     }
-    byte[] bytes = Base64UrlSafe.decodePaddingAgnostic(encoding);
+    byte[] bytes = Base64.decodePaddingAgnostic(encoding);
     GroupInviteLink groupInviteLink = GroupInviteLink.parseFrom(bytes);
     GroupInviteLink.GroupInviteLinkContentsV1 groupInviteLinkContentsV1 = groupInviteLink.getV1Contents();
     GroupMasterKey groupMasterKey = new GroupMasterKey(groupInviteLinkContentsV1.getGroupMasterKey().toByteArray());

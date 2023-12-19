@@ -16,7 +16,7 @@ import java.util.Optional;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.auth.AuthCredentialResponse;
 import org.signal.libsignal.zkgroup.auth.AuthCredentialWithPniResponse;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 public class GroupCredentialsTable implements IGroupCredentialsTable {
   private static final String TABLE_NAME = "group_credentials";

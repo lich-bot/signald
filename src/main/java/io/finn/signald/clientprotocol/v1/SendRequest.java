@@ -43,7 +43,7 @@ import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServicePreview;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 import org.whispersystems.signalservice.api.push.exceptions.NonSuccessfulResponseCodeException;
-import org.whispersystems.util.Base64;
+import org.signal.core.util.Base64;
 
 @ProtocolType("send")
 public class SendRequest implements RequestType<SendResponse> {

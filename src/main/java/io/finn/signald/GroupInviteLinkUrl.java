@@ -15,7 +15,7 @@ import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.groups.GroupMasterKey;
 import org.signal.storageservice.protos.groups.GroupInviteLink;
 import org.signal.storageservice.protos.groups.local.DecryptedGroup;
-import org.whispersystems.util.Base64UrlSafe;
+import org.signal.core.util.Base64UrlSafe;
 
 public final class GroupInviteLinkUrl {
 

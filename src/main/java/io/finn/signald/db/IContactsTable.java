@@ -11,8 +11,8 @@ import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.signalservice.api.messages.multidevice.DeviceContact;
-import org.whispersystems.signalservice.api.push.ACI;
-import org.whispersystems.util.Base64;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
+import org.signal.core.util.Base64;
 
 public interface IContactsTable {
   Logger logger = LogManager.getLogger();

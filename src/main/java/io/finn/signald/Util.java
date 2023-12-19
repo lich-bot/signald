@@ -12,7 +12,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.UUID;
 import org.whispersystems.signalservice.api.push.ServiceId;
-import org.whispersystems.util.Base64;
+import org.signal.core.util.Base64;
 
 public class Util {
   public static String getSecret(int size) {

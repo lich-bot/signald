@@ -31,10 +31,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.PhoneNumberFormatter;
-import org.whispersystems.util.Base64;
+import org.signal.core.util.Base64;
 
 @Deprecated
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)

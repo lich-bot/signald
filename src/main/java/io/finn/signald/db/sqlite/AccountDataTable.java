@@ -10,7 +10,7 @@ package io.finn.signald.db.sqlite;
 import io.finn.signald.db.Database;
 import io.finn.signald.db.IAccountDataTable;
 import java.sql.SQLException;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 public class AccountDataTable implements IAccountDataTable {
   String TABLE_NAME = "account_data";

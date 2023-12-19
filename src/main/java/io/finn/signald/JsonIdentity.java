@@ -18,7 +18,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import org.asamk.signal.util.Hex;
 import org.signal.libsignal.protocol.fingerprint.Fingerprint;
-import org.whispersystems.util.Base64;
+import org.signal.core.util.Base64;
 
 @Deprecated(1641027661)
 class JsonIdentity {

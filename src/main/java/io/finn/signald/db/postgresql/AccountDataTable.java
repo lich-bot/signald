@@ -11,7 +11,7 @@ import io.finn.signald.db.Database;
 import io.finn.signald.db.IAccountDataTable;
 import java.sql.SQLException;
 import java.util.UUID;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 public class AccountDataTable implements IAccountDataTable {
   private static final String TABLE_NAME = "signald_account_data";

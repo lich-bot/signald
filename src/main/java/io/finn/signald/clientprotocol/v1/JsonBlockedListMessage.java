@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.whispersystems.signalservice.api.messages.multidevice.BlockedListMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-import org.whispersystems.util.Base64;
+import org.signal.core.util.Base64;
 
 public class JsonBlockedListMessage {
   public List<JsonAddress> addresses;

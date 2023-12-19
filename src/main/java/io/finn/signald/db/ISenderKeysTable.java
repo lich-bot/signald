@@ -4,7 +4,7 @@ import java.sql.SQLException;
 import java.util.UUID;
 import org.signal.libsignal.protocol.SignalProtocolAddress;
 import org.signal.libsignal.protocol.groups.state.SenderKeyStore;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.DistributionId;
 
 public interface ISenderKeysTable extends SenderKeyStore {

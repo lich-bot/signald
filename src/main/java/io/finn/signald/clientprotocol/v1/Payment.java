@@ -12,7 +12,7 @@ import io.finn.signald.annotations.Doc;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidBase64Error;
 import java.io.IOException;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
-import org.whispersystems.util.Base64;
+import org.signal.core.util.Base64;
 
 @Doc("details about a MobileCoin payment")
 public class Payment {

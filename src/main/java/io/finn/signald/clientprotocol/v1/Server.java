@@ -18,7 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import org.whispersystems.util.Base64;
+import org.signal.core.util.Base64;
 
 @Doc("a Signal server")
 public class Server {

@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.whispersystems.util.Base64;
+import org.signal.core.util.Base64;
 
 @Deprecated
 @JsonSerialize(using = LegacyGroupStore.GroupStoreSerializer.class)

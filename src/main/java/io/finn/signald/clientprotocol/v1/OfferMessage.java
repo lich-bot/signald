@@ -7,7 +7,7 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import org.whispersystems.util.Base64;
+import org.signal.core.util.Base64;
 
 public class OfferMessage {
   public final long id;

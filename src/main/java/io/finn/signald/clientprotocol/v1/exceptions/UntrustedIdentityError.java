@@ -15,7 +15,7 @@ import io.finn.signald.db.Recipient;
 import io.finn.signald.util.SafetyNumberHelper;
 import org.signal.libsignal.protocol.fingerprint.Fingerprint;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 public class UntrustedIdentityError extends ExceptionWrapper {
   public String identifier;

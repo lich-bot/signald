@@ -8,7 +8,7 @@ import io.finn.signald.db.Recipient;
 import java.sql.SQLException;
 import java.util.List;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 
 public class ProfilesTable implements IProfilesTable {

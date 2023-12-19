@@ -19,8 +19,8 @@ import java.util.Optional;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
-import org.whispersystems.signalservice.api.push.ACI;
-import org.whispersystems.util.Base64;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
+import org.signal.core.util.Base64;
 
 @Deprecated(1641027661)
 public class JsonAttachment {

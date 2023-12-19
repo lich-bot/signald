@@ -8,7 +8,7 @@ import java.sql.SQLException;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import org.flywaydb.core.Flyway;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class TestUtil {

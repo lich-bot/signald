@@ -21,7 +21,7 @@ import io.finn.signald.exceptions.NoSuchAccountException;
 import java.sql.SQLException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 
 public class IncomingMessage {

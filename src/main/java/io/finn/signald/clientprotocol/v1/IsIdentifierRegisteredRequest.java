@@ -16,7 +16,7 @@ import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.UUID;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 @ProtocolType("is_identifier_registered")
 @Doc("Determine whether an account identifier is registered on the Signal service.")

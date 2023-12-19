@@ -25,7 +25,7 @@ import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 @Doc("After a linking URI has been requested, finish_link must be called with the session_id provided with the URI. "
      + "it will return information about the new account once the linking process is completed by the other device "

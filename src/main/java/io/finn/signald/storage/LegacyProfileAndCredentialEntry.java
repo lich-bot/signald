@@ -25,7 +25,7 @@ import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredential;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-import org.whispersystems.util.Base64;
+import org.signal.core.util.Base64;
 
 @Deprecated
 @JsonDeserialize(using = LegacyProfileAndCredentialEntry.ProfileAndCredentialEntryDeserializer.class)

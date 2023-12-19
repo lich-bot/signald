@@ -24,7 +24,7 @@ import okhttp3.Interceptor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.signalservice.api.push.TrustStore;
-import org.whispersystems.util.Base64;
+import org.signal.core.util.Base64;
 
 public class ServersTable implements IServersTable {
   private static final String TABLE_NAME = "signald_servers";

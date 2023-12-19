@@ -5,7 +5,7 @@ import io.finn.signald.db.Database;
 import io.finn.signald.db.IProfileCapabilitiesTable;
 import io.finn.signald.db.Recipient;
 import java.sql.SQLException;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 public class ProfileCapabilitiesTable implements IProfileCapabilitiesTable {
   private static final String TABLE_NAME = "profile_capabilities";

@@ -7,7 +7,7 @@
 
 package io.finn.signald.exceptions;
 
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 public class UserAlreadyExistsException extends Exception {
   private final ACI aci;

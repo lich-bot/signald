@@ -9,7 +9,7 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.whispersystems.signalservice.api.messages.SignalServiceTypingMessage;
-import org.whispersystems.util.Base64;
+import org.signal.core.util.Base64;
 
 public class TypingMessage {
   public String action;
