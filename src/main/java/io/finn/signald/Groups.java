@@ -32,6 +32,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.protocol.util.Pair;
 import org.signal.libsignal.zkgroup.InvalidInputException;
@@ -52,7 +53,6 @@ import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.push.exceptions.NotInGroupException;
-import org.signal.core.util.Base64;
 
 public class Groups {
   private final static Logger logger = LogManager.getLogger();

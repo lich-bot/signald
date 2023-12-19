@@ -17,8 +17,8 @@ import io.finn.signald.util.SafetyNumberHelper;
 import java.io.IOException;
 import java.sql.SQLException;
 import org.asamk.signal.util.Hex;
-import org.signal.libsignal.protocol.fingerprint.Fingerprint;
 import org.signal.core.util.Base64;
+import org.signal.libsignal.protocol.fingerprint.Fingerprint;
 
 @Deprecated(1641027661)
 class JsonIdentity {

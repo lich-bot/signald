@@ -18,6 +18,7 @@ import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.protocol.IdentityKeyPair;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
@@ -30,7 +31,6 @@ import org.whispersystems.signalservice.api.util.DeviceNameUtil;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.push.WhoAmIResponse;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
-import org.signal.core.util.Base64;
 
 public class Account {
   private static final Logger logger = LogManager.getLogger();

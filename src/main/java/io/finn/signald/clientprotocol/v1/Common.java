@@ -33,6 +33,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.metadata.certificate.InvalidCertificateException;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.protocol.InvalidRegistrationIdException;
@@ -49,7 +50,6 @@ import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.*;
 import org.whispersystems.signalservice.internal.push.exceptions.GroupPatchNotAcceptedException;
-import org.signal.core.util.Base64;
 
 /* Common is a collection of wrapper functions that call common functions
  * and convert their exceptions to documented v1 exceptions

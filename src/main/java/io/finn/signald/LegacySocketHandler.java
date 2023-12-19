@@ -43,6 +43,7 @@ import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
 import org.asamk.signal.TrustLevel;
 import org.asamk.signal.util.Hex;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
@@ -59,7 +60,6 @@ import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.exceptions.CaptchaRequiredException;
 import org.whispersystems.signalservice.api.websocket.WebSocketConnectionState;
 import org.whispersystems.signalservice.internal.push.LockedException;
-import org.signal.core.util.Base64;
 
 public class LegacySocketHandler {
   private BufferedReader reader;

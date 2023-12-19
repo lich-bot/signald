@@ -12,12 +12,12 @@ import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
 import org.signal.libsignal.zkgroup.groups.GroupSecretParams;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
-import org.signal.core.util.Base64;
 
 public class GetProfileKeysFromGroupHistoryJob implements Job {
   private static final Logger logger = LogManager.getLogger();

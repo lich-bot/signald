@@ -4,8 +4,8 @@ import java.sql.SQLException;
 import java.util.UUID;
 import org.signal.libsignal.protocol.SignalProtocolAddress;
 import org.signal.libsignal.protocol.groups.state.SenderKeyStore;
-import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.DistributionId;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 public interface ISenderKeysTable extends SenderKeyStore {
   String ACCOUNT_UUID = "account_uuid";

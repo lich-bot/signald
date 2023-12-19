@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.zkgroup.profiles.ExpiringProfileKeyCredential;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
@@ -38,7 +39,6 @@ import org.whispersystems.signalservice.api.push.exceptions.RateLimitException;
 import org.whispersystems.signalservice.api.services.ProfileService;
 import org.whispersystems.signalservice.internal.ServiceResponse;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
-import org.signal.core.util.Base64;
 
 public class RefreshProfileJob implements Job {
   private static final Logger logger = LogManager.getLogger();

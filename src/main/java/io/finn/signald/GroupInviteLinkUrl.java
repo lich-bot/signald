@@ -11,11 +11,11 @@ import com.google.protobuf.ByteString;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import org.signal.core.util.Base64UrlSafe;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.groups.GroupMasterKey;
 import org.signal.storageservice.protos.groups.GroupInviteLink;
 import org.signal.storageservice.protos.groups.local.DecryptedGroup;
-import org.signal.core.util.Base64UrlSafe;
 
 public final class GroupInviteLinkUrl {
 

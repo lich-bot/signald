@@ -27,9 +27,9 @@ import java.util.List;
 import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.auth.AuthCredentialResponse;
-import org.signal.core.util.Base64;
 @Deprecated
 public class LegacyGroupsV2Storage {
   private static final Logger logger = LogManager.getLogger();

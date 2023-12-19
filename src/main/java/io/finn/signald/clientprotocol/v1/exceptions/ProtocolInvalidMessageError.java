@@ -8,9 +8,9 @@
 package io.finn.signald.clientprotocol.v1.exceptions;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.metadata.ProtocolInvalidMessageException;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-import org.signal.core.util.Base64;
 
 public class ProtocolInvalidMessageError extends ExceptionWrapper {
   public final String sender;

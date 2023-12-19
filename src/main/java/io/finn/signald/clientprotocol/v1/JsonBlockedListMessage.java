@@ -9,9 +9,9 @@ package io.finn.signald.clientprotocol.v1;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.signal.core.util.Base64;
 import org.whispersystems.signalservice.api.messages.multidevice.BlockedListMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-import org.signal.core.util.Base64;
 
 public class JsonBlockedListMessage {
   public List<JsonAddress> addresses;

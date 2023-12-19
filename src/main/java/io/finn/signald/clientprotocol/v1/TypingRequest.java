@@ -26,10 +26,10 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.signal.core.util.Base64;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.messages.SignalServiceTypingMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-import org.signal.core.util.Base64;
 
 @ProtocolType("typing")
 @Doc("send a typing started or stopped message")

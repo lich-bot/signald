@@ -17,11 +17,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.Optional;
+import org.signal.core.util.Base64;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStream;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
-import org.signal.core.util.Base64;
 
 @Doc("represents a file attached to a message. When sending, only `filename` is required.")
 public class JsonAttachment {

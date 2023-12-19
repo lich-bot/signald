@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
+import org.signal.core.util.Base64UrlSafe;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
 import org.signal.libsignal.zkgroup.groups.GroupMasterKey;
@@ -27,7 +28,6 @@ import org.signal.libsignal.zkgroup.groups.GroupSecretParams;
 import org.signal.storageservice.protos.groups.GroupInviteLink;
 import org.signal.storageservice.protos.groups.local.DecryptedGroupJoinInfo;
 import org.whispersystems.signalservice.api.groupsv2.GroupLinkNotActiveException;
-import org.signal.core.util.Base64UrlSafe;
 
 @ProtocolType("group_link_info")
 @Doc("Get information about a group from a signal.group link")

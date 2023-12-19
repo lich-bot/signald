@@ -8,9 +8,9 @@
 package io.finn.signald.clientprotocol.v1.exceptions;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.metadata.ProtocolNoSessionException;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-import org.signal.core.util.Base64;
 
 public class ProtocolNoSessionError extends ExceptionWrapper {
   public final String sender;

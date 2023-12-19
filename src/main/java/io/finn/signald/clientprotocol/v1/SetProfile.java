@@ -34,12 +34,12 @@ import java.util.List;
 import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.protocol.IdentityKeyPair;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.profiles.AvatarUploadParams;
 import org.whispersystems.signalservice.api.util.StreamDetails;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
-import org.signal.core.util.Base64;
 
 @ProtocolType("set_profile")
 public class SetProfile implements RequestType<Empty> {

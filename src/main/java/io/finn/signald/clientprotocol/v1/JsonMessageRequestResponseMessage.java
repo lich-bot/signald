@@ -9,8 +9,8 @@ package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.annotations.Doc;
 import java.io.IOException;
-import org.whispersystems.signalservice.api.messages.multidevice.MessageRequestResponseMessage;
 import org.signal.core.util.Base64;
+import org.whispersystems.signalservice.api.messages.multidevice.MessageRequestResponseMessage;
 
 @Doc("Responses to message requests from unknown users or groups")
 public class JsonMessageRequestResponseMessage {

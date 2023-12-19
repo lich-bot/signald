@@ -8,8 +8,8 @@
 package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.whispersystems.signalservice.api.messages.SignalServiceTypingMessage;
 import org.signal.core.util.Base64;
+import org.whispersystems.signalservice.api.messages.SignalServiceTypingMessage;
 
 public class TypingMessage {
   public String action;

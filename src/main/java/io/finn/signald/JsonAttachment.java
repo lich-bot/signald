@@ -16,11 +16,11 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Optional;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
-import org.signal.core.util.Base64;
 
 @Deprecated(1641027661)
 public class JsonAttachment {

@@ -10,9 +10,9 @@ package io.finn.signald.clientprotocol.v0;
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.util.GroupsUtil;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.zkgroup.groups.GroupMasterKey;
 import org.signal.storageservice.protos.groups.local.DecryptedGroupJoinInfo;
-import org.signal.core.util.Base64;
 
 @Deprecated(1641027661)
 public class JsonGroupJoinInfo {

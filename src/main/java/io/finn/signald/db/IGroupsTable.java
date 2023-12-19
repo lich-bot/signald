@@ -21,8 +21,8 @@ import org.signal.libsignal.zkgroup.groups.GroupMasterKey;
 import org.signal.libsignal.zkgroup.groups.GroupSecretParams;
 import org.signal.storageservice.protos.groups.local.DecryptedGroup;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
-import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.DistributionId;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 public interface IGroupsTable {
   String ROWID = "rowid";
