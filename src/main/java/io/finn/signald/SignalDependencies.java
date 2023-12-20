@@ -15,9 +15,6 @@ import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.util.GroupsUtil;
 import java.io.IOException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
@@ -53,9 +50,6 @@ public class SignalDependencies {
 
   private SignalServiceMessageSender messageSender;
   private final Object messageSenderLock = new Object();
-
-  private KeyBackupService keyBackupService;
-  private final Object keyBackupServiceLock = new Object();
 
   private SignalServiceAccountManager accountManager;
   private final Object accountManagerLock = new Object();
@@ -150,16 +144,6 @@ public class SignalDependencies {
       }
     }
     return messageSender;
-  }
-
-  public KeyBackupService getKeyBackupService() throws CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException {
-    synchronized (keyBackupServiceLock) {
-      if (keyBackupService == null) {
-        keyBackupService =
-            accountManager.getKeyBackupService(server.getIASKeyStore(), server.getKeyBackupServiceName(), server.getKeyBackupServiceId(), server.getKeyBackupMrenclave(), 10);
-      }
-    }
-    return keyBackupService;
   }
 
   public SignalServiceAccountManager getAccountManager() {
