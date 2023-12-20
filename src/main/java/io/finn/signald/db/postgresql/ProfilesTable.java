@@ -9,7 +9,7 @@ import java.sql.SQLException;
 import java.util.List;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
-import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
+import org.whispersystems.signalservice.internal.push.PaymentAddress;
 
 public class ProfilesTable implements IProfilesTable {
   private static final String TABLE_NAME = "signald_profiles";
@@ -46,13 +46,13 @@ public class ProfilesTable implements IProfilesTable {
   }
 
   @Override
-  public void setPaymentAddress(Recipient recipient, SignalServiceProtos.PaymentAddress paymentAddress) throws SQLException {
+  public void setPaymentAddress(Recipient recipient, PaymentAddress paymentAddress) throws SQLException {
     var query = String.format("INSERT INTO %s (%s, %s, %s, %s) VALUES (?, ?, ?, ?) ON CONFLICT (%s, %s) DO UPDATE SET %s = excluded.%s, %s = excluded.%s", TABLE_NAME, ACCOUNT_UUID,
                               RECIPIENT, PAYMENT_ADDRESS, LAST_UPDATE, ACCOUNT_UUID, RECIPIENT, PAYMENT_ADDRESS, PAYMENT_ADDRESS, LAST_UPDATE, LAST_UPDATE);
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setObject(1, account.getUUID());
       statement.setInt(2, recipient.getId());
-      statement.setBytes(3, paymentAddress == null ? null : paymentAddress.toByteArray());
+      statement.setBytes(3, paymentAddress == null ? null : paymentAddress.encode());
       statement.setLong(4, System.currentTimeMillis());
       Database.executeUpdate(TABLE_NAME + "_set_" + PAYMENT_ADDRESS, statement);
     }

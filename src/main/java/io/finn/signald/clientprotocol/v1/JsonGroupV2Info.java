@@ -90,8 +90,8 @@ public class JsonGroupV2Info {
 
   // format a group for an incoming message
   public JsonGroupV2Info(SignalServiceGroupV2 group, ACI aci) {
-    masterKey = Base64.encodeBytes(group.getMasterKey().serialize());
-    id = Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(group.getMasterKey()).serialize());
+    masterKey = Base64.encodeWithPadding(group.getMasterKey().serialize());
+    id = Base64.encodeWithPadding(GroupsUtil.GetIdentifierFromMasterKey(group.getMasterKey()).serialize());
     revision = group.getRevision();
 
     Optional<IGroupsTable.IGroup> localState;
@@ -119,22 +119,22 @@ public class JsonGroupV2Info {
   }
 
   public JsonGroupV2Info(GroupMasterKey masterKey, @NonNull DecryptedGroup decryptedGroup) {
-    this.masterKey = Base64.encodeBytes(masterKey.serialize());
-    id = Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(masterKey).serialize());
-    revision = decryptedGroup.getRevision();
+    this.masterKey = Base64.encodeWithPadding(masterKey.serialize());
+    id = Base64.encodeWithPadding(GroupsUtil.GetIdentifierFromMasterKey(masterKey).serialize());
+    revision = decryptedGroup.revision;
     initializeWithDecryptedGroup(masterKey, decryptedGroup);
   }
 
   public JsonGroupV2Info(SignalServiceGroupV2 signalServiceGroupV2, DecryptedGroup decryptedGroup) {
-    masterKey = Base64.encodeBytes(signalServiceGroupV2.getMasterKey().serialize());
-    id = Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(signalServiceGroupV2.getMasterKey()).serialize());
+    masterKey = Base64.encodeWithPadding(signalServiceGroupV2.getMasterKey().serialize());
+    id = Base64.encodeWithPadding(GroupsUtil.GetIdentifierFromMasterKey(signalServiceGroupV2.getMasterKey()).serialize());
     revision = signalServiceGroupV2.getRevision();
 
     if (decryptedGroup != null) {
-      if (signalServiceGroupV2.getRevision() != decryptedGroup.getRevision()) {
+      if (signalServiceGroupV2.getRevision() != decryptedGroup.revision) {
         logger.warn("group revision mismatch for group " + id + "("
                     + "signalServiceGroupV2: " + signalServiceGroupV2.getRevision() + ", "
-                    + "decryptedGroup: " + decryptedGroup.getRevision());
+                    + "decryptedGroup: " + decryptedGroup.revision);
       }
 
       initializeWithDecryptedGroup(signalServiceGroupV2.getMasterKey(), decryptedGroup);
@@ -142,25 +142,25 @@ public class JsonGroupV2Info {
   }
 
   private void initializeWithDecryptedGroup(@NonNull GroupMasterKey masterKey, @NonNull DecryptedGroup decryptedGroup) {
-    title = decryptedGroup.getTitle();
-    description = decryptedGroup.getDescription();
-    timer = decryptedGroup.getDisappearingMessagesTimer().getDuration();
+    title = decryptedGroup.title;
+    description = decryptedGroup.description;
+    timer = decryptedGroup.disappearingMessagesTimer.duration;
     members = new ArrayList<>();
-    members = decryptedGroup.getMembersList().stream().map(e -> new JsonAddress(DecryptedGroupUtil.toUuid(e))).collect(Collectors.toList());
-    pendingMembers = decryptedGroup.getPendingMembersList().stream().map(e -> new JsonAddress(DecryptedGroupUtil.toUuid(e))).collect(Collectors.toList());
-    requestingMembers = decryptedGroup.getRequestingMembersList().stream().map(e -> new JsonAddress(UuidUtil.fromByteStringOrUnknown(e.getUuid()))).collect(Collectors.toList());
-    bannedMembers = decryptedGroup.getBannedMembersList().stream().map(BannedGroupMember::new).collect(Collectors.toList());
+    members = DecryptedGroupUtil.toAciListWithUnknowns(decryptedGroup.members).stream().map(JsonAddress::new).toList();
+    pendingMembers = DecryptedGroupUtil.pendingToServiceIdList(decryptedGroup.pendingMembers).stream().map(JsonAddress::new).toList();
+    requestingMembers = decryptedGroup.requestingMembers.stream().map(e -> new JsonAddress(UuidUtil.fromByteStringOrUnknown(e.aciBytes))).collect(Collectors.toList());
+    bannedMembers = decryptedGroup.bannedMembers.stream().map(BannedGroupMember::new).collect(Collectors.toList());
 
-    AccessControl.AccessRequired access = decryptedGroup.getAccessControl().getAddFromInviteLink();
+    AccessControl.AccessRequired access = decryptedGroup.accessControl.addFromInviteLink;
     if (access == AccessControl.AccessRequired.ANY || access == AccessControl.AccessRequired.ADMINISTRATOR) {
       inviteLink = GroupInviteLinkUrl.forGroup(masterKey, decryptedGroup).getUrl();
     }
 
-    accessControl = new GroupAccessControl(decryptedGroup.getAccessControl());
+    accessControl = new GroupAccessControl(decryptedGroup.accessControl);
 
-    memberDetail = decryptedGroup.getMembersList().stream().map(GroupMember::new).collect(Collectors.toList());
-    pendingMemberDetail = decryptedGroup.getPendingMembersList().stream().map(GroupMember::new).collect(Collectors.toList());
-    announcements = decryptedGroup.getIsAnnouncementGroup().name();
+    memberDetail = decryptedGroup.members.stream().map(GroupMember::new).collect(Collectors.toList());
+    pendingMemberDetail = decryptedGroup.pendingMembers.stream().map(GroupMember::new).collect(Collectors.toList());
+    announcements = decryptedGroup.isAnnouncementGroup.name();
   }
 
   public void update(JsonGroupV2Info other) {

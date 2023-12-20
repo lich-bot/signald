@@ -42,8 +42,7 @@ import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 import org.whispersystems.signalservice.api.util.DeviceNameUtil;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
-import org.whispersystems.signalservice.internal.push.ConfirmCodeMessage;
-import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
+import org.whispersystems.signalservice.internal.push.SyncMessage;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
 
 public class ProvisioningManager {
@@ -81,7 +80,7 @@ public class ProvisioningManager {
 
   public URI getDeviceLinkUri() throws TimeoutException, IOException, URISyntaxException {
     String deviceUuid = accountManager.getNewDeviceUuid();
-    String deviceKey = Base64.encodeBytesWithoutPadding(identityKey.getPublicKey().getPublicKey().serialize());
+    String deviceKey = Base64.encodeWithoutPadding(identityKey.getPublicKey().getPublicKey().serialize());
     return new URI("sgnl://linkdevice?uuid=" + URLEncoder.encode(deviceUuid, StandardCharsets.UTF_8) + "&pub_key=" + URLEncoder.encode(deviceKey, StandardCharsets.UTF_8));
   }
 
@@ -141,12 +140,12 @@ public class ProvisioningManager {
                   account.getPassword().equals(password), Util.redact(newDeviceRegistration.getAci()), Util.redact(newDeviceRegistration.getPni()));
       throw e;
     }
-    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.GROUPS));
-    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.CONTACTS));
-    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.BLOCKED));
-    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.CONFIGURATION));
-    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.KEYS));
-    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.PNI_IDENTITY));
+    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SyncMessage.Request.Type.GROUPS));
+    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SyncMessage.Request.Type.CONTACTS));
+    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SyncMessage.Request.Type.BLOCKED));
+    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SyncMessage.Request.Type.CONFIGURATION));
+    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SyncMessage.Request.Type.KEYS));
+    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SyncMessage.Request.Type.PNI_IDENTITY));
 
     return aci;
   }
