@@ -144,17 +144,23 @@ public interface IServersTable {
         }
       }
 
+      // TODO: make this actually configurable
+      final byte[] genericServerPublicParams = Base64.getDecoder().decode(
+          "AByD873dTilmOSG0TjKrvpeaKEsUmIO8Vx9BeMmftwUs9v7ikPwM8P3OHyT0+X3EUMZrSe9VUp26Wai51Q9I8mdk0hX/yo7CeFGJyzoOqn8e/i4Ygbn5HoAyXJx5eXfIbqpc0bIxzju4H/HOQeOpt6h742qii5u/cbwOhFZCsMIbElZTaeU+BWMBQiZHIGHT5IE0qCordQKZ5iPZom0HeFa8Yq0ShuEyAl0WINBiY6xE3H/9WnvzXBbMuuk//eRxXgzO8ieCeK8FwQNxbfXqZm6Ro1cMhCOF3u7xoX83QhpN");
+
       return new SignalServiceConfiguration(
-          new SignalServiceUrl[] {new SignalServiceUrl(serviceURL, trustStore)},                            // SignalServiceUrl[] signalServiceUrls
-          signalCdnUrlMap,                                                                                  // Map<Integer, SignalCdnUrl[]> signalCdnUrlMap
-          new SignalContactDiscoveryUrl[] {new SignalContactDiscoveryUrl(contactDiscoveryURL, trustStore)}, // SignalContactDiscoveryUrl[] signalContactDiscoveryUrls
-          new SignalKeyBackupServiceUrl[] {new SignalKeyBackupServiceUrl(keyBackupURL, trustStore)},        // SignalKeyBackupServiceUrl[] signalKeyBackupServiceUrls
-          new SignalStorageUrl[] {new SignalStorageUrl(storageURL, trustStore)},                            // SignalStorageUrl[] signalStorageUrls
-          new SignalCdsiUrl[] {new SignalCdsiUrl("", trustStore)},                                          // SignalCdsiUrl[] signalCdsiUrls left blank for now
-          getInterceptors(),                                                                                // List<Interceptor> networkInterceptors
-          Optional.empty(),                                                                                 // Optional<Dns> dns
-          proxyOptional,                                                                                    // Optional<SignalProxy> proxy
-          zkParams                                                                                          // byte[] zkGroupServerPublicParams
+          new SignalServiceUrl[] {new SignalServiceUrl(serviceURL, trustStore)}, // SignalServiceUrl[] signalServiceUrls
+          signalCdnUrlMap,                                                       // Map<Integer, SignalCdnUrl[]> signalCdnUrlMap
+          //          new SignalContactDiscoveryUrl[] {new SignalContactDiscoveryUrl(contactDiscoveryURL, trustStore)}, // SignalContactDiscoveryUrl[] signalContactDiscoveryUrls/
+          //          new SignalKeyBackupServiceUrl[] {new SignalKeyBackupServiceUrl(keyBackupURL, trustStore)},        // SignalKeyBackupServiceUrl[] signalKeyBackupServiceUrls
+          new SignalStorageUrl[] {new SignalStorageUrl(storageURL, trustStore)}, // SignalStorageUrl[] signalStorageUrls
+          new SignalCdsiUrl[] {new SignalCdsiUrl("", trustStore)},               // SignalCdsiUrl[] signalCdsiUrls left blank for now
+          new SignalSvr2Url[] {new SignalSvr2Url("", trustStore, null, null)},
+          getInterceptors(), // List<Interceptor> networkInterceptors
+          Optional.empty(),  // Optional<Dns> dns
+          proxyOptional,     // Optional<SignalProxy> proxy
+          zkParams,
+          genericServerPublicParams // byte[] zkGroupServerPublicParams
       );
     }
 

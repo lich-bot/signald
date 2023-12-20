@@ -22,7 +22,7 @@ import java.sql.SQLException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
-import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
+import org.whispersystems.signalservice.internal.push.Envelope;
 
 public class IncomingMessage {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) public String account;
@@ -57,7 +57,10 @@ public class IncomingMessage {
     }
 
     if (!envelope.isUnidentifiedSender()) {
-      source = new JsonAddress(Common.getRecipient(aci, envelope.getSourceAddress()));
+      if (envelope.getSourceServiceId().isPresent()) {
+        source = new JsonAddress(Common.getRecipient(aci, envelope.getSourceServiceId().get()));
+      }
+
       if (envelope.hasSourceDevice()) {
         sourceDevice = envelope.getSourceDevice();
       }
@@ -66,7 +69,9 @@ public class IncomingMessage {
       sourceDevice = content.getSenderDevice();
     }
 
-    type = SignalServiceProtos.Envelope.Type.forNumber(envelope.getType()).toString();
+    if (envelope.getType() != null) {
+      type = Envelope.Type.fromValue(envelope.getType()).toString();
+    }
     timestamp = envelope.getTimestamp();
     serverReceivedTimestamp = envelope.getServerReceivedTimestamp();
     serverDeliveredTimestamp = envelope.getServerDeliveredTimestamp();

@@ -5,13 +5,14 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.finn.signald.util.JSONUtil;
 import io.sentry.Sentry;
+import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
-import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
+import org.whispersystems.signalservice.internal.push.PaymentAddress;
 
 public interface IProfilesTable {
   String ACCOUNT_UUID = "account_uuid";
@@ -30,7 +31,7 @@ public interface IProfilesTable {
   void setSerializedName(Recipient recipient, String name) throws SQLException;
   void setAbout(Recipient recipient, String about) throws SQLException;
   void setEmoji(Recipient recipient, String emoji) throws SQLException;
-  void setPaymentAddress(Recipient recipient, SignalServiceProtos.PaymentAddress paymentAddress) throws SQLException;
+  void setPaymentAddress(Recipient recipient, PaymentAddress paymentAddress) throws SQLException;
   void setBadges(Recipient recipient, List<SignalServiceProfile.Badge> badges) throws SQLException, JsonProcessingException;
 
   class Profile {
@@ -39,7 +40,7 @@ public interface IProfilesTable {
     private final String familyName;
     private final String about;
     private final String emoji;
-    private final SignalServiceProtos.PaymentAddress paymentAddress;
+    private final PaymentAddress paymentAddress;
     private final List<StoredBadge> badges;
 
     public Profile(ResultSet rows) throws SQLException {
@@ -51,11 +52,13 @@ public interface IProfilesTable {
 
       byte[] paymentAddressBytes = rows.getBytes(PAYMENT_ADDRESS);
       if (paymentAddressBytes != null) {
-        SignalServiceProtos.PaymentAddress tmpPaymentAddress = null;
+        PaymentAddress tmpPaymentAddress = null;
         try {
-          tmpPaymentAddress = SignalServiceProtos.PaymentAddress.parseFrom(paymentAddressBytes);
+          tmpPaymentAddress = PaymentAddress.ADAPTER.decode(paymentAddressBytes);
         } catch (InvalidProtocolBufferException e) {
           LogManager.getLogger().error("error parsing stored payment address proto", e);
+        } catch (IOException e) {
+          LogManager.getLogger().error("error decoding stored payment address proto", e);
         }
         paymentAddress = tmpPaymentAddress;
       } else {
@@ -95,7 +98,7 @@ public interface IProfilesTable {
 
     public String getEmoji() { return emoji; }
 
-    public SignalServiceProtos.PaymentAddress getPaymentAddress() { return paymentAddress; }
+    public PaymentAddress getPaymentAddress() { return paymentAddress; }
 
     public List<StoredBadge> getBadges() { return badges; }
 

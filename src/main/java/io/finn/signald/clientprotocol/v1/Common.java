@@ -110,6 +110,7 @@ public class Common {
   }
 
   static Recipient getRecipient(ACI aci, SignalServiceAddress address) throws InternalError { return getRecipient(Database.Get(aci).RecipientsTable, address); }
+
   static Recipient getRecipient(ACI aci, JsonAddress address) throws InternalError, UnregisteredUserError, AuthorizationFailedError {
     return getRecipient(Database.Get(aci).RecipientsTable, address);
   }
@@ -248,7 +249,7 @@ public class Common {
   }
 
   public static io.finn.signald.Account getAccount(String identifier) throws InternalError, NoSuchAccountError, SQLError {
-    return getAccount(getACIFromIdentifier(identifier).uuid());
+    return getAccount(getACIFromIdentifier(identifier).getRawUuid());
   }
 
   public static io.finn.signald.Account getAccount(UUID accountUUID) { return new Account(ACI.from(accountUUID)); }

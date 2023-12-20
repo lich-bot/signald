@@ -63,13 +63,12 @@ import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
-import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.MissingConfigurationException;
 import org.whispersystems.signalservice.api.storage.StorageKey;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
-import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
+import org.whispersystems.signalservice.internal.push.SyncMessage;
 import org.whispersystems.signalservice.internal.push.UnsupportedDataMessageException;
 
 public class Manager {
@@ -165,7 +164,7 @@ public class Manager {
 
   public Account getAccount() { return account; }
 
-  public UUID getUUID() { return aci.uuid(); }
+  public UUID getUUID() { return aci.getRawUuid(); }
 
   public ACI getACI() { return aci; }
 
@@ -212,7 +211,7 @@ public class Manager {
     SignalServiceAccountManager accountManager = dependencies.getAccountManager();
     String verificationCode = accountManager.getNewDeviceVerificationCode();
     ProfileKey profileKey = account.getDB().ProfileKeysTable.getProfileKey(account.getSelf());
-    accountManager.addDevice(deviceIdentifier, deviceKey, account.getACIIdentityKeyPair(), account.getPNIIdentityKeyPair(), profileKey, verificationCode);
+    accountManager.addDevice(deviceIdentifier, deviceKey, account.getACIIdentityKeyPair(), account.getPNIIdentityKeyPair(), profileKey, null, verificationCode);
   }
 
   public List<JsonGroupV2Info> getGroupsV2Info() throws SQLException {
@@ -247,19 +246,19 @@ public class Manager {
   }
 
   public void requestSyncGroups() throws IOException, SQLException, UntrustedIdentityException {
-    SignalServiceProtos.SyncMessage.Request r = SignalServiceProtos.SyncMessage.Request.newBuilder().setType(SignalServiceProtos.SyncMessage.Request.Type.GROUPS).build();
+    SyncMessage.Request r = SyncMessage.Request.newBuilder().setType(SyncMessage.Request.Type.GROUPS).build();
     SignalServiceSyncMessage message = SignalServiceSyncMessage.forRequest(new RequestMessage(r));
     sendSyncMessage(message);
   }
 
   public void requestSyncContacts() throws IOException, SQLException, UntrustedIdentityException {
-    SignalServiceProtos.SyncMessage.Request r = SignalServiceProtos.SyncMessage.Request.newBuilder().setType(SignalServiceProtos.SyncMessage.Request.Type.CONTACTS).build();
+    SyncMessage.Request r = SyncMessage.Request.newBuilder().setType(SyncMessage.Request.Type.CONTACTS).build();
     SignalServiceSyncMessage message = SignalServiceSyncMessage.forRequest(new RequestMessage(r));
     sendSyncMessage(message);
   }
 
   public void requestSyncConfiguration() throws IOException, SQLException, UntrustedIdentityException {
-    SignalServiceProtos.SyncMessage.Request r = SignalServiceProtos.SyncMessage.Request.newBuilder().setType(SignalServiceProtos.SyncMessage.Request.Type.CONFIGURATION).build();
+    SyncMessage.Request r = SyncMessage.Request.newBuilder().setType(SyncMessage.Request.Type.CONFIGURATION).build();
     SignalServiceSyncMessage message = SignalServiceSyncMessage.forRequest(new RequestMessage(r));
     sendSyncMessage(message);
   }
@@ -866,7 +865,7 @@ public class Manager {
       }
 
       if (syncMessage.getPniIdentity().isPresent()) {
-        SignalServiceProtos.SyncMessage.PniIdentity pniIdentity = syncMessage.getPniIdentity().get();
+        SyncMessage.PniIdentity pniIdentity = syncMessage.getPniIdentity().get();
         IdentityKey pniIdentityKey = new IdentityKey(pniIdentity.getPublicKey().toByteArray());
         ECPrivateKey pniPrivateKey = Curve.decodePrivatePoint(pniIdentity.getPrivateKey().toByteArray());
         account.setPNIIdentityKeyPair(new IdentityKeyPair(pniIdentityKey, pniPrivateKey));
@@ -905,7 +904,7 @@ public class Manager {
     }
   }
 
-  public File getGroupAvatarFile(byte[] groupId) { return new File(avatarsPath, "group-" + Base64.encodeBytes(groupId).replace("/", "_")); }
+  public File getGroupAvatarFile(byte[] groupId) { return new File(avatarsPath, "group-" + Base64.encodeUrlSafeWithoutPadding(groupId)); }
 
   public File getAttachmentFile(String attachmentId) { return new File(attachmentsPath, attachmentId); }
 

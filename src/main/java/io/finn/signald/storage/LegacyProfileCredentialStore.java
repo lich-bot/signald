@@ -19,7 +19,6 @@ import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
-import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredential;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 @Deprecated
 public class LegacyProfileCredentialStore {
@@ -99,24 +98,5 @@ public class LegacyProfileCredentialStore {
     }
     unsaved = true;
     return newEntry;
-  }
-
-  @Deprecated
-  public LegacyProfileAndCredentialEntry update(SignalServiceAddress address, ProfileKey profileKey, long now, LegacySignalProfile profile,
-                                                ProfileKeyCredential profileKeyCredential, LegacyProfileAndCredentialEntry.UnidentifiedAccessMode unidentifiedAccessMode) {
-    LegacyProfileAndCredentialEntry entry = new LegacyProfileAndCredentialEntry(address, profileKey, now, profile, profileKeyCredential, unidentifiedAccessMode);
-    synchronized (profiles) {
-      for (int i = 0; i < profiles.size(); i++) {
-        if (profiles.get(i).getServiceAddress().matches(address)) {
-          // TODO: announce profile change
-          profiles.set(i, entry);
-          unsaved = true;
-          return entry;
-        }
-      }
-      profiles.add(entry);
-      unsaved = true;
-      return entry;
-    }
   }
 }

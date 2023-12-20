@@ -14,9 +14,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
-import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
+import org.whispersystems.signalservice.internal.push.PaymentAddress;
+
 @Deprecated
 public class LegacySignalProfile {
 
@@ -43,7 +45,7 @@ public class LegacySignalProfile {
   @JsonProperty private final List<SignalServiceProfile.Badge> badges;
 
   public LegacySignalProfile(final SignalServiceProfile encryptedProfile, String name, String about, String aboutEmoji, final File avatarFile, final String unidentifiedAccess,
-                             final SignalServiceProtos.PaymentAddress paymentAddress, List<SignalServiceProfile.Badge> badges) {
+                             final PaymentAddress paymentAddress, List<SignalServiceProfile.Badge> badges) {
     this.identityKey = encryptedProfile.getIdentityKey();
     this.name = name;
     this.avatarFile = avatarFile;
@@ -57,11 +59,7 @@ public class LegacySignalProfile {
     } else {
       this.paymentAddress = null;
     }
-    if (badges != null) {
-      this.badges = badges;
-    } else {
-      this.badges = new ArrayList<>();
-    }
+    this.badges = Objects.requireNonNullElseGet(badges, ArrayList::new);
   }
 
   public LegacySignalProfile(@JsonProperty("identityKey") final String identityKey, @JsonProperty("name") final String name,
@@ -78,11 +76,7 @@ public class LegacySignalProfile {
     this.about = about;
     this.emoji = emoji;
     this.paymentAddress = paymentAddress;
-    if (badges != null) {
-      this.badges = badges;
-    } else {
-      this.badges = new ArrayList<>();
-    }
+    this.badges = Objects.requireNonNullElseGet(badges, ArrayList::new);
   }
 
   public String getIdentityKey() { return identityKey; }
@@ -117,7 +111,7 @@ public class LegacySignalProfile {
   public Capabilities getCapabilities() { return capabilities; }
 
   @JsonIgnore
-  public SignalServiceProtos.PaymentAddress getPaymentAddress() throws IOException {
+  public PaymentAddress getPaymentAddress() throws IOException {
     if (paymentAddress == null) {
       return null;
     }

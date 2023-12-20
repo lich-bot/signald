@@ -21,7 +21,9 @@ import org.jetbrains.annotations.Nullable;
 import org.signal.core.util.Base64;
 import org.signal.libsignal.protocol.IdentityKeyPair;
 import org.signal.libsignal.protocol.InvalidKeyException;
+import org.signal.libsignal.protocol.ServiceId;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
+import org.whispersystems.signalservice.api.account.AccountAttributes;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.ServiceId.PNI;
@@ -39,9 +41,11 @@ public class Account {
 
   public Account(ACI aci) { this.aci = aci; }
 
+  public Account(ServiceId.Aci aci) { this.aci = new ACI(aci); }
+
   public String getE164() throws SQLException, NoSuchAccountException { return Database.Get().AccountsTable.getE164(aci); }
 
-  public UUID getUUID() { return aci.uuid(); }
+  public UUID getUUID() { return aci.getRawUuid(); }
 
   public ACI getACI() { return aci; }
 
@@ -242,13 +246,15 @@ public class Account {
       deviceName = "signald";
       setDeviceName(deviceName);
     }
-    deviceName = DeviceNameUtil.encryptDeviceName(deviceName, getProtocolStore().getIdentityKeyPair().getPrivateKey());
+    String encryptedDeviceName = DeviceNameUtil.encryptDeviceName(deviceName, getProtocolStore().getIdentityKeyPair().getPrivateKey());
     ProfileKey ownProfileKey = getDB().ProfileKeysTable.getProfileKey(getSelf());
     byte[] ownUnidentifiedAccessKey = UnidentifiedAccess.deriveAccessKeyFrom(ownProfileKey);
     int localRegistrationId = getLocalRegistrationId();
     int pniRegistrationId = getPniRegistrationId();
-    getSignalDependencies().getAccountManager().setAccountAttributes(null, localRegistrationId, true, null, null, ownUnidentifiedAccessKey, true, ServiceConfig.CAPABILITIES, true,
-                                                                     Base64.decode(deviceName), pniRegistrationId);
+
+    AccountAttributes.Capabilities capabilities = new AccountAttributes.Capabilities(true, true, true, true, true, true, true, true);
+    getSignalDependencies().getAccountManager().setAccountAttributes(new AccountAttributes(null, localRegistrationId, false, false, true, null, ownUnidentifiedAccessKey, false,
+                                                                                           false, capabilities, encryptedDeviceName, pniRegistrationId, null));
     setLastAccountRefresh(ACCOUNT_REFRESH_VERSION);
   }
 }
