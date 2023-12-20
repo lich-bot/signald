@@ -35,7 +35,7 @@ public class Recipient {
 
   public String toRedactedString() { return new JsonAddress(address).toRedactedString(); }
 
-  public UUID getUUID() { return address.getServiceId().uuid(); }
+  public UUID getUUID() { return address.getServiceId().getRawUuid(); }
 
   public ServiceId getServiceId() { return address.getServiceId(); }
 

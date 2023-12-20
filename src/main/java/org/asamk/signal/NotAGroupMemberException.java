@@ -13,5 +13,5 @@ public class NotAGroupMemberException extends Exception {
 
   public NotAGroupMemberException(String message) { super(message); }
 
-  public NotAGroupMemberException(byte[] groupId, String groupName) { super("User is not a member in group: " + groupName + " (" + Base64.encodeBytes(groupId) + ")"); }
+  public NotAGroupMemberException(byte[] groupId, String groupName) { super("User is not a member in group: " + groupName + " (" + Base64.encodeWithPadding(groupId) + ")"); }
 }

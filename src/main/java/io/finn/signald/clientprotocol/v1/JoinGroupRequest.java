@@ -29,7 +29,6 @@ import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
 import org.signal.libsignal.zkgroup.groups.GroupSecretParams;
 import org.signal.libsignal.zkgroup.profiles.ExpiringProfileKeyCredential;
-import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredential;
 import org.signal.storageservice.protos.groups.AccessControl;
 import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.storageservice.protos.groups.local.DecryptedGroupChange;
@@ -104,16 +103,16 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
       throw new GroupVerificationError(e);
     }
 
-    boolean requestToJoin = groupJoinInfo.getAddFromInviteLink() == AccessControl.AccessRequired.ADMINISTRATOR;
+    boolean requestToJoin = groupJoinInfo.addFromInviteLink == AccessControl.AccessRequired.ADMINISTRATOR;
     GroupChange.Actions.Builder change;
     if (requestToJoin) {
       change = groupOperations.createGroupJoinRequest(expiringProfileKeyCredential);
     } else {
       change = groupOperations.createGroupJoinDirect(expiringProfileKeyCredential);
     }
-    change.setSourceUuid(UuidUtil.toByteString(a.getUUID()));
+    change.sourceServiceId(UuidUtil.toByteString(a.getUUID()));
 
-    int revision = groupJoinInfo.getRevision() + 1;
+    int revision = groupJoinInfo.revision + 1;
 
     DecryptedGroupChange decryptedChange;
     GroupChange groupChange;
@@ -132,7 +131,7 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
 
     Optional<IGroupsTable.IGroup> groupOptional;
     try {
-      groupOptional = groups.getGroup(groupSecretParams, decryptedChange.getRevision());
+      groupOptional = groups.getGroup(groupSecretParams, decryptedChange.revision);
     } catch (IOException | SQLException | InvalidInputException e) {
       throw new InternalError("error getting new group information after join", e);
     } catch (VerificationFailedException e) {
@@ -147,7 +146,7 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
 
     var group = groupOptional.get();
 
-    SignalServiceGroupV2.Builder groupBuilder = SignalServiceGroupV2.newBuilder(group.getMasterKey()).withRevision(revision).withSignedGroupChange(groupChange.toByteArray());
+    SignalServiceGroupV2.Builder groupBuilder = SignalServiceGroupV2.newBuilder(group.getMasterKey()).withRevision(revision).withSignedGroupChange(groupChange.encode());
     SignalServiceDataMessage.Builder message = SignalServiceDataMessage.newBuilder().asGroupMessage(groupBuilder.build());
 
     Common.sendGroupUpdateMessage(a, message, group);

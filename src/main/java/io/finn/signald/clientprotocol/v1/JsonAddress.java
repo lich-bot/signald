@@ -33,7 +33,7 @@ public class JsonAddress {
   public JsonAddress() {}
 
   public JsonAddress(String n, ACI aci) {
-    UUID uuid = aci == null ? null : aci.uuid();
+    UUID uuid = aci == null ? null : aci.getRawUuid();
     if (!n.startsWith("+") && UuidUtil.isUuid(n)) {
       logger.warn("Number field has a valid UUID in it! Converting to UUID field (this is to fix a data migration "
                   + "issue in signald, do not rely on this behavior when using the socket API)");

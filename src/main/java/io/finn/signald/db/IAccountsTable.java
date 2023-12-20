@@ -47,7 +47,7 @@ public interface IAccountsTable {
 
   // Default implementations
   default boolean exists(UUID uuid) throws SQLException { return exists(ACI.from(uuid)); }
-  default UUID getUUID(String e164) throws NoSuchAccountException, SQLException { return getACI(e164).uuid(); }
+  default UUID getUUID(String e164) throws NoSuchAccountException, SQLException { return getACI(e164).getRawUuid(); }
   default IServersTable.AbstractServer getServer(java.util.UUID uuid) throws SQLException, IOException, ServerNotFoundException, InvalidProxyException {
     return getServer(ACI.from(uuid));
   }

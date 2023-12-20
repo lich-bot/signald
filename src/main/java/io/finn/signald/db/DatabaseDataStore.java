@@ -12,7 +12,7 @@ public class DatabaseDataStore implements SignalServiceDataStore {
 
   @Override
   public SignalServiceAccountDataStore get(ServiceId accountIdentifier) {
-    return new DatabaseAccountDataStore(ACI.from(accountIdentifier.uuid()));
+    return new DatabaseAccountDataStore(ACI.from(accountIdentifier.getRawUuid()));
   }
 
   @Override

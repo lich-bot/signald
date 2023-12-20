@@ -178,7 +178,7 @@ public class DatabaseAccountDataStore implements SignalServiceAccountDataStore {
   }
 
   @Override
-  public Set<SignalProtocolAddress> getAllAddressesWithActiveSessions(List<String> list) {
+  public Map<SignalProtocolAddress, SessionRecord> getAllAddressesWithActiveSessions(List<String> list) {
     return sessions.getAllAddressesWithActiveSessions(list);
   }
 

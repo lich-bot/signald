@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.Optional;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.auth.AuthCredentialWithPniResponse;
+import org.whispersystems.signalservice.api.groupsv2.GroupsV2Api;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 public class GroupCredentialsTable implements IGroupCredentialsTable {
@@ -24,7 +25,7 @@ public class GroupCredentialsTable implements IGroupCredentialsTable {
   public GroupCredentialsTable(ACI aci) { this.aci = aci; }
 
   @Override
-  public Optional<AuthCredentialWithPniResponse> getCredential(int date) throws SQLException, InvalidInputException {
+  public Optional<GroupsV2Api.CredentialResponseMaps> getCredential(int date) throws SQLException, InvalidInputException {
     var query = String.format("SELECT %s FROM %s WHERE %s=? AND %s=?", CREDENTIAL, TABLE_NAME, ACCOUNT_UUID, DATE);
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setObject(1, aci.uuid());

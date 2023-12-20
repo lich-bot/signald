@@ -9,8 +9,10 @@ package io.finn.signald.db;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.signal.libsignal.protocol.SignalProtocolAddress;
+import org.signal.libsignal.protocol.state.SessionRecord;
 import org.signal.libsignal.protocol.state.SessionStore;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
@@ -22,7 +24,7 @@ public interface ISessionsTable extends SessionStore {
   String RECORD = "record";
 
   void deleteAccount(ACI aci) throws SQLException;
-  Set<SignalProtocolAddress> getAllAddressesWithActiveSessions(List<String> list);
+  Map<SignalProtocolAddress, SessionRecord> getAllAddressesWithActiveSessions(List<String> list);
   void archiveAllSessions(Recipient recipient) throws SQLException;
 
   default void deleteAllSessions(Recipient recipient) { deleteAllSessions(recipient.getAddress().getIdentifier()); }
