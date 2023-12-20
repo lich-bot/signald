@@ -26,7 +26,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
-import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
+import org.whispersystems.signalservice.internal.push.SyncMessage;
 
 @Doc("Request other devices on the account send us their group list, syncable config and contact list.")
 @ProtocolType("request_sync")
@@ -44,29 +44,29 @@ public class RequestSyncRequest implements RequestType<Empty> {
     Account account = Common.getAccount(accountIdentifier);
 
     if (groups) {
-      sendSyncRequest(account, SignalServiceProtos.SyncMessage.Request.Type.GROUPS);
+      sendSyncRequest(account, SyncMessage.Request.Type.GROUPS);
     }
 
     if (configuration) {
-      sendSyncRequest(account, SignalServiceProtos.SyncMessage.Request.Type.CONFIGURATION);
+      sendSyncRequest(account, SyncMessage.Request.Type.CONFIGURATION);
     }
 
     if (contacts) {
-      sendSyncRequest(account, SignalServiceProtos.SyncMessage.Request.Type.CONTACTS);
+      sendSyncRequest(account, SyncMessage.Request.Type.CONTACTS);
     }
 
     if (blocked) {
-      sendSyncRequest(account, SignalServiceProtos.SyncMessage.Request.Type.BLOCKED);
+      sendSyncRequest(account, SyncMessage.Request.Type.BLOCKED);
     }
 
     if (keys) {
-      sendSyncRequest(account, SignalServiceProtos.SyncMessage.Request.Type.KEYS);
+      sendSyncRequest(account, SyncMessage.Request.Type.KEYS);
     }
 
     return new Empty();
   }
 
-  private void sendSyncRequest(Account account, SignalServiceProtos.SyncMessage.Request.Type type)
+  private void sendSyncRequest(Account account, SyncMessage.Request.Type type)
       throws ServerNotFoundError, InvalidProxyError, NoSuchAccountError, InternalError, UntrustedIdentityError, AuthorizationFailedError, NetworkError {
     try {
       new SendSyncRequestJob(account, type).run();
