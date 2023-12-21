@@ -17,7 +17,6 @@ import java.io.IOException;
 import java.sql.SQLException;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.profiles.ExpiringProfileKeyCredential;
-import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredential;
 import org.signal.storageservice.protos.groups.GroupChange;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.util.UuidUtil;
@@ -51,7 +50,7 @@ public class AcceptInvitationRequest implements RequestType<JsonGroupV2Info> {
 
     GroupsV2Operations.GroupOperations groupOperations = Common.getGroupOperations(a, group);
     GroupChange.Actions.Builder change = groupOperations.createAcceptInviteChange(ownExpiringProfileKeyCredential);
-    change.setSourceUuid(UuidUtil.toByteString(a.getUUID()));
+    change.sourceServiceId(UuidUtil.toByteString(a.getUUID()));
 
     Common.updateGroup(a, group, change);
 

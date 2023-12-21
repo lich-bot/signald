@@ -69,7 +69,7 @@ public class LegacyGroup {
       return null;
     }
     List<SignalServiceAddress> l = new ArrayList<>();
-    for (DecryptedMember member : group.getMembersList()) {
+    for (DecryptedMember member : group.members) {
       ACI aci = ACI.from(DecryptedGroupUtil.toUuid(member));
       l.add(new SignalServiceAddress(aci, Optional.empty()));
     }

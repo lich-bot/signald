@@ -23,7 +23,7 @@ import org.apache.logging.log4j.Logger;
 import org.signal.core.util.Base64;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
-import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredential;
+import org.signal.libsignal.zkgroup.profiles.ExpiringProfileKeyCredential;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
@@ -44,12 +44,12 @@ public class LegacyProfileAndCredentialEntry {
 
   private final LegacySignalProfile profile;
 
-  private final ProfileKeyCredential profileKeyCredential;
+  private final ExpiringProfileKeyCredential profileKeyCredential;
 
   private boolean requestPending;
 
   public LegacyProfileAndCredentialEntry(final SignalServiceAddress serviceAddress, final ProfileKey profileKey, final long lastUpdateTimestamp, final LegacySignalProfile profile,
-                                         final ProfileKeyCredential profileKeyCredential, UnidentifiedAccessMode unidentifiedAccessMode) {
+                                         final ExpiringProfileKeyCredential profileKeyCredential, UnidentifiedAccessMode unidentifiedAccessMode) {
     this.serviceAddress = serviceAddress;
     this.profileKey = profileKey;
     this.lastUpdateTimestamp = lastUpdateTimestamp;
@@ -65,8 +65,6 @@ public class LegacyProfileAndCredentialEntry {
   public long getLastUpdateTimestamp() { return lastUpdateTimestamp; }
 
   public LegacySignalProfile getProfile() { return profile; }
-
-  public ProfileKeyCredential getProfileKeyCredential() { return profileKeyCredential; }
 
   public boolean isRequestPending() { return requestPending; }
 

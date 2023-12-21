@@ -9,7 +9,7 @@ public class GroupRequestingMember {
   public long timestamp;
 
   public GroupRequestingMember(DecryptedRequestingMember m) {
-    uuid = UuidUtil.fromByteStringOrUnknown(m.getUuid()).toString();
-    timestamp = m.getTimestamp();
+    uuid = UuidUtil.fromByteStringOrUnknown(m.aciBytes).toString();
+    timestamp = m.timestamp;
   }
 }

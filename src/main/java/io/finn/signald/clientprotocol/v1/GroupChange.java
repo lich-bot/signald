@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import okio.ByteString;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
 import org.signal.storageservice.protos.groups.AccessControl;
 import org.signal.storageservice.protos.groups.local.DecryptedGroupChange;
@@ -62,7 +64,7 @@ public class GroupChange {
 
   public static GroupChange fromBytes(Groups groups, IGroupsTable.IGroup group, byte[] signedGroupChange)
       throws InvalidGroupStateException, IOException, VerificationFailedException {
-    final org.signal.storageservice.protos.groups.GroupChange protoGroupChange = org.signal.storageservice.protos.groups.GroupChange.parseFrom(signedGroupChange);
+    final org.signal.storageservice.protos.groups.GroupChange protoGroupChange = org.signal.storageservice.protos.groups.GroupChange.ADAPTER.decode(signedGroupChange);
 
     final Optional<DecryptedGroupChange> changeOptional = groups.decryptChange(group, protoGroupChange, true);
     if (changeOptional.isEmpty()) {
@@ -73,75 +75,75 @@ public class GroupChange {
 
   public GroupChange(DecryptedGroupChange change) {
     // The order of these fields correspond to the upstream protobuf order for DecryptedGroupChange.
-    editor = new JsonAddress(UuidUtil.fromByteStringOrUnknown(change.getEditor()));
-    revision = change.getRevision();
-    if (!change.getNewMembersList().isEmpty()) {
-      newMembers = change.getNewMembersList().stream().map(GroupMember::new).collect(Collectors.toList());
+    editor = new JsonAddress(UuidUtil.fromByteStringOrUnknown(change.editorServiceIdBytes));
+    revision = change.revision;
+    if (!change.newMembers.isEmpty()) {
+      newMembers = change.newMembers.stream().map(GroupMember::new).collect(Collectors.toList());
     }
-    if (!change.getDeleteMembersList().isEmpty()) {
-      deleteMembers = change.getDeleteMembersList().stream().map(UuidUtil::fromByteStringOrUnknown).map(JsonAddress::new).collect(Collectors.toList());
+    if (!change.deleteMembers.isEmpty()) {
+      deleteMembers = change.deleteMembers.stream().map(UuidUtil::fromByteStringOrUnknown).map(JsonAddress::new).collect(Collectors.toList());
     }
-    if (!change.getModifyMemberRolesList().isEmpty()) {
-      modifyMemberRoles = change.getModifyMemberRolesList().stream().map(GroupMember::new).collect(Collectors.toList());
+    if (!change.modifyMemberRoles.isEmpty()) {
+      modifyMemberRoles = change.modifyMemberRoles.stream().map(GroupMember::new).collect(Collectors.toList());
     }
-    if (!change.getModifiedProfileKeysList().isEmpty()) {
-      modifiedProfileKeys = change.getModifiedProfileKeysList().stream().map(GroupMember::new).collect(Collectors.toList());
+    if (!change.modifiedProfileKeys.isEmpty()) {
+      modifiedProfileKeys = change.modifiedProfileKeys.stream().map(GroupMember::new).collect(Collectors.toList());
     }
-    if (!change.getNewPendingMembersList().isEmpty()) {
-      newPendingMembers = change.getNewPendingMembersList().stream().map(GroupPendingMember::new).collect(Collectors.toList());
+    if (!change.newPendingMembers.isEmpty()) {
+      newPendingMembers = change.newPendingMembers.stream().map(GroupPendingMember::new).collect(Collectors.toList());
     }
-    if (!change.getDeletePendingMembersList().isEmpty()) {
+    if (!change.deletePendingMembers.isEmpty()) {
       deletePendingMembers =
-          change.getDeletePendingMembersList().stream().map(m -> UuidUtil.fromByteStringOrUnknown(m.getUuid())).map(JsonAddress::new).collect(Collectors.toList());
+          change.deleteMembers.stream().map(UuidUtil::fromByteStringOrUnknown).map(JsonAddress::new).collect(Collectors.toList());
     }
-    if (!change.getPromotePendingMembersList().isEmpty()) {
-      promotePendingMembers = change.getPromotePendingMembersList().stream().map(GroupMember::new).collect(Collectors.toList());
+    if (!change.promotePendingMembers.isEmpty()) {
+      promotePendingMembers = change.promotePendingMembers.stream().map(GroupMember::new).collect(Collectors.toList());
     }
-    if (!change.getNewBannedMembersList().isEmpty()) {
-      newBannedMembers = change.getNewBannedMembersList().stream().map(BannedGroupMember::new).collect(Collectors.toList());
+    if (!change.newBannedMembers.isEmpty()) {
+      newBannedMembers = change.newBannedMembers.stream().map(BannedGroupMember::new).collect(Collectors.toList());
     }
-    if (!change.getDeleteBannedMembersList().isEmpty()) {
-      newUnbannedMembers = change.getDeleteBannedMembersList().stream().map(BannedGroupMember::new).collect(Collectors.toList());
+    if (!change.deleteBannedMembers.isEmpty()) {
+      newUnbannedMembers = change.deleteBannedMembers.stream().map(BannedGroupMember::new).collect(Collectors.toList());
     }
-    if (change.hasNewTitle()) {
-      newTitle = change.getNewTitle().getValue();
+    if (change.newTitle != null) {
+      newTitle = change.newTitle.value_;
     }
-    if (change.hasNewAvatar()) {
+    if (change.newAvatar!=null) {
       newAvatar = true;
     }
-    if (change.hasNewTimer()) {
-      newTimer = change.getNewTimer().getDuration();
+    if (change.newTimer != null) {
+      newTimer = change.newTimer.duration;
     }
-    if (change.getNewAttributeAccess() != AccessControl.AccessRequired.UNKNOWN || change.getNewMemberAccess() != AccessControl.AccessRequired.UNKNOWN ||
-        change.getNewInviteLinkAccess() != AccessControl.AccessRequired.UNKNOWN) {
+    if (change.newAttributeAccess != AccessControl.AccessRequired.UNKNOWN || change.newMemberAccess != AccessControl.AccessRequired.UNKNOWN ||
+        change.newInviteLinkAccess != AccessControl.AccessRequired.UNKNOWN) {
       newAccessControl = new GroupAccessControl();
-      if (change.getNewAttributeAccess() != AccessControl.AccessRequired.UNKNOWN) {
-        newAccessControl.attributes = change.getNewAttributeAccess().name();
+      if (change.newAttributeAccess != AccessControl.AccessRequired.UNKNOWN) {
+        newAccessControl.attributes = change.newAttributeAccess.name();
       }
-      if (change.getNewMemberAccess() != AccessControl.AccessRequired.UNKNOWN) {
-        newAccessControl.members = change.getNewMemberAccess().name();
+      if (change.newMemberAccess != AccessControl.AccessRequired.UNKNOWN) {
+        newAccessControl.members = change.newMemberAccess.name();
       }
-      if (change.getNewInviteLinkAccess() != AccessControl.AccessRequired.UNKNOWN) {
-        newAccessControl.link = change.getNewInviteLinkAccess().name();
+      if (change.newInviteLinkAccess != AccessControl.AccessRequired.UNKNOWN) {
+        newAccessControl.link = change.newInviteLinkAccess.name();
       }
     }
-    if (!change.getNewRequestingMembersList().isEmpty()) {
-      newRequestingMembers = change.getNewRequestingMembersList().stream().map(GroupRequestingMember::new).collect(Collectors.toList());
+    if (!change.newRequestingMembers.isEmpty()) {
+      newRequestingMembers = change.newRequestingMembers.stream().map(GroupRequestingMember::new).collect(Collectors.toList());
     }
-    if (!change.getDeleteRequestingMembersList().isEmpty()) {
-      deleteRequestingMembers = change.getDeleteRequestingMembersList().stream().map(UuidUtil::fromByteStringOrUnknown).map(JsonAddress::new).collect(Collectors.toList());
+    if (!change.deleteRequestingMembers.isEmpty()) {
+      deleteRequestingMembers = change.deleteRequestingMembers.stream().map(UuidUtil::fromByteStringOrUnknown).map(JsonAddress::new).collect(Collectors.toList());
     }
-    if (!change.getPromoteRequestingMembersList().isEmpty()) {
-      promoteRequestingMembers = change.getPromoteRequestingMembersList().stream().map(GroupMember::new).collect(Collectors.toList());
+    if (!change.promoteRequestingMembers.isEmpty()) {
+      promoteRequestingMembers = change.promoteRequestingMembers.stream().map(GroupMember::new).collect(Collectors.toList());
     }
-    if (!change.getNewInviteLinkPassword().isEmpty()) {
+    if (change.newInviteLinkPassword != ByteString.EMPTY) {
       newInviteLinkPassword = true;
     }
-    if (change.hasNewDescription()) {
-      newDescription = change.getNewDescription().getValue();
+    if (change.newDescription != null) {
+      newDescription = change.newDescription.value_;
     }
-    if (change.getNewIsAnnouncementGroup() != EnabledState.UNKNOWN) {
-      newIsAnnouncementGroup = change.getNewIsAnnouncementGroup().name();
+    if (change.newIsAnnouncementGroup != EnabledState.UNKNOWN) {
+      newIsAnnouncementGroup = change.newIsAnnouncementGroup.name();
     }
   }
 }
