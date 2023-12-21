@@ -35,12 +35,12 @@ public class JsonGroupJoinInfo {
   @Doc("Whether the account is waiting for admin approval in order to be added to the group.") public boolean pendingAdminApproval;
 
   public JsonGroupJoinInfo(DecryptedGroupJoinInfo i, GroupMasterKey masterKey) {
-    groupID = Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(masterKey).serialize());
-    title = i.getTitle();
-    description = i.getDescription();
-    memberCount = i.getMemberCount();
-    addFromInviteLink = i.getAddFromInviteLinkValue();
-    revision = i.getRevision();
-    pendingAdminApproval = i.getPendingAdminApproval();
+    groupID = Base64.encodeWithPadding(GroupsUtil.GetIdentifierFromMasterKey(masterKey).serialize());
+    title = i.title;
+    description = i.description;
+    memberCount = i.memberCount;
+    addFromInviteLink = i.addFromInviteLink.getValue();
+    revision = i.revision;
+    pendingAdminApproval = i.pendingAdminApproval;
   }
 }

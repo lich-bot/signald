@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
 import okio.ByteString;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
 import org.signal.storageservice.protos.groups.AccessControl;
@@ -93,8 +92,7 @@ public class GroupChange {
       newPendingMembers = change.newPendingMembers.stream().map(GroupPendingMember::new).collect(Collectors.toList());
     }
     if (!change.deletePendingMembers.isEmpty()) {
-      deletePendingMembers =
-          change.deleteMembers.stream().map(UuidUtil::fromByteStringOrUnknown).map(JsonAddress::new).collect(Collectors.toList());
+      deletePendingMembers = change.deleteMembers.stream().map(UuidUtil::fromByteStringOrUnknown).map(JsonAddress::new).collect(Collectors.toList());
     }
     if (!change.promotePendingMembers.isEmpty()) {
       promotePendingMembers = change.promotePendingMembers.stream().map(GroupMember::new).collect(Collectors.toList());
@@ -108,7 +106,7 @@ public class GroupChange {
     if (change.newTitle != null) {
       newTitle = change.newTitle.value_;
     }
-    if (change.newAvatar!=null) {
+    if (change.newAvatar != null) {
       newAvatar = true;
     }
     if (change.newTimer != null) {

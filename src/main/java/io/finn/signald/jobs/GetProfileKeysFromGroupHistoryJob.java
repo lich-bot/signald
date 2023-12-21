@@ -39,7 +39,7 @@ public class GetProfileKeysFromGroupHistoryJob implements Job {
     final Groups groups = account.getGroups();
     // don't refresh group from server, and ensure we're still in the group
     final Optional<IGroupsTable.IGroup> localGroup = groups.getGroup(groupSecretParams, mostRecentGroupRevision);
-    final String groupId = Base64.encodeBytes(groupSecretParams.getPublicParams().getGroupIdentifier().serialize());
+    final String groupId = Base64.encodeWithPadding(groupSecretParams.getPublicParams().getGroupIdentifier().serialize());
     if (localGroup.isEmpty()) {
       logger.warn("Missing group " + groupId + "; might've left the group");
       return;

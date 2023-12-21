@@ -114,7 +114,7 @@ public class GroupsTable implements IGroupsTable {
 
   @Override
   public File getGroupAvatarFile(GroupIdentifier groupId) {
-    return new File(groupAvatarPath, "group-" + Base64.encodeBytes(groupId.serialize()).replace("/", "_"));
+    return new File(groupAvatarPath, "group-" + Base64.encodeWithPadding(groupId.serialize()).replace("/", "_"));
   }
 
   @Override
@@ -159,7 +159,7 @@ public class GroupsTable implements IGroupsTable {
 
     @Override
     public String getIdString() {
-      return Base64.encodeBytes(getId().serialize());
+      return Base64.encodeWithPadding(getId().serialize());
     }
 
     @Override

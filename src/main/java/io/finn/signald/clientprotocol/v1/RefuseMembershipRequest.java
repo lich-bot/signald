@@ -8,7 +8,6 @@
 package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.protobuf.ByteString;
 import io.finn.signald.Account;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
@@ -20,8 +19,10 @@ import io.finn.signald.db.Recipient;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.*;
+import okio.ByteString;
 import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.storageservice.protos.groups.local.DecryptedBannedMember;
+import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 
 @ProtocolType("refuse_membership")
@@ -59,21 +60,21 @@ public class RefuseMembershipRequest implements RequestType<JsonGroupV2Info> {
       }
     }
 
-    Set<UUID> membersToRefuse = new HashSet<>();
+    Set<ServiceId> membersToRefuse = new HashSet<>();
     List<DecryptedBannedMember> bannedMembers = new ArrayList<>();
 
     for (JsonAddress member : members) {
-      UUID memberUUID = Common.getRecipient(a.getACI(), member).getUUID();
-      membersToRefuse.add(memberUUID);
+      ServiceId memberServiceId = Common.getRecipient(a.getACI(), member).getServiceId();
+      membersToRefuse.add(memberServiceId);
       if (alsoBan) {
-        ByteString uuidByteString = UuidUtil.toByteString(memberUUID);
-        DecryptedBannedMember bannedMember = DecryptedBannedMember.newBuilder().setUuid(uuidByteString).build();
+        ByteString uuidByteString = UuidUtil.toByteString(memberServiceId.getRawUuid());
+        DecryptedBannedMember bannedMember = new DecryptedBannedMember.Builder().serviceIdBytes(uuidByteString).build();
         bannedMembers.add(bannedMember);
       }
     }
 
     GroupChange.Actions.Builder change = Common.getGroupOperations(a, group).createRefuseGroupJoinRequest(membersToRefuse, alsoBan, bannedMembers);
-    change.setSourceUuid(UuidUtil.toByteString(a.getUUID()));
+    change.sourceServiceId(UuidUtil.toByteString(a.getUUID()));
 
     Common.updateGroup(a, group, change);
 

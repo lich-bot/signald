@@ -21,7 +21,7 @@ public class JsonTypingMessage {
     action = typingMessage.getAction().name();
     timestamp = typingMessage.getTimestamp();
     if (typingMessage.getGroupId().isPresent()) {
-      groupId = Base64.encodeBytes(typingMessage.getGroupId().get());
+      groupId = Base64.encodeWithPadding(typingMessage.getGroupId().get());
     }
   }
 }

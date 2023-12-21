@@ -15,7 +15,6 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.protobuf.ByteString;
 import io.finn.signald.Manager;
 import io.finn.signald.ServiceConfig;
 import io.finn.signald.Util;
@@ -26,6 +25,7 @@ import io.sentry.Sentry;
 import java.io.*;
 import java.nio.file.Files;
 import java.util.*;
+import okio.ByteString;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.core.util.Base64;
@@ -39,6 +39,7 @@ import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupUtil;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
 import org.whispersystems.signalservice.api.push.DistributionId;
+import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.NonSuccessfulResponseCodeException;
@@ -70,7 +71,7 @@ public class LegacyGroup {
     }
     List<SignalServiceAddress> l = new ArrayList<>();
     for (DecryptedMember member : group.members) {
-      ACI aci = ACI.from(DecryptedGroupUtil.toUuid(member));
+      ACI aci = ACI.from(UuidUtil.fromByteStringOrUnknown(member.aciBytes));
       l.add(new SignalServiceAddress(aci, Optional.empty()));
     }
     return l;
@@ -82,8 +83,8 @@ public class LegacyGroup {
       return null;
     }
     List<SignalServiceAddress> l = new ArrayList<>();
-    for (DecryptedPendingMember member : group.getPendingMembersList()) {
-      ACI aci = ACI.from(DecryptedGroupUtil.toUuid(member));
+    for (ServiceId member : DecryptedGroupUtil.pendingToServiceIdList(group.pendingMembers)) {
+      ACI aci = ACI.from(member.getRawUuid());
       l.add(new SignalServiceAddress(aci, Optional.empty()));
     }
     return l;
@@ -109,7 +110,7 @@ public class LegacyGroup {
   public DistributionId getDistributionId() { return distributionId; }
 
   public boolean isPendingMember(UUID query) {
-    for (UUID m : DecryptedGroupUtil.pendingToUuidList(group.getPendingMembersList())) {
+    for (ServiceId m : DecryptedGroupUtil.pendingToServiceIdList(group.pendingMembers)) {
       if (m.equals(query)) {
         return true;
       }
@@ -121,7 +122,7 @@ public class LegacyGroup {
     if (group == null) {
       return 0;
     }
-    return group.getDisappearingMessagesTimer().getDuration();
+    return group.disappearingMessagesTimer.duration;
   }
 
   public JsonGroupV2Info getJsonGroupV2Info(Manager m) {
@@ -138,7 +139,7 @@ public class LegacyGroup {
     return jsonGroupV2Info;
   }
 
-  public String getID() { return Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(masterKey).serialize()); }
+  public String getID() { return Base64.encodeWithPadding(GroupsUtil.GetIdentifierFromMasterKey(masterKey).serialize()); }
 
   public void update(LegacyGroup g) {
     this.masterKey = g.masterKey;
@@ -147,8 +148,8 @@ public class LegacyGroup {
   }
 
   public void update(Pair<DecryptedGroup, GroupChange> groupChangePair) {
-    if (groupChangePair.first().getRevision() > revision) {
-      revision = groupChangePair.first().getRevision();
+    if (groupChangePair.first().revision > revision) {
+      revision = groupChangePair.first().revision;
       group = groupChangePair.first();
     }
   }
@@ -163,7 +164,7 @@ public class LegacyGroup {
     GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(m.getServiceConfiguration()).forGroup(groupSecretParams);
 
     File tmpFile = FileUtil.createTempFile();
-    try (InputStream input = m.getMessageReceiver().retrieveGroupsV2ProfileAvatar(group.getAvatar(), tmpFile, ServiceConfig.AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE)) {
+    try (InputStream input = m.getMessageReceiver().retrieveGroupsV2ProfileAvatar(group.avatar, tmpFile, ServiceConfig.AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE)) {
       byte[] encryptedData = Util.readFully(input);
       byte[] decryptedData = groupOperations.decryptAvatar(encryptedData);
       OutputStream outputStream = new FileOutputStream(avatarFile);
@@ -203,18 +204,18 @@ public class LegacyGroup {
         }
         DecryptedGroup group;
         if (node.has("group")) {
-          group = DecryptedGroup.parseFrom(Base64.decode(node.get("group").textValue()));
+          group = DecryptedGroup.ADAPTER.decode(Base64.decode(node.get("group").textValue()));
         } else {
-          DecryptedGroup.Builder builder = DecryptedGroup.newBuilder();
+          DecryptedGroup.Builder builder = new DecryptedGroup.Builder();
 
           if (node.has("title")) {
-            builder.setTitle(node.get("title").textValue());
+            builder.title(node.get("title").textValue());
           }
 
           if (node.has("timer")) {
             int duration = node.get("timer").asInt();
-            DecryptedTimer timer = DecryptedTimer.newBuilder().setDuration(duration).build();
-            builder.setDisappearingMessagesTimer(timer);
+            DecryptedTimer timer = new DecryptedTimer.Builder().duration(duration).build();
+            builder.disappearingMessagesTimer(timer);
           }
 
           if (node.has("members")) {
@@ -222,8 +223,8 @@ public class LegacyGroup {
               JsonNode m = it.next();
               if (m.has("uuid")) {
                 ByteString uuid = UuidUtil.toByteString(UUID.fromString(node.get("uuid").textValue()));
-                DecryptedMember decryptedMember = DecryptedMember.newBuilder().setUuid(uuid).build();
-                builder.addMembers(decryptedMember);
+                DecryptedMember decryptedMember = new DecryptedMember.Builder().aciBytes(uuid).build();
+                builder.members.add(decryptedMember);
               }
             }
           }
@@ -233,8 +234,8 @@ public class LegacyGroup {
               JsonNode m = it.next();
               if (m.has("uuid")) {
                 ByteString uuid = UuidUtil.toByteString(UUID.fromString(node.get("uuid").textValue()));
-                DecryptedPendingMember decryptedMember = DecryptedPendingMember.newBuilder().setUuid(uuid).build();
-                builder.addPendingMembers(decryptedMember);
+                DecryptedPendingMember decryptedMember = new DecryptedPendingMember.Builder().serviceIdBytes(uuid).build();
+                builder.pendingMembers.add(decryptedMember);
               }
             }
           }
@@ -244,8 +245,8 @@ public class LegacyGroup {
               JsonNode m = it.next();
               if (m.has("uuid")) {
                 ByteString uuid = UuidUtil.toByteString(UUID.fromString(node.get("uuid").textValue()));
-                DecryptedRequestingMember decryptedMember = DecryptedRequestingMember.newBuilder().setUuid(uuid).build();
-                builder.addRequestingMembers(decryptedMember);
+                DecryptedRequestingMember decryptedMember = new DecryptedRequestingMember.Builder().aciBytes(uuid).build();
+                builder.requestingMembers.add(decryptedMember);
               }
             }
           }
@@ -269,10 +270,10 @@ public class LegacyGroup {
     @Override
     public void serialize(LegacyGroup value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
       ObjectNode node = JsonNodeFactory.instance.objectNode();
-      node.put("masterKey", Base64.encodeBytes(value.masterKey.serialize()));
+      node.put("masterKey", Base64.encodeWithPadding(value.masterKey.serialize()));
       node.put("revision", value.revision);
       if (value.group != null) {
-        node.put("group", Base64.encodeBytes(value.group.toByteArray()));
+        node.put("group", Base64.encodeWithPadding(value.group.encode()));
       }
       node.put("lastAvatarFetch", value.lastAvatarFetch);
       if (value.hasDistributionId()) {

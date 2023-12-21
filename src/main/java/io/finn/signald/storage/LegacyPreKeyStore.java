@@ -103,7 +103,7 @@ public class LegacyPreKeyStore implements org.signal.libsignal.protocol.state.Pr
       for (Map.Entry<Integer, byte[]> preKey : jsonPreKeyStore.store.entrySet()) {
         json.writeStartObject();
         json.writeNumberField("id", preKey.getKey());
-        json.writeStringField("record", Base64.encodeBytes(preKey.getValue()));
+        json.writeStringField("record", Base64.encodeWithPadding(preKey.getValue()));
         json.writeEndObject();
       }
       json.writeEndArray();

@@ -25,7 +25,7 @@ public class ProtocolNoSessionError extends ExceptionWrapper {
     senderDevice = e.getSenderDevice();
     contentHint = e.getContentHint();
     if (e.getGroupId().isPresent()) {
-      groupId = Base64.encodeBytes(e.getGroupId().get());
+      groupId = Base64.encodeWithPadding(e.getGroupId().get());
     }
     timestamp = envelope.getTimestamp();
   }

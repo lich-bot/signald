@@ -99,7 +99,7 @@ public class GroupsTable implements IGroupsTable {
     try {
       existingGroup = get(groupId);
     } catch (InvalidInputException | InvalidProtocolBufferException e) {
-      logger.error("error parsing group " + Base64.encodeBytes(groupId.serialize()) + " from database", e);
+      logger.error("error parsing group " + Base64.encodeWithPadding(groupId.serialize()) + " from database", e);
       Sentry.captureException(e);
       throw e;
     }
@@ -147,7 +147,7 @@ public class GroupsTable implements IGroupsTable {
 
   @Override
   public File getGroupAvatarFile(GroupIdentifier groupId) {
-    return new File(groupAvatarPath, "group-" + Base64.encodeBytes(groupId.serialize()).replace("/", "_"));
+    return new File(groupAvatarPath, "group-" + Base64.encodeWithPadding(groupId.serialize()).replace("/", "_"));
   }
 
   @Override
@@ -192,7 +192,7 @@ public class GroupsTable implements IGroupsTable {
 
     @Override
     public String getIdString() {
-      return Base64.encodeBytes(getId().serialize());
+      return Base64.encodeWithPadding(getId().serialize());
     }
 
     @Override

@@ -26,7 +26,7 @@ public class JsonMessageRequestResponseMessage {
     }
 
     if (m.getGroupId().isPresent()) {
-      groupId = Base64.encodeBytes(m.getGroupId().get());
+      groupId = Base64.encodeWithPadding(m.getGroupId().get());
     }
 
     type = m.getType().toString();

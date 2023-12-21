@@ -29,7 +29,7 @@ public class JsonBlockedListMessage {
     if (!blocklist.getGroupIds().isEmpty()) {
       groupIds = new ArrayList<>();
       for (byte[] groupId : blocklist.getGroupIds()) {
-        groupIds.add(Base64.encodeBytes(groupId));
+        groupIds.add(Base64.encodeWithPadding(groupId));
       }
     }
   }

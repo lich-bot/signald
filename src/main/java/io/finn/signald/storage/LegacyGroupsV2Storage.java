@@ -76,7 +76,7 @@ public class LegacyGroupsV2Storage {
     public static class JsonAuthCredentialSerializer extends JsonSerializer<JsonAuthCredential> {
       @Override
       public void serialize(final JsonAuthCredential value, final JsonGenerator jgen, final SerializerProvider provider) throws IOException {
-        jgen.writeString(Base64.encodeBytes(value.credential.serialize()));
+        jgen.writeString(Base64.encodeWithPadding(value.credential.serialize()));
       }
     }
 

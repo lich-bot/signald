@@ -25,7 +25,7 @@ public class Payment {
   Payment() {}
 
   public Payment(SignalServiceDataMessage.PaymentNotification p) {
-    receipt = Base64.encodeBytes(p.getReceipt());
+    receipt = Base64.encodeWithPadding(p.getReceipt());
     note = p.getNote();
   }
 

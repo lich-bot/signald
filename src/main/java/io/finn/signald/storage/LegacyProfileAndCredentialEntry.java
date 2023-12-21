@@ -22,8 +22,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.core.util.Base64;
 import org.signal.libsignal.zkgroup.InvalidInputException;
-import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.signal.libsignal.zkgroup.profiles.ExpiringProfileKeyCredential;
+import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
@@ -159,7 +159,7 @@ public class LegacyProfileAndCredentialEntry {
       }
 
       if (value.profileKey != null) {
-        node.put("profileKey", Base64.encodeBytes(value.profileKey.serialize()));
+        node.put("profileKey", Base64.encodeWithPadding(value.profileKey.serialize()));
       }
 
       node.put("lastUpdateTimestamp", value.lastUpdateTimestamp);
@@ -169,7 +169,7 @@ public class LegacyProfileAndCredentialEntry {
       }
 
       if (value.profileKeyCredential != null) {
-        node.put("profileKeyCredential", Base64.encodeBytes(value.profileKeyCredential.serialize()));
+        node.put("profileKeyCredential", Base64.encodeWithPadding(value.profileKeyCredential.serialize()));
       }
 
       node.put("unidentifiedAccessMode", value.unidentifiedAccessMode.getMode());

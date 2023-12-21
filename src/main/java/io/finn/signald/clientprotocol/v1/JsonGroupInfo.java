@@ -23,7 +23,7 @@ public class JsonGroupInfo {
   public long avatarId;
 
   JsonGroupInfo(SignalServiceGroup groupInfo) {
-    this.groupId = Base64.encodeBytes(groupInfo.getGroupId());
+    this.groupId = Base64.encodeWithPadding(groupInfo.getGroupId());
     if (groupInfo.getMembers().isPresent()) {
       this.members = new ArrayList<>();
       for (SignalServiceAddress member : groupInfo.getMembers().get()) {

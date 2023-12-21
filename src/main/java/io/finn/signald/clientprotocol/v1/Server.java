@@ -46,14 +46,14 @@ public class Server {
     contactDiscoveryURL = server.getContactDiscoveryURL();
     keyBackupURL = server.getKeyBackupURL();
     storageURL = server.getStorageURL();
-    zkParams = server.getZkParams() == null ? null : Base64.encodeBytes(server.getZkParams());
+    zkParams = server.getZkParams() == null ? null : Base64.encodeWithPadding(server.getZkParams());
     proxy = server.getProxy();
-    ca = server.getCa() == null ? null : Base64.encodeBytes(server.getCa());
+    ca = server.getCa() == null ? null : Base64.encodeWithPadding(server.getCa());
     keyBackupServiceName = server.getKeyBackupServiceName();
-    keyBackupServiceId = server.getKeyBackupServiceId() == null ? null : Base64.encodeBytes(server.getKeyBackupServiceId());
+    keyBackupServiceId = server.getKeyBackupServiceId() == null ? null : Base64.encodeWithPadding(server.getKeyBackupServiceId());
     keyBackupMrenclave = server.getKeyBackupMrenclave();
     cdsMrenclave = server.getCdsMrenclave();
-    iasCa = server.getIasCa() == null ? null : Base64.encodeBytes(server.getIasCa());
+    iasCa = server.getIasCa() == null ? null : Base64.encodeWithPadding(server.getIasCa());
   }
 
   @JsonIgnore

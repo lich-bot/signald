@@ -17,7 +17,7 @@ import org.whispersystems.signalservice.api.push.ServiceId;
 public class Util {
   public static String getSecret(int size) {
     byte[] secret = getSecretBytes(size);
-    return Base64.encodeBytes(secret);
+    return Base64.encodeWithPadding(secret);
   }
 
   public static byte[] getSecretBytes(int size) {

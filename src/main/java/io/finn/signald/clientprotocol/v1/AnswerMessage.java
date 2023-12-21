@@ -17,6 +17,6 @@ public class AnswerMessage {
   public AnswerMessage(org.whispersystems.signalservice.api.messages.calls.AnswerMessage message) {
     id = message.getId();
     sdp = message.getSdp();
-    opaque = Base64.encodeBytes(message.getOpaque());
+    opaque = Base64.encodeWithPadding(message.getOpaque());
   }
 }

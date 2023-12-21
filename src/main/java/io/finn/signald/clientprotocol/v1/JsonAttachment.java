@@ -50,18 +50,18 @@ public class JsonAttachment {
     if (attachment.isPointer()) {
       // unclear if this is the correct identifier or the right way to be storing attachments anymore
       this.id = pointer.getRemoteId().toString();
-      this.key = Base64.encodeBytes(pointer.getKey());
+      this.key = Base64.encodeWithPadding(pointer.getKey());
 
       if (pointer.getSize().isPresent()) {
         this.size = pointer.getSize().get();
       }
 
       if (pointer.getPreview().isPresent()) {
-        this.preview = Base64.encodeBytes(pointer.getPreview().get());
+        this.preview = Base64.encodeWithPadding(pointer.getPreview().get());
       }
 
       if (pointer.getDigest().isPresent()) {
-        this.digest = Base64.encodeBytes(pointer.getDigest().get());
+        this.digest = Base64.encodeWithPadding(pointer.getDigest().get());
       }
 
       this.voiceNote = pointer.getVoiceNote();

@@ -53,7 +53,7 @@ class JsonIdentity {
         safety_number = "INVALID ID";
       } else {
         safety_number = fingerprint.getDisplayableFingerprint().getDisplayText();
-        qr_code_data = Base64.encodeBytes(fingerprint.getScannableFingerprint().getSerialized());
+        qr_code_data = Base64.encodeWithPadding(fingerprint.getScannableFingerprint().getSerialized());
       }
     }
   }

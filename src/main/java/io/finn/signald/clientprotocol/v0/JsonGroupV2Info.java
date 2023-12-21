@@ -58,8 +58,8 @@ public class JsonGroupV2Info {
   }
 
   public JsonGroupV2Info(SignalServiceGroupV2 signalServiceGroupV2, DecryptedGroup decryptedGroup) {
-    masterKey = Base64.encodeBytes(signalServiceGroupV2.getMasterKey().serialize());
-    id = Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(signalServiceGroupV2.getMasterKey()).serialize());
+    masterKey = Base64.encodeWithPadding(signalServiceGroupV2.getMasterKey().serialize());
+    id = Base64.encodeWithPadding(GroupsUtil.GetIdentifierFromMasterKey(signalServiceGroupV2.getMasterKey()).serialize());
     revision = signalServiceGroupV2.getRevision();
 
     if (decryptedGroup != null) {

@@ -20,7 +20,7 @@ public class DecryptionErrorMessage {
     timestamp = message.getTimestamp();
     deviceId = message.getDeviceId();
     if (message.getRatchetKey().isPresent()) {
-      ratchetKey = Base64.encodeBytes(message.getRatchetKey().get().serialize());
+      ratchetKey = Base64.encodeWithPadding(message.getRatchetKey().get().serialize());
     }
   }
 }

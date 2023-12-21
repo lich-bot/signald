@@ -19,6 +19,6 @@ public class OfferMessage {
     id = message.getId();
     sdp = message.getSdp();
     type = message.getType().getCode();
-    opaque = Base64.encodeBytes(message.getOpaque());
+    opaque = Base64.encodeWithPadding(message.getOpaque());
   }
 }

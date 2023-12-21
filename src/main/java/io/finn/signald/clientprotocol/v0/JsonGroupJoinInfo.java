@@ -24,7 +24,7 @@ public class JsonGroupJoinInfo {
   public boolean pendingAdminApproval;
 
   public JsonGroupJoinInfo(DecryptedGroupJoinInfo i, GroupMasterKey masterKey) {
-    groupID = Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(masterKey).serialize());
+    groupID = Base64.encodeWithPadding(GroupsUtil.GetIdentifierFromMasterKey(masterKey).serialize());
     title = i.getTitle();
     memberCount = i.getMemberCount();
     addFromInviteLink = i.getAddFromInviteLinkValue();

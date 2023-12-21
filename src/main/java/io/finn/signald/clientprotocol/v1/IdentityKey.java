@@ -24,12 +24,12 @@ public class IdentityKey {
     trustLevel = identity.getTrustLevelString();
     added = identity.getAddedTimestamp();
     safetyNumber = fingerprint.getDisplayableFingerprint().getDisplayText();
-    qrCodeData = Base64.encodeBytes(fingerprint.getScannableFingerprint().getSerialized());
+    qrCodeData = Base64.encodeWithPadding(fingerprint.getScannableFingerprint().getSerialized());
   }
 
   public IdentityKey(String trustLevel, Fingerprint fingerprint) {
     this.trustLevel = trustLevel;
     safetyNumber = fingerprint.getDisplayableFingerprint().getDisplayText();
-    qrCodeData = Base64.encodeBytes(fingerprint.getScannableFingerprint().getSerialized());
+    qrCodeData = Base64.encodeWithPadding(fingerprint.getScannableFingerprint().getSerialized());
   }
 }

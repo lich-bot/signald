@@ -178,7 +178,7 @@ public class LegacyIdentityKeyStore {
       if (identityKey == null) {
         return null;
       }
-      return Base64.encodeBytes(identityKey.serialize());
+      return Base64.encodeWithPadding(identityKey.serialize());
     }
 
     public void setAddedTimestamp(long added) {

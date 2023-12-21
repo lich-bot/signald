@@ -31,11 +31,11 @@ public class LegacyGroupStore {
 
   private Map<String, LegacyGroupInfo> groups = new HashMap<>();
 
-  public void updateGroup(LegacyGroupInfo group) { groups.put(Base64.encodeBytes(group.groupId), group); }
+  public void updateGroup(LegacyGroupInfo group) { groups.put(Base64.encodeWithPadding(group.groupId), group); }
 
   public LegacyGroupInfo getGroup(String groupId) { return groups.get(groupId); }
 
-  public LegacyGroupInfo getGroup(byte[] groupId) { return getGroup(Base64.encodeBytes(groupId)); }
+  public LegacyGroupInfo getGroup(byte[] groupId) { return getGroup(Base64.encodeWithPadding(groupId)); }
 
   public List<LegacyGroupInfo> getGroups() { return new ArrayList<>(groups.values()); }
 
@@ -60,7 +60,7 @@ public class LegacyGroupStore {
       }
       for (JsonNode n : node.get("groups")) {
         LegacyGroupInfo g = jsonProcessor.treeToValue(n, LegacyGroupInfo.class);
-        store.groups.put(Base64.encodeBytes(g.groupId), g);
+        store.groups.put(Base64.encodeWithPadding(g.groupId), g);
       }
 
       return store;
