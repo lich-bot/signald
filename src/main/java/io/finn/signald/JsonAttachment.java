@@ -96,7 +96,7 @@ public class JsonAttachment {
   @JsonIgnore
   public Optional<byte[]> getPreview() {
     if (preview != null) {
-      return Optional.of(Base64.encodeWithPadding(preview.getBytes()));
+      return Optional.of(java.util.Base64.getEncoder().encode(preview.getBytes()));
     }
     return Optional.empty();
   }

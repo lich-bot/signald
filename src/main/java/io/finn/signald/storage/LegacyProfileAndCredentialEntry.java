@@ -38,8 +38,6 @@ public class LegacyProfileAndCredentialEntry {
 
   private SignalServiceAddress serviceAddress;
 
-  private final ProfileKey profileKey;
-
   private final long lastUpdateTimestamp;
 
   private final LegacySignalProfile profile;
@@ -48,10 +46,10 @@ public class LegacyProfileAndCredentialEntry {
 
   private boolean requestPending;
 
-  public LegacyProfileAndCredentialEntry(final SignalServiceAddress serviceAddress, final ProfileKey profileKey, final long lastUpdateTimestamp, final LegacySignalProfile profile,
+  public LegacyProfileAndCredentialEntry(final SignalServiceAddress serviceAddress, final long lastUpdateTimestamp, final LegacySignalProfile profile,
                                          final ExpiringProfileKeyCredential profileKeyCredential, UnidentifiedAccessMode unidentifiedAccessMode) {
     this.serviceAddress = serviceAddress;
-    this.profileKey = profileKey;
+    ;
     this.lastUpdateTimestamp = lastUpdateTimestamp;
     this.profile = profile;
     this.profileKeyCredential = profileKeyCredential;
@@ -59,8 +57,6 @@ public class LegacyProfileAndCredentialEntry {
   }
 
   public SignalServiceAddress getServiceAddress() { return serviceAddress; }
-
-  public ProfileKey getProfileKey() { return profileKey; }
 
   public long getLastUpdateTimestamp() { return lastUpdateTimestamp; }
 
@@ -77,19 +73,10 @@ public class LegacyProfileAndCredentialEntry {
   public byte[] getUnidentifiedAccessKey() {
     switch (unidentifiedAccessMode) {
     case UNKNOWN:
-      if (profileKey == null) {
-        return UNRESTRICTED_KEY;
-      } else {
-        return UnidentifiedAccess.deriveAccessKeyFrom(profileKey);
-      }
+    case ENABLED:
+      return UNRESTRICTED_KEY;
     case DISABLED:
       return null;
-    case ENABLED:
-      if (profileKey == null) {
-        return null;
-      } else {
-        return UnidentifiedAccess.deriveAccessKeyFrom(profileKey);
-      }
     case UNRESTRICTED:
       return UNRESTRICTED_KEY;
     default:
@@ -130,14 +117,14 @@ public class LegacyProfileAndCredentialEntry {
         profile = mapper.treeToValue(node.get("profile"), LegacySignalProfile.class);
       }
 
-      ProfileKeyCredential profileKeyCredential = null;
-      if (node.has("profileKeyCredential")) {
-        try {
-          profileKeyCredential = new ProfileKeyCredential(Base64.decode(node.get("profileKeyCredential").textValue()));
-        } catch (InvalidInputException e) {
-          logger.warn("error loading profile key credential from profile credential storage");
-        }
-      }
+      //      ProfileKeyCredential profileKeyCredential = null;
+      //      if (node.has("profileKeyCredential")) {
+      //        try {
+      //          profileKeyCredential = new ProfileKeyCredential(Base64.decode(node.get("profileKeyCredential").textValue()));
+      //        } catch (InvalidInputException e) {
+      //          logger.warn("error loading profile key credential from profile credential storage");
+      //        }
+      //      }
 
       UnidentifiedAccessMode unidentifiedAccessMode = UnidentifiedAccessMode.UNKNOWN;
       if (node.has("unidentifiedAccessMode")) {

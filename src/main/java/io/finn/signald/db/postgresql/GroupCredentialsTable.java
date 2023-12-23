@@ -13,6 +13,7 @@ import java.sql.SQLException;
 import java.util.Optional;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.auth.AuthCredentialWithPniResponse;
+import org.signal.libsignal.zkgroup.calllinks.CallLinkAuthCredential;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Api;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
@@ -31,6 +32,18 @@ public class GroupCredentialsTable implements IGroupCredentialsTable {
       statement.setInt(2, date);
       try (var rows = Database.executeQuery(TABLE_NAME + "_get_credential", statement)) {
         return rows.next() ? Optional.of(new AuthCredentialWithPniResponse(rows.getBytes(CREDENTIAL))) : Optional.empty();
+      }
+    }
+  }
+
+  @Override
+  public Optional<CallLinkAuthCredential> getCallLinkCredentials(int date) throws SQLException, InvalidInputException {
+    var query = String.format("SELECT %s FROM %s WHERE %s=? AND %s=?", CREDENTIAL, TABLE_NAME, ACCOUNT_UUID, DATE);
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setObject(1, aci.getRawUuid());
+      statement.setInt(2, date);
+      try (var rows = Database.executeQuery(TABLE_NAME + "_get_credential", statement)) {
+        return rows.next() ? Optional.of(new CallLinkAuthCredential(rows.getBytes(CREDENTIAL))) : Optional.empty();
       }
     }
   }

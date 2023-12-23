@@ -60,6 +60,6 @@ public class JsonQuote {
 
     String body = this.text == null ? "" : this.text;
 
-    return new SignalServiceDataMessage.Quote(this.id, this.author.getServiceID(), body, quotedAttachments, signalMentions, SignalServiceDataMessage.Quote.Type.NORMAL);
+    return new SignalServiceDataMessage.Quote(this.id, this.author.getServiceID(), body, quotedAttachments, signalMentions, SignalServiceDataMessage.Quote.Type.NORMAL, List.of());
   }
 }

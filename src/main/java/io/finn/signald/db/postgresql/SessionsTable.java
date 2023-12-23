@@ -44,7 +44,7 @@ public class SessionsTable implements ISessionsTable {
       Recipient recipient = Database.Get(aci).RecipientsTable.get(address.getName());
       var query = String.format("SELECT %s FROM %s WHERE %s=? AND %s=? AND %s=?", RECORD, TABLE_NAME, ACCOUNT_UUID, RECIPIENT, DEVICE_ID);
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setObject(1, aci.uuid());
+        statement.setObject(1, aci.getRawUuid());
         statement.setInt(2, recipient.getId());
         statement.setInt(3, address.getDeviceId());
         try (var rows = Database.executeQuery(TABLE_NAME + "_load", statement)) {
@@ -69,7 +69,7 @@ public class SessionsTable implements ISessionsTable {
         Recipient recipient = Database.Get(aci).RecipientsTable.get(address.getName());
         var query = String.format("SELECT %s FROM %s WHERE %s=? AND %s=? AND %s=?", RECORD, TABLE_NAME, ACCOUNT_UUID, RECIPIENT, DEVICE_ID);
         try (var statement = Database.getConn().prepareStatement(query)) {
-          statement.setObject(1, aci.uuid());
+          statement.setObject(1, aci.getRawUuid());
           statement.setInt(2, recipient.getId());
           statement.setInt(3, address.getDeviceId());
           try (var rows = Database.executeQuery(TABLE_NAME + "_load_existing", statement)) {
@@ -92,7 +92,7 @@ public class SessionsTable implements ISessionsTable {
       Recipient recipient = Database.Get(aci).RecipientsTable.get(name);
       var query = String.format("SELECT %s FROM %s WHERE %s=? AND %s=?", DEVICE_ID, TABLE_NAME, ACCOUNT_UUID, RECIPIENT);
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setObject(1, aci.uuid());
+        statement.setObject(1, aci.getRawUuid());
         statement.setInt(2, recipient.getId());
         try (var rows = Database.executeQuery(TABLE_NAME + "_get_sub_device_session", statement)) {
           List<Integer> results = new ArrayList<>();
@@ -123,7 +123,7 @@ public class SessionsTable implements ISessionsTable {
                                 // DO UPDATE SET
                                 RECORD, RECORD);
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setObject(1, aci.uuid());
+        statement.setObject(1, aci.getRawUuid());
         statement.setInt(2, recipient.getId());
         statement.setInt(3, address.getDeviceId());
         statement.setBytes(4, record.serialize());
@@ -140,7 +140,7 @@ public class SessionsTable implements ISessionsTable {
       Recipient recipient = Database.Get(aci).RecipientsTable.get(address.getName());
       var query = String.format("SELECT %s FROM %s WHERE %s=? AND %s=? AND %s=?", RECORD, TABLE_NAME, ACCOUNT_UUID, RECIPIENT, DEVICE_ID);
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setObject(1, aci.uuid());
+        statement.setObject(1, aci.getRawUuid());
         statement.setInt(2, recipient.getId());
         statement.setInt(3, address.getDeviceId());
         try (var rows = Database.executeQuery(TABLE_NAME + "_contains", statement)) {
@@ -163,7 +163,7 @@ public class SessionsTable implements ISessionsTable {
       Recipient recipient = Database.Get(aci).RecipientsTable.get(address.getName());
       var query = String.format("DELETE FROM %s WHERE %s=? AND %s=? AND %s=?", TABLE_NAME, ACCOUNT_UUID, RECIPIENT, DEVICE_ID);
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setObject(1, aci.uuid());
+        statement.setObject(1, aci.getRawUuid());
         statement.setInt(2, recipient.getId());
         statement.setInt(3, address.getDeviceId());
         Database.executeUpdate(TABLE_NAME + "_delete", statement);
@@ -179,7 +179,7 @@ public class SessionsTable implements ISessionsTable {
       Recipient recipient = Database.Get(aci).RecipientsTable.get(name);
       var query = String.format("DELETE FROM %s WHERE %s=? AND %s=?", TABLE_NAME, ACCOUNT_UUID, RECIPIENT);
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setObject(1, aci.uuid());
+        statement.setObject(1, aci.getRawUuid());
         statement.setInt(2, recipient.getId());
         Database.executeUpdate(TABLE_NAME + "_delete_all", statement);
       }
@@ -210,7 +210,7 @@ public class SessionsTable implements ISessionsTable {
       query += "?, ".repeat(recipientList.size() - 1) + " ?)";
       try (var statement = Database.getConn().prepareStatement(query)) {
         var i = 1;
-        statement.setObject(i++, aci.uuid());
+        statement.setObject(i++, aci.getRawUuid());
         for (var recipient : recipientList) {
           statement.setInt(i++, recipient.getId());
         }
@@ -236,7 +236,7 @@ public class SessionsTable implements ISessionsTable {
   public void archiveAllSessions(Recipient recipient) throws SQLException {
     var query = String.format("SELECT %s, %s FROM %s WHERE %s=? AND %s=?", RECORD, DEVICE_ID, TABLE_NAME, ACCOUNT_UUID, RECIPIENT);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, aci.uuid());
+      statement.setObject(1, aci.getRawUuid());
       statement.setInt(2, recipient.getId());
       List<Pair<Integer, SessionRecord>> records = new ArrayList<>();
       try (var rows = Database.executeQuery(TABLE_NAME + "_archive_all_sessions_find", statement)) {
@@ -268,7 +268,7 @@ public class SessionsTable implements ISessionsTable {
                                                RECORD, RECORD);
       try (var storeStatement = Database.getConn().prepareStatement(storeStatementString)) {
         for (Pair<Integer, SessionRecord> record : records) {
-          storeStatement.setObject(1, aci.uuid());
+          storeStatement.setObject(1, aci.getRawUuid());
           storeStatement.setInt(2, recipient.getId());
           storeStatement.setInt(3, record.first());
           storeStatement.setBytes(4, record.second().serialize());

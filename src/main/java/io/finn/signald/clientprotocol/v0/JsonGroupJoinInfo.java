@@ -25,10 +25,10 @@ public class JsonGroupJoinInfo {
 
   public JsonGroupJoinInfo(DecryptedGroupJoinInfo i, GroupMasterKey masterKey) {
     groupID = Base64.encodeWithPadding(GroupsUtil.GetIdentifierFromMasterKey(masterKey).serialize());
-    title = i.getTitle();
-    memberCount = i.getMemberCount();
-    addFromInviteLink = i.getAddFromInviteLinkValue();
-    revision = i.getRevision();
-    pendingAdminApproval = i.getPendingAdminApproval();
+    title = i.title;
+    memberCount = i.memberCount;
+    addFromInviteLink = i.addFromInviteLink.getValue();
+    revision = i.revision;
+    pendingAdminApproval = i.pendingAdminApproval;
   }
 }

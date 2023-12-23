@@ -34,12 +34,12 @@ public class MessageQueueTable implements IMessageQueueTable {
                       // RETURNING
                       ID);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      UUID sourceUuid = envelope.getSourceUuid().isPresent() && !envelope.getSourceUuid().get().equals("") ? UUID.fromString(envelope.getSourceUuid().get()) : null;
+      UUID sourceUuid = envelope.getSourceServiceId().isPresent() && !envelope.getSourceServiceId().get().equals("") ? UUID.fromString(envelope.getSourceServiceId().get()) : null;
       int i = 1;
-      statement.setObject(i++, aci.uuid());
+      statement.setObject(i++, aci.getRawUuid());
       statement.setInt(i++, 2); // Version is hard-coded to 2
       statement.setInt(i++, envelope.getType());
-      statement.setString(i++, envelope.getSourceIdentifier());
+      statement.setString(i++, envelope.getSourceServiceId().toString());
       statement.setObject(i++, sourceUuid);
       statement.setInt(i++, envelope.getSourceDevice());
       statement.setLong(i++, envelope.getTimestamp());
@@ -47,7 +47,7 @@ public class MessageQueueTable implements IMessageQueueTable {
       statement.setLong(i++, envelope.getServerReceivedTimestamp());
       statement.setLong(i++, envelope.getServerDeliveredTimestamp());
       statement.setObject(i++, UUID.fromString(envelope.getServerGuid()));
-      statement.setString(i++, envelope.getDestinationUuid());
+      statement.setString(i++, envelope.getDestinationServiceId());
       statement.setBoolean(i++, envelope.isUrgent());
       statement.setString(i++, envelope.getUpdatedPni());
       statement.setBoolean(i++, envelope.isStory());
@@ -73,7 +73,7 @@ public class MessageQueueTable implements IMessageQueueTable {
   public StoredEnvelope nextEnvelope() throws SQLException {
     var query = String.format("SELECT * FROM %s WHERE %s=? ORDER BY %s LIMIT 1", TABLE_NAME, ACCOUNT, ID);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, aci.uuid());
+      statement.setObject(1, aci.getRawUuid());
       try (var rows = Database.executeQuery(TABLE_NAME + "_next_envelope", statement)) {
         if (!rows.next()) {
           return null;
@@ -99,7 +99,7 @@ public class MessageQueueTable implements IMessageQueueTable {
         String updatedPni = rows.getString(UPDATED_PNI);
         boolean story = rows.getBoolean(STORY);
         SignalServiceEnvelope signalServiceEnvelope = new SignalServiceEnvelope(type, sender, senderDevice, timestamp, content, serverReceivedTimestamp, serverDeliveredTimestamp,
-                                                                                uuid, destinationUUID, urgent, updatedPni, story);
+                                                                                uuid, destinationUUID, urgent, story, null, updatedPni);
         return new StoredEnvelope(id, signalServiceEnvelope);
       }
     }

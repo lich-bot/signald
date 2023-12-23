@@ -13,8 +13,6 @@ import io.finn.signald.db.StoredEnvelope;
 import java.sql.SQLException;
 import java.util.Optional;
 import java.util.UUID;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -36,9 +34,9 @@ public class MessageQueueTable implements IMessageQueueTable {
       statement.setString(i++, aci.toString());
       statement.setInt(i++, 2); // Version is hard-coded to 2
       statement.setInt(i++, envelope.getType());
-      statement.setString(i++, envelope.getSourceIdentifier());
-      if (envelope.getSourceUuid().isPresent()) {
-        statement.setString(i++, envelope.getSourceUuid().get());
+      statement.setString(i++, envelope.getDestinationServiceId());
+      if (envelope.getSourceServiceId().isPresent()) {
+        statement.setString(i++, envelope.getSourceServiceId().get());
       }
       statement.setInt(i++, envelope.getSourceDevice());
       statement.setLong(i++, envelope.getTimestamp());
@@ -48,7 +46,7 @@ public class MessageQueueTable implements IMessageQueueTable {
       statement.setLong(i++, envelope.getServerReceivedTimestamp());
       statement.setLong(i++, envelope.getServerDeliveredTimestamp());
       statement.setString(i++, envelope.getServerGuid());
-      statement.setString(i++, envelope.getDestinationUuid());
+      statement.setString(i++, envelope.getDestinationServiceId());
       statement.setBoolean(i++, envelope.isUrgent());
       statement.setString(i++, envelope.getUpdatedPni());
       statement.setBoolean(i++, envelope.isStory());
@@ -99,7 +97,7 @@ public class MessageQueueTable implements IMessageQueueTable {
         String updatedPni = rows.getString(UPDATED_PNI);
         boolean story = rows.getBoolean(STORY);
         SignalServiceEnvelope signalServiceEnvelope = new SignalServiceEnvelope(type, sender, senderDevice, timestamp, content, serverReceivedTimestamp, serverDeliveredTimestamp,
-                                                                                uuid, destinationUUID, urgent, updatedPni, story);
+                                                                                uuid, destinationUUID, urgent, story, null, updatedPni);
         return new StoredEnvelope(id, signalServiceEnvelope);
       }
     }

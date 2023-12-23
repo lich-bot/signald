@@ -32,7 +32,7 @@ public class PreKeysTable implements IPreKeysTable {
     try {
       var query = String.format("SELECT %s FROM %s WHERE %s=? AND %s=?", RECORD, TABLE_NAME, ACCOUNT_UUID, ID);
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setObject(1, aci.uuid());
+        statement.setObject(1, aci.getRawUuid());
         statement.setInt(2, preKeyId);
         try (var rows = Database.executeQuery(TABLE_NAME + "_load_pre_key", statement)) {
           if (!rows.next()) {
@@ -57,7 +57,7 @@ public class PreKeysTable implements IPreKeysTable {
                                 // DO UPDATE SET
                                 RECORD, RECORD);
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setObject(1, aci.uuid());
+        statement.setObject(1, aci.getRawUuid());
         statement.setInt(2, preKeyId);
         statement.setBytes(3, record.serialize());
         Database.executeUpdate(TABLE_NAME + "_store_pre_key", statement);
@@ -73,7 +73,7 @@ public class PreKeysTable implements IPreKeysTable {
     try {
       var query = String.format("SELECT %s FROM %s WHERE %s=? AND %s=?", RECORD, TABLE_NAME, ACCOUNT_UUID, ID);
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setObject(1, aci.uuid());
+        statement.setObject(1, aci.getRawUuid());
         statement.setInt(2, preKeyId);
         try (var rows = Database.executeQuery(TABLE_NAME + "_contains_pre_key", statement)) {
           return rows.next();
@@ -91,7 +91,7 @@ public class PreKeysTable implements IPreKeysTable {
     try {
       var query = String.format("DELETE FROM %s WHERE %s=? AND %s=?", TABLE_NAME, ACCOUNT_UUID, ID);
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setObject(1, aci.uuid());
+        statement.setObject(1, aci.getRawUuid());
         statement.setInt(2, preKeyId);
         Database.executeUpdate(TABLE_NAME + "_remove_pre_key", statement);
       }

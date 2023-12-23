@@ -97,7 +97,7 @@ public class JsonAttachment {
   @JsonIgnore
   public Optional<byte[]> getPreview() {
     if (preview != null) {
-      return Optional.of(Base64.encodeBytesToBytes(preview.getBytes()));
+      return Optional.of(java.util.Base64.getDecoder().decode(preview.getBytes()));
     }
     return Optional.empty();
   }
@@ -105,7 +105,6 @@ public class JsonAttachment {
   public SignalServiceAttachmentStream asStream() throws IOException {
     File attachmentFile = new File(filename);
     InputStream attachmentStream = new FileInputStream(attachmentFile);
-    final long attachmentSize = attachmentFile.length();
     if (contentType == null) {
       contentType = Files.probeContentType(attachmentFile.toPath());
       if (contentType == null) {
@@ -113,12 +112,8 @@ public class JsonAttachment {
       }
     }
 
-    return new SignalServiceAttachmentStream(attachmentStream,
-
-    )
-    //    return new SignalServiceAttachmentStream(attachmentStream, contentType, attachmentSize,
-    //                                             customFilename == null ? Optional.of(attachmentFile.getName()) : Optional.of(customFilename), voiceNote, false, false,
-    //                                             getPreview(), width, height, System.currentTimeMillis(), Optional.ofNullable(caption), Optional.ofNullable(blurhash), null, null,
-    //                                             Optional.empty());
+    return new SignalServiceAttachmentStream(
+        attachmentStream, contentType, attachmentFile.length(), customFilename == null ? Optional.of(attachmentFile.getName()) : Optional.of(customFilename), voiceNote, false,
+        false, false, getPreview(), width, height, System.currentTimeMillis(), Optional.ofNullable(caption), Optional.ofNullable(blurhash), null, null, Optional.empty());
   }
 }

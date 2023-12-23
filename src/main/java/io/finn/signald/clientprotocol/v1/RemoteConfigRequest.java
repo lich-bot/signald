@@ -21,11 +21,13 @@ import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.IOException;
+import java.rmi.Remote;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.whispersystems.signalservice.api.RemoteConfigResult;
 
 @ProtocolType("get_remote_config")
 @Doc("Retrieves the remote config (feature flags) from the server.")
@@ -34,9 +36,9 @@ public class RemoteConfigRequest implements RequestType<RemoteConfigList> {
 
   @Override
   public RemoteConfigList run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, SQLError {
-    final Map<String, Object> remoteConfig;
+    final RemoteConfigResult result;
     try {
-      remoteConfig = SignalDependencies.get(Common.getACIFromIdentifier(account).uuid()).getAccountManager().getRemoteConfig();
+      result = SignalDependencies.get(Common.getACIFromIdentifier(account).getRawUuid()).getAccountManager().getRemoteConfig();
     } catch (IOException | SQLException e) {
       throw new InternalError("error getting remote config", e);
     } catch (InvalidProxyException e) {
@@ -47,11 +49,6 @@ public class RemoteConfigRequest implements RequestType<RemoteConfigList> {
       throw new NoSuchAccountError(e);
     }
 
-    final List<RemoteConfig> remoteConfigAsList = new ArrayList<>(remoteConfig.size());
-    for (final Map.Entry<String, Object> entry : remoteConfig.entrySet()) {
-      remoteConfigAsList.add(new RemoteConfig(entry.getKey(), String.valueOf(entry.getValue())));
-    }
-
-    return new RemoteConfigList(remoteConfigAsList);
+    return new RemoteConfigList(result);
   }
 }

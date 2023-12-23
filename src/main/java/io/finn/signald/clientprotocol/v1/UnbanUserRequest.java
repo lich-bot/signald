@@ -20,6 +20,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 
@@ -43,17 +44,17 @@ public class UnbanUserRequest implements RequestType<JsonGroupV2Info> {
     final var group = Common.getGroup(a, groupId);
     var recipientsTable = Database.Get(a.getACI()).RecipientsTable;
 
-    final Set<UUID> membersToUnban = new HashSet<>(this.usersToUnban.size());
+    final Set<ServiceId> membersToUnban = new HashSet<>(this.usersToUnban.size());
     for (JsonAddress member : usersToUnban) {
       try {
-        membersToUnban.add(recipientsTable.get(member).getUUID());
+        membersToUnban.add(recipientsTable.get(member).getServiceId());
       } catch (UnregisteredUserException e) {
         logger.warn("Unregistered user");
         // allow unbanning users if they end up unregistered, because they can just register again
         if (member.getUUID() == null) {
           throw new InvalidRequestError("One of the input users is unregistered and we don't know their service identifier / UUID");
         }
-        membersToUnban.add(member.getUUID());
+        membersToUnban.add(member.getServiceID());
       } catch (SQLException | IOException e) {
         throw new InternalError("error looking up member", e);
       }
@@ -61,8 +62,8 @@ public class UnbanUserRequest implements RequestType<JsonGroupV2Info> {
 
     final var groupOperations = Common.getGroupOperations(a, group);
     // have to simultaneously ban and remove users that are in the group
-    final var change = groupOperations.createUnbanUuidsChange(membersToUnban);
-    change.setSourceUuid(UuidUtil.toByteString(a.getUUID()));
+    final var change = groupOperations.createUnbanServiceIdsChange(membersToUnban);
+    change.sourceServiceId(UuidUtil.toByteString(a.getUUID()));
 
     Common.updateGroup(a, group, change);
 

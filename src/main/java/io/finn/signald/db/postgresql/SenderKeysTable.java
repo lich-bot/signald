@@ -44,7 +44,7 @@ public class SenderKeysTable implements ISenderKeysTable {
                         RECORD, RECORD, CREATED_AT, CREATED_AT);
       // account_uuid,address,device,distribution_id
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setObject(1, aci.uuid());
+        statement.setObject(1, aci.getRawUuid());
         statement.setString(2, address.getName());
         statement.setInt(3, address.getDeviceId());
         statement.setObject(4, distributionId);
@@ -64,7 +64,7 @@ public class SenderKeysTable implements ISenderKeysTable {
                                 // WHERE
                                 ACCOUNT_UUID, ADDRESS, DEVICE, DISTRIBUTION_ID);
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setObject(1, aci.uuid());
+        statement.setObject(1, aci.getRawUuid());
         statement.setString(2, address.getName());
         statement.setInt(3, address.getDeviceId());
         statement.setObject(4, distributionId);
@@ -85,7 +85,7 @@ public class SenderKeysTable implements ISenderKeysTable {
                               // WHERE
                               ACCOUNT_UUID, ADDRESS, DEVICE, DISTRIBUTION_ID);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, aci.uuid());
+      statement.setObject(1, aci.getRawUuid());
       statement.setString(2, address.getName());
       statement.setInt(3, address.getDeviceId());
       statement.setObject(4, distributionId);
@@ -101,7 +101,7 @@ public class SenderKeysTable implements ISenderKeysTable {
                               // WHERE
                               ACCOUNT_UUID, ADDRESS, DISTRIBUTION_ID);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, aci.uuid());
+      statement.setObject(1, aci.getRawUuid());
       statement.setString(2, address);
       statement.setObject(3, distributionId.asUuid());
       Database.executeUpdate(TABLE_NAME + "_delete_all_for", statement);

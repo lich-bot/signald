@@ -42,7 +42,7 @@ public class RecipientsTable implements IRecipientsTable {
 
   public RecipientsTable(java.util.UUID u) { uuid = u; }
 
-  public RecipientsTable(ACI aci) { uuid = aci.uuid(); }
+  public RecipientsTable(ACI aci) { uuid = aci.getRawUuid(); }
 
   public Recipient get(String e164, ServiceId serviceId) throws SQLException, IOException {
     List<Recipient> results = new ArrayList<>();

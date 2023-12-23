@@ -63,23 +63,23 @@ public class JsonGroupV2Info {
     revision = signalServiceGroupV2.getRevision();
 
     if (decryptedGroup != null) {
-      title = decryptedGroup.getTitle();
-      description = decryptedGroup.getDescription();
-      timer = decryptedGroup.getDisappearingMessagesTimer().getDuration();
+      title = decryptedGroup.title;
+      description = decryptedGroup.description;
+      timer = decryptedGroup.disappearingMessagesTimer.duration;
       members = new ArrayList<>();
-      members = decryptedGroup.getMembersList().stream().map(e -> new JsonAddress(DecryptedGroupUtil.toUuid(e))).collect(Collectors.toList());
-      pendingMembers = decryptedGroup.getPendingMembersList().stream().map(e -> new JsonAddress(DecryptedGroupUtil.toUuid(e))).collect(Collectors.toList());
-      requestingMembers = decryptedGroup.getRequestingMembersList().stream().map(e -> new JsonAddress(UuidUtil.fromByteStringOrUnknown(e.getUuid()))).collect(Collectors.toList());
+      members = DecryptedGroupUtil.toAciList(decryptedGroup.members).stream().map(JsonAddress::new).collect(Collectors.toList());
+      pendingMembers = DecryptedGroupUtil.pendingToServiceIdList(decryptedGroup.pendingMembers).stream().map(JsonAddress::new).collect(Collectors.toList());
+      requestingMembers = decryptedGroup.requestingMembers.stream().map(e -> new JsonAddress(UuidUtil.fromByteString(e.aciBytes))).collect(Collectors.toList());
 
-      AccessControl.AccessRequired access = decryptedGroup.getAccessControl().getAddFromInviteLink();
+      AccessControl.AccessRequired access = decryptedGroup.accessControl.addFromInviteLink;
       if (access == AccessControl.AccessRequired.ANY || access == AccessControl.AccessRequired.ADMINISTRATOR) {
         inviteLink = GroupInviteLinkUrl.forGroup(signalServiceGroupV2.getMasterKey(), decryptedGroup).getUrl();
       }
 
-      accessControl = new GroupAccessControl(decryptedGroup.getAccessControl());
+      accessControl = new GroupAccessControl(decryptedGroup.accessControl);
 
-      memberDetail = decryptedGroup.getMembersList().stream().map(GroupMember::new).collect(Collectors.toList());
-      pendingMemberDetail = decryptedGroup.getPendingMembersList().stream().map(GroupMember::new).collect(Collectors.toList());
+      memberDetail = decryptedGroup.members.stream().map(GroupMember::new).collect(Collectors.toList());
+      pendingMemberDetail = decryptedGroup.pendingMembers.stream().map(GroupMember::new).collect(Collectors.toList());
     }
   }
 

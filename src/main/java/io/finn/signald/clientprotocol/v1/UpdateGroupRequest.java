@@ -33,6 +33,7 @@ import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.storageservice.protos.groups.Member;
 import org.whispersystems.signalservice.api.groupsv2.GroupCandidate;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
+import org.whispersystems.signalservice.api.push.ServiceId;
 
 @ProtocolType("update_group")
 @ErrorDoc(error = AuthorizationFailedError.class, doc = AuthorizationFailedError.DEFAULT_ERROR_DOC)
@@ -108,38 +109,31 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
         } catch (SQLException e) {
           throw new SQLError(e);
         }
-        change = GroupChange.Actions.newBuilder().setModifyAvatar(GroupChange.Actions.ModifyAvatarAction.newBuilder().setAvatar(cdnKey));
+        change = new GroupChange.Actions.Builder().modifyAvatar(new GroupChange.Actions.ModifyAvatarAction.Builder().avatar(cdnKey).build());
       } else if (addMembers != null && addMembers.size() > 0) {
         Set<GroupCandidate> candidates = new HashSet<>();
         for (JsonAddress member : addMembers) {
           Recipient recipient = recipientsTable.get(member);
           ExpiringProfileKeyCredential expiringProfileKeyCredential = a.getDB().ProfileKeysTable.getExpiringProfileKeyCredential(recipient);
           recipients.add(recipientsTable.get(recipient.getAddress()));
-          UUID uuid = recipient.getUUID();
-          candidates.add(new GroupCandidate(uuid, Optional.ofNullable(expiringProfileKeyCredential)));
+          candidates.add(new GroupCandidate(recipient.getServiceId(), Optional.ofNullable(expiringProfileKeyCredential)));
         }
-        change = groupOperations.createModifyGroupMembershipChange(candidates, Set.of(), a.getUUID());
+        change = groupOperations.createModifyGroupMembershipChange(candidates, Set.of(), a.getACI());
       } else if (removeMembers != null && removeMembers.size() > 0) {
-        Set<UUID> members = new HashSet<>();
+        Set<ServiceId.ACI> members = new HashSet<>();
         for (JsonAddress member : removeMembers) {
           Recipient recipient = recipientsTable.get(member);
-          members.add(recipient.getUUID());
+          members.add(recipient.getACI());
         }
         change = groupOperations.createRemoveMembersChange(members, false, List.of());
       } else if (updateRole != null) {
         UUID uuid = UUID.fromString(updateRole.uuid);
-        Member.Role role;
-        switch (updateRole.role) {
-        case "ADMINISTRATOR":
-          role = Member.Role.ADMINISTRATOR;
-          break;
-        case "DEFAULT":
-          role = Member.Role.DEFAULT;
-          break;
-        default:
-          throw new InvalidRequestError("unknown role requested");
-        }
-        change = groupOperations.createChangeMemberRole(uuid, role);
+        Member.Role role = switch (updateRole.role) {
+          case "ADMINISTRATOR" -> Member.Role.ADMINISTRATOR;
+          case "DEFAULT" -> Member.Role.DEFAULT;
+          default -> throw new InvalidRequestError("unknown role requested");
+        };
+        change = groupOperations.createChangeMemberRole(ServiceId.ACI.from(uuid), role);
       } else if (updateAccessControl != null) {
         if (updateAccessControl.attributes != null) {
           if (updateAccessControl.members != null || updateAccessControl.link != null) {
@@ -159,7 +153,7 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
 
           change = groupOperations.createChangeJoinByLinkRights(access);
           if (access != AccessControl.AccessRequired.UNSATISFIABLE) {
-            if (group.getDecryptedGroup().getInviteLinkPassword().isEmpty()) {
+            if (group.getDecryptedGroup().inviteLinkPassword.size() == 0) {
               logger.debug("First time enabling group links for group and password empty, generating");
               change = groupOperations.createModifyGroupLinkPasswordAndRightsChange(GroupLinkPassword.createNew().serialize(), access);
             }
@@ -172,17 +166,12 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
       } else if (updateTimer > -1) {
         change = groupOperations.createModifyGroupTimerChange(updateTimer);
       } else if (announcements != null) {
-        boolean announcementMode;
-        switch (announcements) {
-        case "ENABLED":
-          announcementMode = true;
-          break;
-        case "DISABLED":
-          announcementMode = false;
-          break;
-        default:
-          throw new InvalidRequestError("unexpected value for key announcement: must be ENABLED or DISABLED");
-        }
+        boolean announcementMode = switch (announcements) {
+          case "ENABLED" -> true;
+          case "DISABLED" -> false;
+          default ->
+                  throw new InvalidRequestError("unexpected value for key announcement: must be ENABLED or DISABLED");
+        };
         change = groupOperations.createAnnouncementGroupChange(announcementMode);
       } else {
         throw new InvalidRequestError("no change requested");
@@ -196,17 +185,12 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
   }
 
   public AccessControl.AccessRequired getAccessRequired(String name) throws InvalidRequestError {
-    switch (name) {
-    case "ANY":
-      return AccessControl.AccessRequired.ANY;
-    case "MEMBER":
-      return AccessControl.AccessRequired.MEMBER;
-    case "ADMINISTRATOR":
-      return AccessControl.AccessRequired.ADMINISTRATOR;
-    case "UNSATISFIABLE":
-      return AccessControl.AccessRequired.UNSATISFIABLE;
-    default:
-      throw new InvalidRequestError("invalid role: " + name);
-    }
+    return switch (name) {
+      case "ANY" -> AccessControl.AccessRequired.ANY;
+      case "MEMBER" -> AccessControl.AccessRequired.MEMBER;
+      case "ADMINISTRATOR" -> AccessControl.AccessRequired.ADMINISTRATOR;
+      case "UNSATISFIABLE" -> AccessControl.AccessRequired.UNSATISFIABLE;
+      default -> throw new InvalidRequestError("invalid role: " + name);
+    };
   }
 }

@@ -33,14 +33,12 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.AttachmentInvalidException;
 import org.asamk.signal.GroupNotFoundException;
-import org.asamk.signal.NotAGroupMemberException;
 import org.asamk.signal.TrustLevel;
 import org.asamk.signal.util.Hex;
 import org.signal.core.util.Base64;
@@ -62,17 +60,15 @@ import org.whispersystems.signalservice.api.websocket.WebSocketConnectionState;
 import org.whispersystems.signalservice.internal.push.LockedException;
 
 public class LegacySocketHandler {
-  private BufferedReader reader;
-  private PrintWriter writer;
-  private ObjectMapper mpr = new ObjectMapper();
+  private final PrintWriter writer;
+  private final ObjectMapper mpr = new ObjectMapper();
   private static final Logger logger = LogManager.getLogger();
-  private Socket socket;
+  private final Socket socket;
 
   private static final String NOT_SUPPORTED_CODE = "no_longer_supported";
   private static final String NOT_SUPPORTED_MESSAGE = "please upgrade to v1 requests. If you have questions please reach out at https://signald.org/articles/community";
 
   public LegacySocketHandler(Socket socket) throws IOException {
-    this.reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
     this.writer = new PrintWriter(socket.getOutputStream(), true);
     this.socket = socket;
 
@@ -84,94 +80,38 @@ public class LegacySocketHandler {
 
   public void handleRequest(JsonRequest request) throws Throwable {
     switch (request.type) {
-    case "send":
-      send(request);
-      break;
-    case "typing_started":
-      typing(request, SignalServiceTypingMessage.Action.STARTED);
-      break;
-    case "typing_stopped":
-      typing(request, SignalServiceTypingMessage.Action.STOPPED);
-      break;
-    case "mark_delivered":
-      markDelivered(request);
-      break;
-    case "mark_read":
-      markRead(request);
-      break;
-    case "subscribe":
-      subscribe(request);
-      break;
-    case "unsubscribe":
-      unsubscribe(request);
-      break;
-    case "list_accounts":
-      listAccounts(request);
-      break;
-    case "register":
-      register(request);
-      break;
-    case "verify":
-      verify(request);
-      break;
-    case "link":
-      link(request);
-      break;
-    case "add_device":
-      addDevice(request);
-      break;
-    case "update_group":
-      updateGroup(request);
-      break;
-    case "set_expiration":
-      setExpiration(request);
-      break;
-    case "list_groups":
-      listGroups(request);
-      break;
-    case "leave_group":
-      leaveGroup(request);
-      break;
-    case "get_identities":
-      getIdentities(request);
-      break;
-    case "trust":
-      trust(request);
-      break;
-    case "sync_contacts":
-      syncContacts(request);
-      break;
-    case "sync_groups":
-      syncGroups(request);
-      break;
-    case "sync_configuration":
-      syncConfiguration(request);
-      break;
-    case "list_contacts":
-      listContacts(request);
-      break;
-    case "update_contact":
-      updateContact(request);
-      break;
-    case "get_profile":
-      getProfile(request);
-      break;
-    case "set_profile":
-      setProfile(request);
-      break;
-    case "react":
-      react(request);
-      break;
-    case "refresh_account":
-      refreshAccount(request);
-      break;
-    case "group_link_info":
-      groupLinkInfo(request);
-      break;
-    default:
-      logger.warn("Unknown command type " + request.type);
-      this.reply("unknown_command", new JsonStatusMessage(5, "Unknown command type " + request.type, request), request.id);
-      break;
+      case "send" -> send(request);
+      case "typing_started" -> typing(request, SignalServiceTypingMessage.Action.STARTED);
+      case "typing_stopped" -> typing(request, SignalServiceTypingMessage.Action.STOPPED);
+      case "mark_delivered" -> markDelivered(request);
+      case "mark_read" -> markRead(request);
+      case "subscribe" -> subscribe(request);
+      case "unsubscribe" -> unsubscribe(request);
+      case "list_accounts" -> listAccounts(request);
+      case "register" -> register(request);
+      case "verify" -> verify(request);
+      case "link" -> link(request);
+      case "add_device" -> addDevice(request);
+      case "update_group" -> updateGroup(request);
+      case "set_expiration" -> setExpiration(request);
+      case "list_groups" -> listGroups(request);
+      case "leave_group" -> leaveGroup(request);
+      case "get_identities" -> getIdentities(request);
+      case "trust" -> trust(request);
+      case "sync_contacts" -> syncContacts(request);
+      case "sync_groups" -> syncGroups(request);
+      case "sync_configuration" -> syncConfiguration(request);
+      case "list_contacts" -> listContacts(request);
+      case "update_contact" -> updateContact(request);
+      case "get_profile" -> getProfile(request);
+      case "set_profile" -> setProfile(request);
+      case "react" -> react(request);
+      case "refresh_account" -> refreshAccount(request);
+      case "group_link_info" -> groupLinkInfo(request);
+      default -> {
+        logger.warn("Unknown command type " + request.type);
+        this.reply("unknown_command", new JsonStatusMessage(5, "Unknown command type " + request.type, request), request.id);
+      }
     }
   }
 
@@ -189,46 +129,46 @@ public class LegacySocketHandler {
     if (request.attachments != null) {
       List<SignalServiceAttachment> attachments = new ArrayList<>(request.attachments.size());
       for (JsonAttachment attachment : request.attachments) {
-        try {
-          File attachmentFile = new File(attachment.filename);
-          InputStream attachmentStream = new FileInputStream(attachmentFile);
-          final long attachmentSize = attachmentFile.length();
-          if (attachment.contentType == null) {
-            attachment.contentType = Files.probeContentType(attachmentFile.toPath());
+          try {
+            File attachmentFile = new File(attachment.filename);
+            InputStream attachmentStream = new FileInputStream(attachmentFile);
+            final long attachmentSize = attachmentFile.length();
             if (attachment.contentType == null) {
-              attachment.contentType = "application/octet-stream";
+              attachment.contentType = Files.probeContentType(attachmentFile.toPath());
+              if (attachment.contentType == null) {
+                attachment.contentType = "application/octet-stream";
+              }
             }
+            String customFilename = attachmentFile.getName();
+            if (attachment.customFilename != null) {
+              customFilename = attachment.customFilename;
+            }
+            attachments.add(new SignalServiceAttachmentStream(attachmentStream, attachment.contentType, attachmentSize, Optional.of(customFilename), attachment.voiceNote, false,
+                                                              false, false, attachment.getPreview(), attachment.width, attachment.height, System.currentTimeMillis(),
+                                                              Optional.ofNullable(attachment.caption), Optional.ofNullable(attachment.blurhash), null, null, null));
+          } catch (IOException e) {
+            throw new AttachmentInvalidException(attachment.filename, e);
           }
-          String customFilename = attachmentFile.getName();
-          if (attachment.customFilename != null) {
-            customFilename = attachment.customFilename;
-          }
-          attachments.add(new SignalServiceAttachmentStream(attachmentStream, attachment.contentType, attachmentSize, Optional.of(customFilename), attachment.voiceNote, false,
-                                                            false, attachment.getPreview(), attachment.width, attachment.height, System.currentTimeMillis(),
-                                                            Optional.ofNullable(attachment.caption), Optional.ofNullable(attachment.blurhash), null, null, Optional.empty()));
-        } catch (IOException e) {
-          throw new AttachmentInvalidException(attachment.filename, e);
         }
+        messageBuilder.withAttachments(attachments);
       }
-      messageBuilder.withAttachments(attachments);
-    }
 
-    if (request.quote != null) {
-      messageBuilder.withQuote(request.quote.getQuote());
-    }
+      if (request.quote != null) {
+        messageBuilder.withQuote(request.quote.getQuote());
+      }
 
-    if (request.reaction != null) {
-      messageBuilder.withReaction(request.reaction.getReaction());
-    }
+      if (request.reaction != null) {
+        messageBuilder.withReaction(request.reaction.getReaction());
+      }
 
-    if (request.timestamp != null) {
-      messageBuilder.withTimestamp(request.timestamp);
-    }
+      if (request.timestamp != null) {
+        messageBuilder.withTimestamp(request.timestamp);
+      }
 
-    var recipientsTable = Database.Get(request.recipientAddress.getACI()).RecipientsTable;
-    var recipient = request.recipientAddress == null ? null : recipientsTable.get(request.recipientAddress.number, request.recipientAddress.getACI());
-    GroupIdentifier groupIdentifier = request.recipientGroupId == null ? null : new GroupIdentifier(Base64.decode(request.recipientGroupId));
-    handleSendMessage(manager.send(messageBuilder, recipient, groupIdentifier, null), request);
+      var recipientsTable = Database.Get(request.recipientAddress.getACI()).RecipientsTable;
+      var recipient = request.recipientAddress == null ? null : recipientsTable.get(request.recipientAddress.number, request.recipientAddress.getACI());
+      GroupIdentifier groupIdentifier = request.recipientGroupId == null ? null : new GroupIdentifier(Base64.decode(request.recipientGroupId));
+      handleSendMessage(manager.send(messageBuilder, recipient, groupIdentifier, null), request);
   }
 
   private void typing(JsonRequest request, SignalServiceTypingMessage.Action action)
@@ -405,7 +345,7 @@ public class LegacySocketHandler {
       } else if (request.avatar != null) {
         byte[] avatarBytes = Files.readAllBytes(new File(request.avatar).toPath());
         String cdnKey = account.getGroups().uploadNewAvatar(group.getSecretParams(), avatarBytes);
-        change = GroupChange.Actions.newBuilder().setModifyAvatar(GroupChange.Actions.ModifyAvatarAction.newBuilder().setAvatar(cdnKey));
+        change = new GroupChange.Actions.Builder().modifyAvatar(new GroupChange.Actions.ModifyAvatarAction.Builder().avatar(cdnKey).build());
       } else {
         this.reply("group_update_error", "unknown action for v2 group. only name changes and membership adds are supported in this version of the update_group request.",
                    request.id);
@@ -465,16 +405,16 @@ public class LegacySocketHandler {
       GroupsV2Operations operations = GroupsUtil.GetGroupsV2Operations(m.getServiceConfiguration());
       GroupsV2Operations.GroupOperations operationsForGroup = operations.forGroup(group.getSecretParams());
 
-      List<DecryptedPendingMember> pendingMemberList = group.getDecryptedGroup().getPendingMembersList();
-      Optional<DecryptedPendingMember> selfPendingMember = DecryptedGroupUtil.findPendingByUuid(pendingMemberList, m.getUUID());
+      List<DecryptedPendingMember> pendingMemberList = group.getDecryptedGroup().pendingMembers;
+      Optional<DecryptedPendingMember> selfPendingMember = DecryptedGroupUtil.findPendingByServiceId(pendingMemberList, m.getACI());
       GroupChange.Actions.Builder change;
       if (selfPendingMember.isPresent()) {
         final Set<UuidCiphertext> uuidCipherTexts = group.getPendingMembers().stream().map(LegacySocketHandler::recipientToUuidCipherText).collect(Collectors.toSet());
         change = operationsForGroup.createRemoveInvitationChange(uuidCipherTexts);
       } else {
-        Set<UUID> uuidsToRemove = new HashSet<>();
-        uuidsToRemove.add(m.getUUID());
-        change = operationsForGroup.createRemoveMembersChange(uuidsToRemove, false, List.of());
+        Set<ACI> acisToRemove = new HashSet<>();
+        acisToRemove.add(m.getACI());
+        change = operationsForGroup.createRemoveMembersChange(acisToRemove, false, List.of());
       }
 
       var output = account.getGroups().updateGroup(group, change);
@@ -726,52 +666,46 @@ public class LegacySocketHandler {
     @Override
     public void broadcastWebSocketConnectionStateChange(WebSocketConnectionState state, boolean unidentified) throws IOException {
       switch (state) {
-      case DISCONNECTED:
-      case AUTHENTICATION_FAILED:
-      case FAILED:
-        this.broadcastListenStopped(null);
-        break;
-      case CONNECTED:
-        this.broadcastListenStarted();
-        break;
+        case DISCONNECTED, AUTHENTICATION_FAILED, FAILED -> this.broadcastListenStopped(null);
+        case CONNECTED -> this.broadcastListenStarted();
       }
-      HashMap<String, String> stateChange = new HashMap<String, String>();
+      HashMap<String, String> stateChange = new HashMap<>();
       stateChange.put("account", accountE164);
       stateChange.put("state", state.name());
       stateChange.put("socket", unidentified ? "UNIDENTIFIED" : "IDENTIFIED");
-      broadcast(new JsonMessageWrapper("websocket_connection_state_change", stateChange));
-    }
-
-    @Override
-    public void broadcastStorageChange(long version) {}
-
-    @Override
-    public boolean isClosed() {
-      return socket.isClosed();
-    }
-
-    @Override
-    public boolean equals(Socket s) {
-      return socket.equals(s);
-    }
-
-    @Override
-    public boolean equals(MessageEncoder encoder) {
-      return encoder.equals(socket);
-    }
-
-    private boolean shouldBroadcast(SignalServiceContent content) {
-      if (content == null) {
-        return true;
-      }
-      if (content.getDataMessage().isPresent()) {
-        SignalServiceDataMessage dataMessage = content.getDataMessage().get();
-        if (dataMessage.getGroupContext().isPresent()) {
-          SignalServiceGroupContext group = dataMessage.getGroupContext().get();
-          return group.getGroupV1Type() != SignalServiceGroup.Type.REQUEST_INFO;
+          broadcast(new JsonMessageWrapper("websocket_connection_state_change", stateChange));
         }
-      }
-      return true;
+
+        @Override
+        public void broadcastStorageChange(long version) {}
+
+        @Override
+        public boolean isClosed() {
+          return socket.isClosed();
+        }
+
+        @Override
+        public boolean equals(Socket s) {
+          return socket.equals(s);
+        }
+
+        @Override
+        public boolean equals(MessageEncoder encoder) {
+          return encoder.equals(socket);
+        }
+
+        private boolean shouldBroadcast(SignalServiceContent content) {
+          if (content == null) {
+            return true;
+          }
+          if (content.getDataMessage().isPresent()) {
+            SignalServiceDataMessage dataMessage = content.getDataMessage().get();
+            if (dataMessage.getGroupContext().isPresent()) {
+              SignalServiceGroupContext group = dataMessage.getGroupContext().get();
+              return group.getGroupV1Type() != SignalServiceGroup.Type.REQUEST_INFO;
+            }
+          }
+          return true;
+        }
     }
   }
-}

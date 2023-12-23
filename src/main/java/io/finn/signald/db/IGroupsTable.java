@@ -34,7 +34,7 @@ public interface IGroupsTable {
   String DISTRIBUTION_ID = "distribution_id";
   String GROUP_INFO = "group_info";
 
-  Optional<IGroup> get(GroupIdentifier identifier) throws SQLException, InvalidInputException, InvalidProtocolBufferException;
+  Optional<IGroup> get(GroupIdentifier identifier) throws SQLException, InvalidInputException, IOException;
   List<IGroup> getAll() throws SQLException;
   File getGroupAvatarFile(GroupIdentifier groupId);
   void deleteAccount(ACI aci) throws SQLException;
@@ -44,8 +44,7 @@ public interface IGroupsTable {
     return get(GroupSecretParams.deriveFromMasterKey(group.getMasterKey()).getPublicParams().getGroupIdentifier());
   }
 
-  void upsert(GroupMasterKey masterKey, DecryptedGroup decryptedGroup, DistributionId distributionId, int lastAvatarFetch)
-      throws SQLException, InvalidInputException, InvalidProtocolBufferException;
+  void upsert(GroupMasterKey masterKey, DecryptedGroup decryptedGroup, DistributionId distributionId, int lastAvatarFetch) throws SQLException, InvalidInputException, IOException;
   default void upsert(GroupMasterKey masterKey, DecryptedGroup decryptedGroup) throws SQLException, InvalidInputException, InvalidProtocolBufferException {
     upsert(masterKey, decryptedGroup, null, -1);
   }

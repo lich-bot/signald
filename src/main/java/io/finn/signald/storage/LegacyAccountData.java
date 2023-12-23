@@ -119,7 +119,7 @@ public class LegacyAccountData {
         }
         try {
           ProfileKey p = new ProfileKey(c.profileKey);
-          Recipient recipient = Database.Get(ACI.from(self.getServiceId().uuid())).RecipientsTable.get(c.recipient.getServiceId());
+          Recipient recipient = Database.Get(ACI.from(self.getServiceId().getRawUuid())).RecipientsTable.get(c.recipient.getServiceId());
           legacyProfileCredentialStore.storeProfileKey(recipient, p);
         } catch (InvalidInputException e) {
           logger.warn("Invalid profile key while migrating profile keys from contacts", e);

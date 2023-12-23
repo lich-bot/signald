@@ -5,7 +5,6 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 import org.signal.storageservice.protos.groups.local.DecryptedGroup;
 import org.signal.storageservice.protos.groups.local.DecryptedGroupChange;
-import org.slf4j.LoggerFactory;
 
 /**
  * Pair of a group state and optionally the corresponding change from the server.
@@ -22,7 +21,7 @@ class ServerGroupLogEntry {
   @Nullable private final DecryptedGroupChange change;
 
   ServerGroupLogEntry(@Nullable DecryptedGroup group, @Nullable DecryptedGroupChange change) {
-    if (change != null && group != null && group.getRevision() != change.getRevision()) {
+    if (change != null && group != null && group.revision != change.revision) {
       logger.warn("Ignoring change with revision number not matching group");
       change = null;
     }
@@ -47,9 +46,9 @@ class ServerGroupLogEntry {
 
   int getRevision() {
     if (group != null)
-      return group.getRevision();
+      return group.revision;
     else if (change != null)
-      return change.getRevision();
+      return change.revision;
     else
       throw new AssertionError();
   }

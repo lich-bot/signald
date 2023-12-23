@@ -41,7 +41,7 @@ public class RecipientsTable implements IRecipientsTable {
 
   private final UUID accountUUID;
 
-  public RecipientsTable(ACI aci) { accountUUID = aci.uuid(); }
+  public RecipientsTable(ACI aci) { accountUUID = aci.getRawUuid(); }
 
   @Override
   public synchronized Recipient get(String queryE164, ServiceId queryServiceId) throws SQLException, IOException {
@@ -55,7 +55,7 @@ public class RecipientsTable implements IRecipientsTable {
                               // WHERE
                               UUID, E164, ACCOUNT_UUID);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, queryServiceId != null ? queryServiceId.uuid() : null);
+      statement.setObject(1, queryServiceId != null ? queryServiceId.getRawUuid() : null);
       statement.setString(2, queryE164);
       statement.setObject(3, accountUUID);
       try (var rows = Database.executeQuery(TABLE_NAME + "_get", statement)) {
@@ -110,7 +110,7 @@ public class RecipientsTable implements IRecipientsTable {
         storedE164 = queryE164;
       } else {
         logger.trace("updating existing row in database");
-        update(UUID, queryServiceId.uuid(), rowId);
+        update(UUID, queryServiceId.getRawUuid(), rowId);
       }
       storedServiceId = queryServiceId;
     }
@@ -138,7 +138,7 @@ public class RecipientsTable implements IRecipientsTable {
 
       if (rowId > 0) {
         // if the e164 was in the database already, update the existing row
-        update(UUID, storedServiceId.uuid(), rowId);
+        update(UUID, storedServiceId.getRawUuid(), rowId);
       } else {
         // if the e164 was not in the database, re-run the get() with both e164 and UUID
         // can't just insert because the newly-discovered UUID might already be in the database
@@ -162,7 +162,7 @@ public class RecipientsTable implements IRecipientsTable {
     var query = String.format("INSERT INTO %s (%s, %s, %s) VALUES (?, ?, ?) RETURNING %s", TABLE_NAME, ACCOUNT_UUID, UUID, E164, ROW_ID);
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setObject(1, accountUUID);
-      statement.setObject(2, serviceId.uuid());
+      statement.setObject(2, serviceId.getRawUuid());
       statement.setString(3, e164);
       try (var insertResult = Database.executeQuery(TABLE_NAME + "_store_name", statement)) {
         if (!insertResult.next()) {

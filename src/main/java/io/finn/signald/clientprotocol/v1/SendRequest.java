@@ -11,7 +11,6 @@ import static io.finn.signald.annotations.ExactlyOneOfRequired.ACCOUNT;
 import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.protobuf.InvalidProtocolBufferException;
 import io.finn.signald.Account;
 import io.finn.signald.SignalDependencies;
 import io.finn.signald.annotations.*;
@@ -149,7 +148,7 @@ public class SendRequest implements RequestType<SendResponse> {
       Optional<IGroupsTable.IGroup> groupOptional;
       try {
         groupOptional = Database.Get(a.getACI()).GroupsTable.get(groupIdentifier);
-      } catch (SQLException | InvalidInputException | InvalidProtocolBufferException e) {
+      } catch (SQLException | InvalidInputException | IOException e) {
         throw new InternalError("unexpected error looking up group to send to", e);
       }
 
@@ -161,7 +160,7 @@ public class SendRequest implements RequestType<SendResponse> {
         } catch (SQLException | IOException e) {
           throw new InternalError("error verifying own capabilities before sending", e);
         }
-        if (group.getDecryptedGroup().getIsAnnouncementGroup() == EnabledState.ENABLED && !group.isAdmin(self)) {
+        if (group.getDecryptedGroup().isAnnouncementGroup == EnabledState.ENABLED && !group.isAdmin(self)) {
           logger.warn("refusing to send to an announcement only group that we're not an admin in.");
           throw new NoSendPermissionError();
         }

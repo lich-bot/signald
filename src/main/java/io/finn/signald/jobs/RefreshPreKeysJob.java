@@ -27,6 +27,7 @@ import org.signal.libsignal.protocol.ecc.ECKeyPair;
 import org.signal.libsignal.protocol.state.PreKeyRecord;
 import org.signal.libsignal.protocol.state.SignedPreKeyRecord;
 import org.signal.libsignal.protocol.util.Medium;
+import org.whispersystems.signalservice.api.account.PreKeyUpload;
 import org.whispersystems.signalservice.api.push.ServiceIdType;
 
 public class RefreshPreKeysJob implements Job {
@@ -44,7 +45,7 @@ public class RefreshPreKeysJob implements Job {
       logger.info("generating pre keys");
       refreshPreKeys(ServiceIdType.ACI);
       refreshPreKeys(ServiceIdType.PNI);
-    } else if (account.getSignalDependencies().getAccountManager().getPreKeysCount(ServiceIdType.ACI) < ServiceConfig.PREKEY_MINIMUM_COUNT) {
+    } else if (account.getSignalDependencies().getAccountManager().getPreKeyCounts(ServiceIdType.ACI).getEcCount() < ServiceConfig.PREKEY_MINIMUM_COUNT) {
       logger.info("insufficient number of pre keys available, refreshing");
       refreshPreKeys(ServiceIdType.ACI);
       refreshPreKeys(ServiceIdType.PNI);
@@ -69,7 +70,8 @@ public class RefreshPreKeysJob implements Job {
     List<PreKeyRecord> oneTimePreKeys = generatePreKeys();
     SignedPreKeyRecord signedPreKeyRecord = generateSignedPreKey(account.getACIIdentityKeyPair());
     IdentityKeyPair identityKeyPair = account.getACIIdentityKeyPair();
-    account.getSignalDependencies().getAccountManager().setPreKeys(serviceIdType, identityKeyPair.getPublicKey(), signedPreKeyRecord, oneTimePreKeys);
+    PreKeyUpload p = new PreKeyUpload(serviceIdType, identityKeyPair.getPublicKey(), signedPreKeyRecord, oneTimePreKeys, null, null);
+    account.getSignalDependencies().getAccountManager().setPreKeys(p);
   }
 
   private List<PreKeyRecord> generatePreKeys() throws SQLException {

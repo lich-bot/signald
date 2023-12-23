@@ -65,9 +65,9 @@ public class MessageSender {
       members = group.getMembers().stream().filter(x -> !self.equals(x)).collect(Collectors.toList());
     }
 
-    DecryptedTimer timer = group.getDecryptedGroup().getDisappearingMessagesTimer();
-    if (timer != null && timer.getDuration() != 0) {
-      message.withExpiration(timer.getDuration());
+    DecryptedTimer timer = group.getDecryptedGroup().disappearingMessagesTimer;
+    if (timer != null && timer.duration != 0) {
+      message.withExpiration(timer.duration);
     }
 
     message.asGroupMessage(group.getSignalServiceGroupV2());

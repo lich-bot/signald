@@ -246,19 +246,19 @@ public class Manager {
   }
 
   public void requestSyncGroups() throws IOException, SQLException, UntrustedIdentityException {
-    SyncMessage.Request r = SyncMessage.Request.newBuilder().setType(SyncMessage.Request.Type.GROUPS).build();
+    SyncMessage.Request r = new SyncMessage.Request.Builder().type(SyncMessage.Request.Type.GROUPS).build();
     SignalServiceSyncMessage message = SignalServiceSyncMessage.forRequest(new RequestMessage(r));
     sendSyncMessage(message);
   }
 
   public void requestSyncContacts() throws IOException, SQLException, UntrustedIdentityException {
-    SyncMessage.Request r = SyncMessage.Request.newBuilder().setType(SyncMessage.Request.Type.CONTACTS).build();
+    SyncMessage.Request r = new SyncMessage.Request.Builder().type(SyncMessage.Request.Type.CONTACTS).build();
     SignalServiceSyncMessage message = SignalServiceSyncMessage.forRequest(new RequestMessage(r));
     sendSyncMessage(message);
   }
 
   public void requestSyncConfiguration() throws IOException, SQLException, UntrustedIdentityException {
-    SyncMessage.Request r = SyncMessage.Request.newBuilder().setType(SyncMessage.Request.Type.CONFIGURATION).build();
+    SyncMessage.Request r = new SyncMessage.Request.Builder().type(SyncMessage.Request.Type.CONFIGURATION).build();
     SignalServiceSyncMessage message = SignalServiceSyncMessage.forRequest(new RequestMessage(r));
     sendSyncMessage(message);
   }
@@ -343,9 +343,9 @@ public class Manager {
         }
       } else if (recipients.size() == 1 && recipients.contains(self)) {
         final Optional<UnidentifiedAccessPair> unidentifiedAccess = getAccessPairFor(self);
-        SentTranscriptMessage transcript =
-            new SentTranscriptMessage(Optional.of(self.getAddress()), message.getTimestamp(), Optional.of(message), message.getExpiresInSeconds(),
-                                      Collections.singletonMap(self.getAddress().getServiceId(), unidentifiedAccess.isPresent()), false, Optional.empty(), Set.of());
+        SentTranscriptMessage transcript = new SentTranscriptMessage(Optional.of(self.getAddress()), message.getTimestamp(), Optional.of(message), message.getExpiresInSeconds(),
+                                                                     Collections.singletonMap(self.getAddress().getServiceId(), unidentifiedAccess.isPresent()), false,
+                                                                     Optional.empty(), Set.of(), Optional.empty());
         SignalServiceSyncMessage syncMessage = SignalServiceSyncMessage.forSentTranscript(transcript);
 
         List<SendMessageResult> results = new ArrayList<>(recipients.size());
@@ -366,9 +366,9 @@ public class Manager {
           try {
             if (self.equals(recipient)) { // sending to self
               final Optional<UnidentifiedAccessPair> unidentifiedAccess = getAccessPairFor(recipient);
-              SentTranscriptMessage transcript =
-                  new SentTranscriptMessage(Optional.of(recipient.getAddress()), message.getTimestamp(), Optional.of(message), message.getExpiresInSeconds(),
-                                            Collections.singletonMap(recipient.getAddress().getServiceId(), unidentifiedAccess.isPresent()), false, Optional.empty(), Set.of());
+              SentTranscriptMessage transcript = new SentTranscriptMessage(
+                  Optional.of(recipient.getAddress()), message.getTimestamp(), Optional.of(message), message.getExpiresInSeconds(),
+                  Collections.singletonMap(recipient.getAddress().getServiceId(), unidentifiedAccess.isPresent()), false, Optional.empty(), Set.of(), Optional.empty());
               SignalServiceSyncMessage syncMessage = SignalServiceSyncMessage.forSentTranscript(transcript);
               try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
                 messageSender.sendSyncMessage(syncMessage, unidentifiedAccess);

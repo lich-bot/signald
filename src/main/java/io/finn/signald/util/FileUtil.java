@@ -96,7 +96,7 @@ public class FileUtil {
     if (mime == null) {
       mime = "application/octet-stream";
     }
-    return new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), false, false, false, Optional.empty(), 0, 0,
+    return new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), false, false, false, false, Optional.empty(), 0, 0,
                                              System.currentTimeMillis(), Optional.empty(), Optional.empty(), null, null, Optional.empty());
   }
 }

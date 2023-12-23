@@ -17,15 +17,13 @@ public class ServiceConfig {
   public final static long AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE = 10 * 1024 * 1024;
   public final static boolean AUTOMATIC_NETWORK_RETRY = true;
   public final static int GROUP_MAX_SIZE = 1000;
-  public static final AccountAttributes.Capabilities CAPABILITIES = new AccountAttributes.Capabilities(false, // UUID
-                                                                                                       true,  // groups v2
-                                                                                                       false, // storage
-                                                                                                       true,  // groups v1 migration
+  public static final AccountAttributes.Capabilities CAPABILITIES = new AccountAttributes.Capabilities(false, // storage
                                                                                                        true,  // sender key
                                                                                                        true,  // announcement groups
                                                                                                        true,  // change number
                                                                                                        true,  // stories
                                                                                                        true,  // gift badges
-                                                                                                       false  // pnp
+                                                                                                       false, // pni
+                                                                                                       false  // paymentActivation
   );
 }

@@ -27,8 +27,8 @@ public class GroupAccessControl {
   public GroupAccessControl(){};
 
   public GroupAccessControl(AccessControl a) {
-    link = a.getAddFromInviteLink().toString();
-    attributes = a.getAttributes().toString();
-    members = a.getMembers().toString();
+    link = a.addFromInviteLink.toString();
+    attributes = a.attributes.toString();
+    members = a.members.toString();
   }
 }
