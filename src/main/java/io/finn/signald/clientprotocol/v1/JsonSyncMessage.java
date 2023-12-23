@@ -51,7 +51,7 @@ public class JsonSyncMessage {
     }
 
     if (syncMessage.getRequest().isPresent()) {
-      request = syncMessage.getRequest().get().getRequest().getType().name();
+      request = syncMessage.getRequest().get().getRequest().type.name();
     }
 
     if (syncMessage.getRead().isPresent()) {

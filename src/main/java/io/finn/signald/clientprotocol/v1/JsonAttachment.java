@@ -112,8 +112,13 @@ public class JsonAttachment {
         contentType = "application/octet-stream";
       }
     }
-    return new SignalServiceAttachmentStream(attachmentStream, contentType, attachmentSize,
-                                             customFilename == null ? Optional.of(attachmentFile.getName()) : Optional.of(customFilename), voiceNote, false, false, getPreview(),
-                                             width, height, System.currentTimeMillis(), Optional.ofNullable(caption), Optional.ofNullable(blurhash), null, null, Optional.empty());
+
+    return new SignalServiceAttachmentStream(attachmentStream,
+
+    )
+    //    return new SignalServiceAttachmentStream(attachmentStream, contentType, attachmentSize,
+    //                                             customFilename == null ? Optional.of(attachmentFile.getName()) : Optional.of(customFilename), voiceNote, false, false,
+    //                                             getPreview(), width, height, System.currentTimeMillis(), Optional.ofNullable(caption), Optional.ofNullable(blurhash), null, null,
+    //                                             Optional.empty());
   }
 }

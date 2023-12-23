@@ -1,6 +1,5 @@
 package io.finn.signald;
 
-import com.google.protobuf.ByteString;
 import io.finn.signald.db.IRecipientsTable;
 import io.finn.signald.db.Recipient;
 import io.reactivex.rxjava3.annotations.NonNull;

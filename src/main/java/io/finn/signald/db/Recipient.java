@@ -39,6 +39,8 @@ public class Recipient {
 
   public ServiceId getServiceId() { return address.getServiceId(); }
 
+  public ServiceId.ACI getACI() { return (ServiceId.ACI)address.getServiceId(); }
+
   public boolean isRegistered() { return registered; }
 
   public boolean equals(Recipient other) { return other.getId() == getId(); }
