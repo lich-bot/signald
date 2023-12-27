@@ -19,6 +19,7 @@ import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import io.finn.signald.db.Database;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import java.sql.SQLException;
+import org.whispersystems.signalservice.api.crypto.SignalServiceCipherResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;

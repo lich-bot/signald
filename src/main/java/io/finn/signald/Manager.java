@@ -487,14 +487,14 @@ public class Manager {
         members = group.getMembers();
       }
 
-      if (group.getDecryptedGroup().getIsAnnouncementGroup() == EnabledState.ENABLED && !group.isAdmin(self)) {
+      if (group.getDecryptedGroup().isAnnouncementGroup == EnabledState.ENABLED && !group.isAdmin(self)) {
         logger.warn("refusing to send to an announcement only group that we're not an admin in.");
         throw new NoSendPermissionException();
       }
 
-      DecryptedTimer timer = group.getDecryptedGroup().getDisappearingMessagesTimer();
-      if (timer != null && timer.getDuration() != 0) {
-        message.withExpiration(timer.getDuration());
+      DecryptedTimer timer = group.getDecryptedGroup().disappearingMessagesTimer;
+      if (timer != null && timer.duration != 0) {
+        message.withExpiration(timer.duration);
       }
 
       return sendGroupV2Message(message, group.getSignalServiceGroupV2(), members);
