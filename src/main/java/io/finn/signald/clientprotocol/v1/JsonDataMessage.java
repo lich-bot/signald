@@ -74,6 +74,8 @@ public class JsonDataMessage {
 
   @JsonProperty("story_context") public StoryContext storyContext;
 
+  @JsonProperty("body_range") public List<BodyRangeMessage> bodyRange;
+
   public JsonDataMessage(SignalServiceDataMessage dataMessage, ACI aci)
       throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError, NetworkError {
     timestamp = dataMessage.getTimestamp();
@@ -158,6 +160,10 @@ public class JsonDataMessage {
 
     if (dataMessage.getStoryContext().isPresent()) {
       storyContext = new StoryContext(dataMessage.getStoryContext().get());
+    }
+
+    if (dataMessage.getBodyRanges().isPresent()) {
+      bodyRange = dataMessage.getBodyRanges().get().stream().map(BodyRangeMessage::new).toList();
     }
   }
 }

@@ -231,9 +231,9 @@ public class MessageReceiver implements Runnable {
   }
 
   private void receiveMessages() throws IOException, NoSuchAccountException, SQLException, ServerNotFoundException, InvalidProxyException {
-    while(true) {
+    while (true) {
       logger.debug("processing cached messages");
-      if(!processNextMessage()) {
+      if (!processNextMessage()) {
         break;
       }
     }
@@ -273,7 +273,7 @@ public class MessageReceiver implements Runnable {
 
   private boolean processNextMessage() throws SQLException {
     StoredEnvelope storedEnvelope = messageQueueTable.nextEnvelope();
-    if(storedEnvelope == null) {
+    if (storedEnvelope == null) {
       return false;
     }
     try {

@@ -45,6 +45,8 @@ public class IncomingMessage {
   @JsonProperty("server_guid") public String serverGuid;
   @JsonProperty("decryption_error_message") public DecryptionErrorMessage decryptionErrorMessage;
 
+  @JsonProperty("edit_message") public EditMessage editMessage;
+
   public IncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content, ACI aci)
       throws NoSuchAccountError, InternalError, ServerNotFoundError, InvalidProxyError, AuthorizationFailedError, SQLException, NetworkError {
     try {
@@ -105,6 +107,10 @@ public class IncomingMessage {
 
       if (content.getDecryptionErrorMessage().isPresent()) {
         decryptionErrorMessage = new DecryptionErrorMessage(content.getDecryptionErrorMessage().get());
+      }
+
+      if (content.getEditMessage().isPresent()) {
+        editMessage = new EditMessage(content.getEditMessage().get(), aci);
       }
     }
     unidentifiedSender = envelope.isUnidentifiedSender();
