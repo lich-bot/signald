@@ -70,6 +70,7 @@ public class Database {
   public final IProfileKeysTable ProfileKeysTable;
   public final IProfileCapabilitiesTable ProfileCapabilitiesTable;
   public final IProfileBadgesTable ProfileBadgesTable;
+  public final IKyberPreKeyStore KyberPreKeyStore;
   private Database(ACI aci, Type databaseType) {
     switch (databaseType) {
     case SQLITE:
@@ -92,6 +93,7 @@ public class Database {
       ProfileKeysTable = new io.finn.signald.db.sqlite.ProfileKeysTable(aci);
       ProfileCapabilitiesTable = new io.finn.signald.db.sqlite.ProfileCapabilitiesTable(aci);
       ProfileBadgesTable = new io.finn.signald.db.sqlite.ProfileBadgesTable(aci);
+      KyberPreKeyStore = new io.finn.signald.db.sqlite.KyberPreKeyTable(aci);
       break;
     case POSTGRESQL:
       AccountDataTable = new io.finn.signald.db.postgresql.AccountDataTable();
@@ -113,6 +115,7 @@ public class Database {
       ProfileKeysTable = new io.finn.signald.db.postgresql.ProfileKeysTable(aci);
       ProfileCapabilitiesTable = new io.finn.signald.db.postgresql.ProfileCapabilitiesTable(aci);
       ProfileBadgesTable = new io.finn.signald.db.postgresql.ProfileBadgesTable(aci);
+      KyberPreKeyStore = new io.finn.signald.db.postgresql.KyberPreKeyTable(aci);
       break;
     default:
       throw new IllegalArgumentException("Illegal database type");

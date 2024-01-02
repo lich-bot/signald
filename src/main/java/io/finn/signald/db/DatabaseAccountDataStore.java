@@ -13,9 +13,11 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.*;
 import org.asamk.signal.TrustLevel;
+import org.jetbrains.annotations.NotNull;
 import org.signal.libsignal.protocol.*;
 import org.signal.libsignal.protocol.ecc.ECPublicKey;
 import org.signal.libsignal.protocol.groups.state.SenderKeyRecord;
+import org.signal.libsignal.protocol.state.KyberPreKeyRecord;
 import org.signal.libsignal.protocol.state.PreKeyRecord;
 import org.signal.libsignal.protocol.state.SessionRecord;
 import org.signal.libsignal.protocol.state.SignedPreKeyRecord;
@@ -30,15 +32,18 @@ public class DatabaseAccountDataStore implements SignalServiceAccountDataStore {
   private final IIdentityKeysTable identityKeys;
   private final ISenderKeysTable senderKeys;
   private final ISenderKeySharedTable senderKeyShared;
+  private final IKyberPreKeyStore kyberPreKeyStore;
   private final Account account;
 
   public DatabaseAccountDataStore(ACI aci) {
-    preKeys = Database.Get(aci).PreKeysTable;
-    sessions = Database.Get(aci).SessionsTable;
-    signedPrekeys = Database.Get(aci).SignedPreKeysTable;
-    identityKeys = Database.Get(aci).IdentityKeysTable;
-    senderKeys = Database.Get(aci).SenderKeysTable;
-    senderKeyShared = Database.Get(aci).SenderKeySharedTable;
+    Database db = Database.Get(aci);
+    preKeys = db.PreKeysTable;
+    sessions = db.SessionsTable;
+    signedPrekeys = db.SignedPreKeysTable;
+    identityKeys = db.IdentityKeysTable;
+    senderKeys = db.SenderKeysTable;
+    senderKeyShared = db.SenderKeySharedTable;
+    kyberPreKeyStore = db.KyberPreKeyStore;
     account = new Account(aci);
   }
 
@@ -218,5 +223,66 @@ public class DatabaseAccountDataStore implements SignalServiceAccountDataStore {
       return false;
     }
     return session.currentRatchetKeyMatches(key);
+  }
+
+  @Override
+  public void deleteAllStaleOneTimeKyberPreKeys(long l, int i) {
+    kyberPreKeyStore.deleteAllStaleOneTimeKyberPreKeys(l, i);
+  }
+
+  @NotNull
+  @Override
+  public List<KyberPreKeyRecord> loadLastResortKyberPreKeys() {
+    return kyberPreKeyStore.loadLastResortKyberPreKeys();
+  }
+
+  @Override
+  public void markAllOneTimeKyberPreKeysStaleIfNecessary(long l) {
+    kyberPreKeyStore.markAllOneTimeKyberPreKeysStaleIfNecessary(l);
+  }
+
+  @Override
+  public void removeKyberPreKey(int i) {
+    kyberPreKeyStore.removeKyberPreKey(i);
+  }
+
+  @Override
+  public void storeLastResortKyberPreKey(int i, @NotNull KyberPreKeyRecord kyberPreKeyRecord) {
+    kyberPreKeyStore.storeLastResortKyberPreKey(i, kyberPreKeyRecord);
+  }
+
+  @Override
+  public KyberPreKeyRecord loadKyberPreKey(int kyberPreKeyId) throws InvalidKeyIdException {
+    return kyberPreKeyStore.loadKyberPreKey(kyberPreKeyId);
+  }
+
+  @Override
+  public List<KyberPreKeyRecord> loadKyberPreKeys() {
+    return kyberPreKeyStore.loadKyberPreKeys();
+  }
+
+  @Override
+  public void storeKyberPreKey(int kyberPreKeyId, KyberPreKeyRecord record) {
+    kyberPreKeyStore.storeKyberPreKey(kyberPreKeyId, record);
+  }
+
+  @Override
+  public boolean containsKyberPreKey(int kyberPreKeyId) {
+    return kyberPreKeyStore.containsKyberPreKey(kyberPreKeyId);
+  }
+
+  @Override
+  public void markKyberPreKeyUsed(int kyberPreKeyId) {
+    kyberPreKeyStore.markKyberPreKeyUsed(kyberPreKeyId);
+  }
+
+  @Override
+  public void deleteAllStaleOneTimeEcPreKeys(long l, int i) {
+    kyberPreKeyStore.deleteAllStaleOneTimeKyberPreKeys(l, i);
+  }
+
+  @Override
+  public void markAllOneTimeEcPreKeysStaleIfNecessary(long l) {
+    kyberPreKeyStore.markAllOneTimeKyberPreKeysStaleIfNecessary(l);
   }
 }
