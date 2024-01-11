@@ -32,12 +32,50 @@ public class KyberPreKeyTable implements IKyberPreKeyStore {
   public KyberPreKeyTable(ServiceId.ACI aci) { account = new Account(aci); }
 
   @Override
-  public void deleteAllStaleOneTimeKyberPreKeys(long l, int i) {}
+  public void deleteAllStaleOneTimeKyberPreKeys(long l, int i) {
+    // based on signal-cli:
+    // https://github.com/AsamK/signal-cli/blob/375bdb79485ec90beb9a154112821a4657740b7a/lib/src/main/java/org/asamk/signal/manager/storage/prekeys/KyberPreKeyStore.java#L247
+    var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? "
+                + "                    AND " + STALE_TIMESTAMP + " < ?"
+                + "                    AND " + IS_LAST_RESORT + " = FALSE"
+                + "                    AND _id NOT IN ("
+                + "                        SELECT _id"
+                + "                        FROM " + TABLE_NAME + "                        WHERE " + ACCOUNT_UUID + " = ?"
+                + "                        ORDER BY"
+                + "                          CASE WHEN " + STALE_TIMESTAMP + " IS NULL THEN 1 ELSE 0 END DESC,"
+                + "                          " + STALE_TIMESTAMP + " DESC,"
+                + "                          _id DESC"
+                + "                        LIMIT ?"
+                + "                    )";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, account.getACI().toString());
+      statement.setLong(2, l);
+      statement.setString(3, account.getACI().toString());
+      statement.setInt(4, i);
+      Database.executeUpdate(TABLE_NAME + "_delete_all_stale_one_time_kyber_pre_keys", statement);
+    } catch (SQLException e) {
+      throw new RuntimeException(e);
+    }
+  }
 
   @NotNull
   @Override
   public List<KyberPreKeyRecord> loadLastResortKyberPreKeys() {
-    return null;
+    var query = "SELECT " + KYBER_PREKEY_RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + IS_LAST_RESORT + " = 1";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, account.getACI().toString());
+      ResultSet results = Database.executeQuery(TABLE_NAME + "_load_last_resort_kyber_pre_keys", statement);
+      var records = new ArrayList<KyberPreKeyRecord>();
+      while (results.next()) {
+        byte[] serialized = results.getBytes(1);
+        records.add(new KyberPreKeyRecord(serialized));
+      }
+      return records;
+    } catch (SQLException | InvalidMessageException e) {
+      logger.error("failed to load last resort kyber prekeys: ", e);
+      Sentry.captureException(e);
+      throw new RuntimeException(e);
+    }
   }
 
   @Override
