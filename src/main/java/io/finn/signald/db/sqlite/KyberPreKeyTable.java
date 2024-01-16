@@ -79,10 +79,32 @@ public class KyberPreKeyTable implements IKyberPreKeyStore {
   }
 
   @Override
-  public void markAllOneTimeKyberPreKeysStaleIfNecessary(long l) {}
+  public void markAllOneTimeKyberPreKeysStaleIfNecessary(long timestamp) {
+    var query = "UPDATE " + TABLE_NAME + " SET " + STALE_TIMESTAMP + " WHERE " + ACCOUNT_UUID + " = ? AND " + STALE_TIMESTAMP + " IS NULL AND " + IS_LAST_RESORT + " = FALSE";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setLong(1, timestamp);
+      statement.setString(2, account.getACI().toString());
+      Database.executeUpdate(TABLE_NAME + "_mark_all_one_time_kyber_pre_key_stale_if_necessary", statement);
+    } catch (SQLException e) {
+      logger.error("failed to mark all one time kyber prekeys stale");
+      Sentry.captureException(e);
+      throw new RuntimeException(e);
+    }
+  }
 
   @Override
-  public void removeKyberPreKey(int i) {}
+  public void removeKyberPreKey(int id) {
+    var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + KYBER_PREKEY_ID + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, account.getACI().toString());
+      statement.setInt(2, id);
+      Database.executeUpdate(TABLE_NAME + "_remove_kyber_pre_key", statement);
+    } catch (SQLException e) {
+      logger.error("failed to remove kyber pre key");
+      Sentry.captureException(e);
+      throw new RuntimeException(e);
+    }
+  }
 
   @Override
   public void storeLastResortKyberPreKey(int i, @NotNull KyberPreKeyRecord kyberPreKeyRecord) {
@@ -147,7 +169,21 @@ public class KyberPreKeyTable implements IKyberPreKeyStore {
   }
 
   @Override
-  public void storeKyberPreKey(int kyberPreKeyId, KyberPreKeyRecord record) {}
+  public void storeKyberPreKey(int kyberPreKeyId, KyberPreKeyRecord record) {
+    var query = "INSERT INTO " + TABLE_NAME + " (" + ACCOUNT_UUID + "," + KYBER_PREKEY_ID + "," + KYBER_PREKEY_RECORD + "," + IS_LAST_RESORT + "," + STALE_TIMESTAMP +
+                ") VALUES (?, ?, ?, 0, ?);";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, account.getACI().toString());
+      statement.setInt(2, kyberPreKeyId);
+      statement.setBytes(3, record.serialize());
+      statement.setLong(4, record.getTimestamp());
+      Database.executeUpdate(TABLE_NAME + "_store_kyber_pre_key", statement);
+    } catch (SQLException e) {
+      logger.error("failed to store kyber prekey: ", e);
+      Sentry.captureException(e);
+      throw new RuntimeException(e);
+    }
+  }
 
   @Override
   public boolean containsKyberPreKey(int kyberPreKeyId) {
@@ -165,5 +201,16 @@ public class KyberPreKeyTable implements IKyberPreKeyStore {
   }
 
   @Override
-  public void markKyberPreKeyUsed(int kyberPreKeyId) {}
+  public void markKyberPreKeyUsed(int kyberPreKeyId) {
+    var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + KYBER_PREKEY_ID + " = ? AND " + IS_LAST_RESORT + " = FALSE";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, account.getACI().toString());
+      statement.setInt(2, kyberPreKeyId);
+      Database.executeUpdate(TABLE_NAME + "_mark_kyber_prekey_used", statement);
+    } catch (SQLException e) {
+      logger.error("failed to mark kyber prekey used: ", e);
+      Sentry.captureException(e);
+      throw new RuntimeException(e);
+    }
+  }
 }
