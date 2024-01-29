@@ -63,6 +63,7 @@ import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
+import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.MissingConfigurationException;
@@ -864,12 +865,18 @@ public class Manager {
         logger.info("received {} fetch request device {}", syncMessage.getFetchType().get().name(), content.getSenderDevice());
       }
 
-      if (syncMessage.getPniIdentity().isPresent()) {
-        SyncMessage.PniIdentity pniIdentity = syncMessage.getPniIdentity().get();
-        IdentityKey pniIdentityKey = new IdentityKey(pniIdentity.getPublicKey().toByteArray());
-        ECPrivateKey pniPrivateKey = Curve.decodePrivatePoint(pniIdentity.getPrivateKey().toByteArray());
-        account.setPNIIdentityKeyPair(new IdentityKeyPair(pniIdentityKey, pniPrivateKey));
-        logger.info("received PNI identity key from device {}", content.getSenderDevice());
+      //      if (syncMessage.getPniIdentity().isPresent()) {
+      //        SyncMessage.PniIdentity pniIdentity = syncMessage.getPniIdentity().get();
+      //        IdentityKey pniIdentityKey = new IdentityKey(pniIdentity.getPublicKey().toByteArray());
+      //        ECPrivateKey pniPrivateKey = Curve.decodePrivatePoint(pniIdentity.getPrivateKey().toByteArray());
+      //        account.setPNIIdentityKeyPair(new IdentityKeyPair(pniIdentityKey, pniPrivateKey));
+      //        logger.info("received PNI identity key from device {}", content.getSenderDevice());
+      //      }
+      if (syncMessage.getPniChangeNumber().isPresent()) {
+        SyncMessage.PniChangeNumber pniChangeNumber = syncMessage.getPniChangeNumber().get();
+        //        account.setPniRegistrationId(pniChangeNumber.registrationId);
+        //        account.setPNI(ServiceId.PNI.from());
+        logger.info("account phone number has changed to {}", Util.redact(pniChangeNumber.newE164));
       }
     }
 
