@@ -33,9 +33,14 @@ import org.apache.logging.log4j.Logger;
 import org.signal.core.util.Base64;
 import org.signal.libsignal.protocol.IdentityKeyPair;
 import org.signal.libsignal.protocol.InvalidKeyException;
+import org.signal.libsignal.protocol.state.KyberPreKeyRecord;
+import org.signal.libsignal.protocol.state.SignedPreKeyRecord;
 import org.signal.libsignal.protocol.util.KeyHelper;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
+import org.whispersystems.signalservice.api.account.AccountAttributes;
+import org.whispersystems.signalservice.api.account.PreKeyCollection;
+import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -98,9 +103,26 @@ public class ProvisioningManager {
       new Account(newDeviceRegistration.getAci()).delete(false);
     }
 
-    String encryptedDeviceName = DeviceNameUtil.encryptDeviceName(deviceName, newDeviceRegistration.getAciIdentity().getPrivateKey());
-    int deviceId = accountManager.finishNewDeviceRegistration(newDeviceRegistration.getProvisioningCode(),
-                                                              new ConfirmCodeMessage(false, true, registrationId, pniRegistrationId, encryptedDeviceName, null));
+    IdentityKeyPair aciKeyPair = newDeviceRegistration.getAciIdentity();
+    int aciNextSignedPreKeyId = 0; // TODO: where does this come from?
+    SignedPreKeyRecord aciSignedPreKey = RegistrationManager.generateSignedPreKeyRecord(aciNextSignedPreKeyId, aciKeyPair.getPrivateKey());
+    int aciKyberPreKeyIdOffset = 0; // TODO: where does this come from?
+    KyberPreKeyRecord aciLastResortKyberPreKey = RegistrationManager.generateKyberPreKeyRecord(aciKyberPreKeyIdOffset, aciKeyPair.getPrivateKey());
+    PreKeyCollection aciPreKeyCollection = new PreKeyCollection(aciKeyPair.getPublicKey(), aciSignedPreKey, aciLastResortKyberPreKey);
+
+    IdentityKeyPair pniKeyPair = newDeviceRegistration.getPniIdentity();
+    int pniNextSignedPreKeyId = 0; // TODO: where does this come from?
+    SignedPreKeyRecord pniSignedPreKey = RegistrationManager.generateSignedPreKeyRecord(pniNextSignedPreKeyId, pniKeyPair.getPrivateKey());
+    int pniKyberPreKeyIdOffset = 0; // TODO: where does this come from?
+    KyberPreKeyRecord pniLastResortKyberPreKey = RegistrationManager.generateKyberPreKeyRecord(pniKyberPreKeyIdOffset, pniKeyPair.getPrivateKey());
+    PreKeyCollection pniPreKeyCollection = new PreKeyCollection(pniKeyPair.getPublicKey(), pniSignedPreKey, pniLastResortKyberPreKey);
+
+    byte[] unidentifiedAccessKey = UnidentifiedAccess.deriveAccessKeyFrom(newDeviceRegistration.getProfileKey());
+
+    AccountAttributes accountAttributes =
+        new AccountAttributes(null, registrationId, false, false, true, null, unidentifiedAccessKey, false, false, ServiceConfig.CAPABILITIES, "", pniRegistrationId, null);
+
+    int deviceId = accountManager.finishNewDeviceRegistration(newDeviceRegistration.getProvisioningCode(), accountAttributes, aciPreKeyCollection, pniPreKeyCollection);
 
     ACI aci = newDeviceRegistration.getAci();
     if (Database.Get().AccountsTable.exists(aci)) {

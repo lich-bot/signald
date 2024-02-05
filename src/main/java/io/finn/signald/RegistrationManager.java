@@ -136,6 +136,7 @@ public class RegistrationManager {
     account.setPassword(password);
 
     account.setACIIdentityKeyPair(aciKeyPair);
+
     account.setPNIIdentityKeyPair(pniKeyPair);
 
     account.getDB().IdentityKeysTable.saveIdentity(Database.Get(aci).RecipientsTable.get(aci), aciKeyPair.getPublicKey(), TrustLevel.TRUSTED_VERIFIED);
