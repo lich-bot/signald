@@ -29,22 +29,6 @@ public class UnidentifiedAccessUtil {
 
   public UnidentifiedAccessUtil(ACI aci) { account = new Account(aci); }
 
-  public List<UnidentifiedAccess> getAccessFor(Collection<Recipient> recipients)
-      throws NoSuchAccountException, ServerNotFoundException, InvalidProxyException, InvalidCertificateException, SQLException, IOException, InvalidKeyException {
-    List<UnidentifiedAccess> result = new ArrayList<>(recipients.size());
-    for (Recipient recipient : recipients) {
-      result.add(getAccessFor(recipient));
-    }
-    return result;
-  }
-
-  public UnidentifiedAccess getAccessFor(Recipient recipient)
-      throws NoSuchAccountException, ServerNotFoundException, InvalidProxyException, InvalidCertificateException, SQLException {
-    byte[] recipientUnidentifiedAccessKey = account.getDB().ProfileKeysTable.getUnidentifiedAccessKey(recipient);
-    byte[] selfUnidentifiedAccessCertificate = getSenderCertificate();
-    return new UnidentifiedAccess(recipientUnidentifiedAccessKey, selfUnidentifiedAccessCertificate);
-  }
-
   public Optional<UnidentifiedAccess> getUnidentifiedAccess()
       throws NoSuchAccountException, SQLException, IOException, ServerNotFoundException, InvalidKeyException, InvalidProxyException {
     ProfileKey ownProfileKey = account.getDB().ProfileKeysTable.getProfileKey(account.getSelf());
@@ -52,7 +36,7 @@ public class UnidentifiedAccessUtil {
     byte[] selfUnidentifiedAccessCertificate = getSenderCertificate();
 
     try {
-      return Optional.of(new UnidentifiedAccess(selfUnidentifiedAccessKey, selfUnidentifiedAccessCertificate));
+      return Optional.of(new UnidentifiedAccess(selfUnidentifiedAccessKey, selfUnidentifiedAccessCertificate, false));
     } catch (InvalidCertificateException e) {
       return Optional.empty();
     }
@@ -115,8 +99,8 @@ public class UnidentifiedAccessUtil {
     }
 
     try {
-      return Optional.of(new UnidentifiedAccessPair(new UnidentifiedAccess(recipientUnidentifiedAccessKey, selfUnidentifiedAccessCertificate),
-                                                    new UnidentifiedAccess(selfUnidentifiedAccessKey, selfUnidentifiedAccessCertificate)));
+      return Optional.of(new UnidentifiedAccessPair(new UnidentifiedAccess(recipientUnidentifiedAccessKey, selfUnidentifiedAccessCertificate, false),
+                                                    new UnidentifiedAccess(selfUnidentifiedAccessKey, selfUnidentifiedAccessCertificate, false)));
     } catch (InvalidCertificateException e) {
       logger.debug("cannot get unidentififed access: ", e);
       return Optional.empty();
