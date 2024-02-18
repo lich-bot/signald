@@ -97,7 +97,7 @@ public class JsonGroupV2Info {
     Optional<IGroupsTable.IGroup> localState;
     try {
       localState = Database.Get(aci).GroupsTable.get(group);
-    } catch (InvalidProtocolBufferException | InvalidInputException | SQLException e) {
+    } catch (InvalidInputException | SQLException | IOException e) {
       logger.error("error fetching group state from local db");
       Sentry.captureException(e);
       return;

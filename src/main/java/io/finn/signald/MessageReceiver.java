@@ -231,19 +231,13 @@ public class MessageReceiver implements Runnable {
   }
 
   private void receiveMessages() throws IOException, NoSuchAccountException, SQLException, ServerNotFoundException, InvalidProxyException {
-    while (true) {
-      logger.debug("processing cached messages");
-      if (!processNextMessage()) {
-        break;
-      }
-    }
-
     SignalWebSocket websocket = account.getSignalDependencies().getWebSocket();
     logger.debug("connecting to websocket");
     websocket.connect();
 
     try {
       while (true) {
+        processQueuedMessages();
         try {
           websocket.readMessageBatch(3600000, 1, envelopeResponses -> {
             logger.debug("received a batch of {} messages", envelopeResponses.size());
@@ -263,7 +257,6 @@ public class MessageReceiver implements Runnable {
           logger.info("websocket connection timed out");
           return;
         }
-        processNextMessage();
       }
     } finally {
       logger.debug("disconnecting websocket");
@@ -271,11 +264,13 @@ public class MessageReceiver implements Runnable {
     }
   }
 
-  private boolean processNextMessage() throws SQLException {
-    StoredEnvelope storedEnvelope = messageQueueTable.nextEnvelope();
-    if (storedEnvelope == null) {
-      return false;
+  private void processQueuedMessages() throws SQLException {
+    for (StoredEnvelope storedEnvelope = messageQueueTable.nextEnvelope(); storedEnvelope != null; storedEnvelope = messageQueueTable.nextEnvelope()) {
+      processNextMessage(storedEnvelope);
     }
+  }
+
+  private boolean processNextMessage(StoredEnvelope storedEnvelope) throws SQLException {
     try {
       // TODO: signal-cli checks if storedEnvelope.envelope.isReceipt() and skips a lot of this if it is
       // https://github.com/AsamK/signal-cli/blob/375bdb79485ec90beb9a154112821a4657740b7a/lib/src/main/java/org/asamk/signal/manager/helper/IncomingMessageHandler.java#L101

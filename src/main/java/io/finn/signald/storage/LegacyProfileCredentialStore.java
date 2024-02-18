@@ -63,7 +63,7 @@ public class LegacyProfileCredentialStore {
   @Deprecated
   public LegacyProfileAndCredentialEntry storeProfileKey(SignalServiceAddress owner, ProfileKey profileKey) {
     LegacyProfileAndCredentialEntry newEntry =
-        new LegacyProfileAndCredentialEntry(owner, profileKey, 0, null, null, LegacyProfileAndCredentialEntry.UnidentifiedAccessMode.UNKNOWN);
+        new LegacyProfileAndCredentialEntry(owner, 0, profileKey, null, null, LegacyProfileAndCredentialEntry.UnidentifiedAccessMode.UNKNOWN);
     synchronized (profiles) {
       for (int i = 0; i < profiles.size(); i++) {
         if (profiles.get(i).getServiceAddress().matches(owner)) {

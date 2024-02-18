@@ -7,7 +7,6 @@
 
 package io.finn.signald.db;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.storage.LegacyGroup;
 import java.io.File;
@@ -40,17 +39,17 @@ public interface IGroupsTable {
   void deleteAccount(ACI aci) throws SQLException;
   void setGroupAvatarPath(String path) throws IOException;
 
-  default Optional<IGroup> get(SignalServiceGroupV2 group) throws InvalidProtocolBufferException, InvalidInputException, SQLException {
+  default Optional<IGroup> get(SignalServiceGroupV2 group) throws IOException, InvalidInputException, SQLException {
     return get(GroupSecretParams.deriveFromMasterKey(group.getMasterKey()).getPublicParams().getGroupIdentifier());
   }
 
   void upsert(GroupMasterKey masterKey, DecryptedGroup decryptedGroup, DistributionId distributionId, int lastAvatarFetch) throws SQLException, InvalidInputException, IOException;
-  default void upsert(GroupMasterKey masterKey, DecryptedGroup decryptedGroup) throws SQLException, InvalidInputException, InvalidProtocolBufferException {
+  default void upsert(GroupMasterKey masterKey, DecryptedGroup decryptedGroup) throws SQLException, InvalidInputException, IOException {
     upsert(masterKey, decryptedGroup, null, -1);
   }
 
   @Deprecated
-  default void upsert(LegacyGroup groupFromLegacyStorage) throws SQLException, InvalidInputException, InvalidProtocolBufferException {
+  default void upsert(LegacyGroup groupFromLegacyStorage) throws SQLException, InvalidInputException, IOException {
     upsert(groupFromLegacyStorage.getMasterKey(), groupFromLegacyStorage.getGroup(), groupFromLegacyStorage.getDistributionId(), groupFromLegacyStorage.getLastAvatarFetch());
   }
 
