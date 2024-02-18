@@ -42,14 +42,14 @@ import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.profiles.AvatarUploadParams;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.ServiceId.PNI;
+import org.whispersystems.signalservice.api.push.ServiceIdType;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-import org.whispersystems.signalservice.api.push.exceptions.CaptchaRequiredException;
-import org.whispersystems.signalservice.internal.ServiceResponse;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.push.RegistrationSessionMetadataResponse;
-import org.whispersystems.signalservice.internal.push.RequestVerificationCodeResponse;
 import org.whispersystems.signalservice.internal.push.VerifyAccountResponse;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
+
+import static io.finn.signald.ServiceConfig.PREKEY_MAXIMUM_ID;
 
 public class RegistrationManager {
   private final static Logger logger = LogManager.getLogger();
@@ -100,25 +100,14 @@ public class RegistrationManager {
 
     int registrationID = Database.Get().PendingAccountDataTable.getInt(e164, IPendingAccountDataTable.Key.LOCAL_REGISTRATION_ID);
     int pniRegistrationID = Database.Get().PendingAccountDataTable.getInt(e164, IPendingAccountDataTable.Key.LOCAL_PNI_REGISTRATION_ID);
-    ProfileKey profileKey = generateProfileKey();
+    ProfileKey profileKey = KeyUtil.generateProfileKey();
     byte[] unidentifiedAccessKey = UnidentifiedAccess.deriveAccessKeyFrom(profileKey);
 
     AccountAttributes accountAttributes =
         new AccountAttributes(null, registrationID, false, false, true, null, unidentifiedAccessKey, false, false, ServiceConfig.CAPABILITIES, "", pniRegistrationID, null);
 
-    IdentityKeyPair aciKeyPair = new IdentityKeyPair(Database.Get().PendingAccountDataTable.getBytes(e164, IPendingAccountDataTable.Key.ACI_IDENTITY_KEY_PAIR));
-    int aciNextSignedPreKeyId = Database.Get().PendingAccountDataTable.getInt(e164, IPendingAccountDataTable.Key.ACI_PRE_KEY_ID_OFFSET); // TODO: set this somehow
-    SignedPreKeyRecord aciSignedPreKey = generateSignedPreKeyRecord(aciNextSignedPreKeyId, aciKeyPair.getPrivateKey());
-    int aciNextKyberPreKeyOffset = Database.Get().PendingAccountDataTable.getInt(e164, IPendingAccountDataTable.Key.ACI_NEXT_KYBER_PRE_KEY_OFFSET); // TODO: set this somehow
-    KyberPreKeyRecord aciLastResortKyberPreKey = generateKyberPreKeyRecord(aciNextKyberPreKeyOffset, aciKeyPair.getPrivateKey());
-    PreKeyCollection aciPreKeys = new PreKeyCollection(aciKeyPair.getPublicKey(), aciSignedPreKey, aciLastResortKyberPreKey);
-
-    IdentityKeyPair pniKeyPair = new IdentityKeyPair(Database.Get().PendingAccountDataTable.getBytes(e164, IPendingAccountDataTable.Key.PNI_IDENTITY_KEY_PAIR));
-    int pniNextSignedPreKeyId = Database.Get().PendingAccountDataTable.getInt(e164, IPendingAccountDataTable.Key.PNI_PRE_KEY_ID_OFFSET); // TODO: set this somehow
-    SignedPreKeyRecord pniSignedPreKey = generateSignedPreKeyRecord(pniNextSignedPreKeyId, pniKeyPair.getPrivateKey());
-    int pniNextKyberPreKeyOffset = Database.Get().PendingAccountDataTable.getInt(e164, IPendingAccountDataTable.Key.PNI_NEXT_KYBER_PRE_KEY_OFFSET); // TODO: set this somehow
-    KyberPreKeyRecord pniLastResortKyberPreKey = generateKyberPreKeyRecord(pniNextKyberPreKeyOffset, pniKeyPair.getPrivateKey());
-    PreKeyCollection pniPreKeys = new PreKeyCollection(pniKeyPair.getPublicKey(), pniSignedPreKey, pniLastResortKyberPreKey);
+    PreKeyCollection aciPreKeys = generatePreKeyCollection(ServiceIdType.ACI);
+    PreKeyCollection pniPreKeys = generatePreKeyCollection(ServiceIdType.PNI);
 
     VerifyAccountResponse result = numberVerification.register(accountAttributes, aciPreKeys, pniPreKeys, true);
 
@@ -135,9 +124,23 @@ public class RegistrationManager {
     String password = Database.Get().PendingAccountDataTable.getString(e164, IPendingAccountDataTable.Key.PASSWORD);
     account.setPassword(password);
 
+    IdentityKeyPair aciKeyPair = new IdentityKeyPair(Database.Get().PendingAccountDataTable.getBytes(e164, IPendingAccountDataTable.Key.ACI_IDENTITY_KEY_PAIR));
     account.setACIIdentityKeyPair(aciKeyPair);
 
+    IdentityKeyPair pniKeyPair = new IdentityKeyPair(Database.Get().PendingAccountDataTable.getBytes(e164, IPendingAccountDataTable.Key.PNI_IDENTITY_KEY_PAIR));
     account.setPNIIdentityKeyPair(pniKeyPair);
+
+    int aciNextSignedPreKeyId = Database.Get().PendingAccountDataTable.getInt(e164, IPendingAccountDataTable.Key.ACI_NEXT_SIGNED_PRE_KEY_ID);
+    account.setAciNextSignedPreKeyId(aciNextSignedPreKeyId);
+
+    int pniNextSignedPreKeyId = Database.Get().PendingAccountDataTable.getInt(e164, IPendingAccountDataTable.Key.PNI_NEXT_SIGNED_PRE_KEY_ID);
+    account.setPniNextSignedPreKeyId(pniNextSignedPreKeyId);
+
+    int aciNextKyberPreKeyId = Database.Get().PendingAccountDataTable.getInt(e164, IPendingAccountDataTable.Key.ACI_NEXT_KYBER_PRE_KEY_ID);
+    account.setACINextKyberPreKeyId(aciNextKyberPreKeyId);
+
+    int pniNextKyberPreKeyId = Database.Get().PendingAccountDataTable.getInt(e164, IPendingAccountDataTable.Key.PNI_NEXT_KYBER_PRE_KEY_ID);
+    account.setPNINextKyberPreKeyId(pniNextKyberPreKeyId);
 
     account.getDB().IdentityKeysTable.saveIdentity(Database.Get(aci).RecipientsTable.get(aci), aciKeyPair.getPublicKey(), TrustLevel.TRUSTED_VERIFIED);
 
@@ -172,17 +175,6 @@ public class RegistrationManager {
     }
   }
 
-  private void handleResponseException(final ServiceResponse<?> response) throws IOException {
-    final Optional<Throwable> throwableOptional = response.getExecutionError().or(response::getApplicationError);
-    if (throwableOptional.isPresent()) {
-      if (throwableOptional.get() instanceof IOException) {
-        throw(IOException) throwableOptional.get();
-      } else {
-        throw new IOException(throwableOptional.get());
-      }
-    }
-  }
-
   private ProfileKey generateProfileKey() throws InvalidInputException {
     byte[] key = new byte[32];
     RandomUtils.getSecureRandom().nextBytes(key);
@@ -200,19 +192,31 @@ public class RegistrationManager {
     return new SignedPreKeyRecord(signedPreKeyId, System.currentTimeMillis(), keyPair, signature);
   }
 
-  public static List<KyberPreKeyRecord> generateKyberPreKeyRecords(final int offset, final ECPrivateKey privateKey) {
-    var records = new ArrayList<KyberPreKeyRecord>(ServiceConfig.PREKEY_BATCH_SIZE);
-    for (var i = 0; i < ServiceConfig.PREKEY_BATCH_SIZE; i++) {
-      var preKeyId = (offset + i) % ServiceConfig.PREKEY_MAXIMUM_ID;
-      records.add(generateKyberPreKeyRecord(preKeyId, privateKey));
-    }
-    return records;
-  }
-
   public static KyberPreKeyRecord generateKyberPreKeyRecord(final int preKeyId, final ECPrivateKey privateKey) {
     KEMKeyPair keyPair = KEMKeyPair.generate(KEMKeyType.KYBER_1024);
     byte[] signature = privateKey.calculateSignature(keyPair.getPublicKey().serialize());
 
     return new KyberPreKeyRecord(preKeyId, System.currentTimeMillis(), keyPair, signature);
+  }
+
+  private PreKeyCollection generatePreKeyCollection(ServiceIdType type) throws SQLException {
+    IdentityKeyPair keyPair = new IdentityKeyPair(Database.Get().PendingAccountDataTable.getBytes(e164, type == ServiceIdType.ACI ? IPendingAccountDataTable.Key.ACI_IDENTITY_KEY_PAIR : IPendingAccountDataTable.Key.PNI_IDENTITY_KEY_PAIR));
+
+    int nextSignedPreKeyId = Database.Get().PendingAccountDataTable.getInt(e164, type == ServiceIdType.ACI ? IPendingAccountDataTable.Key.ACI_NEXT_SIGNED_PRE_KEY_ID : IPendingAccountDataTable.Key.PNI_NEXT_SIGNED_PRE_KEY_ID);
+    if(nextSignedPreKeyId < 0) {
+      nextSignedPreKeyId = KeyUtil.getRandomInt(PREKEY_MAXIMUM_ID);
+      Database.Get().PendingAccountDataTable.set(e164, type == ServiceIdType.ACI ? IPendingAccountDataTable.Key.ACI_NEXT_SIGNED_PRE_KEY_ID : IPendingAccountDataTable.Key.PNI_NEXT_SIGNED_PRE_KEY_ID, nextSignedPreKeyId);
+    }
+
+    SignedPreKeyRecord signedPreKey = generateSignedPreKeyRecord(nextSignedPreKeyId, keyPair.getPrivateKey());
+
+    int nextKyberPreKeyId = Database.Get().PendingAccountDataTable.getInt(e164, type == ServiceIdType.ACI ? IPendingAccountDataTable.Key.ACI_NEXT_KYBER_PRE_KEY_ID : IPendingAccountDataTable.Key.PNI_NEXT_KYBER_PRE_KEY_ID);
+    if(nextKyberPreKeyId < 0) {
+      nextKyberPreKeyId = KeyUtil.getRandomInt(PREKEY_MAXIMUM_ID);
+      Database.Get().PendingAccountDataTable.set(e164, type == ServiceIdType.ACI ? IPendingAccountDataTable.Key.ACI_NEXT_KYBER_PRE_KEY_ID : IPendingAccountDataTable.Key.PNI_NEXT_KYBER_PRE_KEY_ID, nextKyberPreKeyId);
+    }
+    KyberPreKeyRecord lastResortKyberPreKey = generateKyberPreKeyRecord(nextKyberPreKeyId, keyPair.getPrivateKey());
+
+    return new PreKeyCollection(keyPair.getPublicKey(), signedPreKey, lastResortKyberPreKey);
   }
 }

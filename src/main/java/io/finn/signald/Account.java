@@ -11,6 +11,7 @@ import io.finn.signald.db.*;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
+import io.finn.signald.util.KeyUtil;
 import io.sentry.Sentry;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -18,7 +19,6 @@ import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
-import org.signal.core.util.Base64;
 import org.signal.libsignal.protocol.IdentityKeyPair;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.protocol.ServiceId;
@@ -33,6 +33,8 @@ import org.whispersystems.signalservice.api.util.DeviceNameUtil;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.push.WhoAmIResponse;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
+
+import static io.finn.signald.ServiceConfig.PREKEY_MAXIMUM_ID;
 
 public class Account {
   private static final Logger logger = LogManager.getLogger();
@@ -183,17 +185,60 @@ public class Account {
 
   public void setPreKeyIdOffset(int preKeyIdOffset) throws SQLException { Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.PRE_KEY_ID_OFFSET, preKeyIdOffset); }
 
-  public int getNextSignedPreKeyId() throws SQLException {
+  public int getACINextSignedPreKeyId() throws SQLException {
     int id = Database.Get().AccountDataTable.getInt(aci, IAccountDataTable.Key.NEXT_SIGNED_PRE_KEY_ID);
     if (id == -1) {
-      return 0;
+      id = KeyUtil.getRandomInt(PREKEY_MAXIMUM_ID);
+      Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.NEXT_SIGNED_PRE_KEY_ID, id);
     }
     return id;
   }
 
-  public void setNextSignedPreKeyId(int nextSignedPreKeyId) throws SQLException {
+  public void setAciNextSignedPreKeyId(int nextSignedPreKeyId) throws SQLException {
     Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.NEXT_SIGNED_PRE_KEY_ID, nextSignedPreKeyId);
   }
+
+  public int getPNINextSignedPreKeyId() throws SQLException {
+    int id = Database.Get().AccountDataTable.getInt(aci, IAccountDataTable.Key.PNI_NEXT_SIGNED_PRE_KEY_ID);
+    if (id == -1) {
+      id = KeyUtil.getRandomInt(PREKEY_MAXIMUM_ID);
+      Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.PNI_NEXT_SIGNED_PRE_KEY_ID, id);
+    }
+    return id;
+  }
+
+  public void setPniNextSignedPreKeyId(int nextSignedPreKeyId) throws SQLException {
+    Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.PNI_NEXT_SIGNED_PRE_KEY_ID, nextSignedPreKeyId);
+  }
+
+  public int getACINextKyberPreKeyId() throws SQLException {
+    int id = Database.Get().AccountDataTable.getInt(aci, IAccountDataTable.Key.ACI_NEXT_KYBER_PRE_KEY_ID);
+    if (id == -1) {
+      id = KeyUtil.getRandomInt(PREKEY_MAXIMUM_ID);
+      Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.ACI_NEXT_KYBER_PRE_KEY_ID, id);
+    }
+    return id;
+  }
+
+  public void setACINextKyberPreKeyId(int nextKyberPreKeyId) throws SQLException {
+    Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.ACI_NEXT_KYBER_PRE_KEY_ID, nextKyberPreKeyId);
+  }
+
+  public int getPNINextKyberPreKeyId() throws SQLException {
+    int id = Database.Get().AccountDataTable.getInt(aci, IAccountDataTable.Key.PNI_NEXT_KYBER_PRE_KEY_ID);
+    if (id == -1) {
+      id = KeyUtil.getRandomInt(PREKEY_MAXIMUM_ID);
+      Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.PNI_NEXT_KYBER_PRE_KEY_ID, id);
+    }
+    return id;
+  }
+
+  public void setPNINextKyberPreKeyId(int nextKyberPreKeyId) throws SQLException {
+    Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.PNI_NEXT_KYBER_PRE_KEY_ID, nextKyberPreKeyId);
+  }
+
+
+
 
   public Recipient getSelf() throws SQLException, IOException { return getDB().RecipientsTable.get(aci); }
 

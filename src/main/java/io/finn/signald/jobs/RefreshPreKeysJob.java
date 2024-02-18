@@ -95,10 +95,10 @@ public class RefreshPreKeysJob implements Job {
   private SignedPreKeyRecord generateSignedPreKey(IdentityKeyPair identityKey) throws SQLException, InvalidKeyException {
     ECKeyPair keyPair = Curve.generateKeyPair();
     byte[] signature = Curve.calculateSignature(identityKey.getPrivateKey(), keyPair.getPublicKey().serialize());
-    int signedPreKeyId = account.getNextSignedPreKeyId();
+    int signedPreKeyId = account.getACINextSignedPreKeyId();
     SignedPreKeyRecord record = new SignedPreKeyRecord(signedPreKeyId, System.currentTimeMillis(), keyPair, signature);
     account.getProtocolStore().storeSignedPreKey(signedPreKeyId, record);
-    account.setNextSignedPreKeyId((signedPreKeyId + 1) % Medium.MAX_VALUE);
+    account.setAciNextSignedPreKeyId((signedPreKeyId + 1) % Medium.MAX_VALUE);
     return record;
   }
 }

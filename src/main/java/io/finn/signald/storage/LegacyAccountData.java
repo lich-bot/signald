@@ -252,7 +252,7 @@ public class LegacyAccountData {
     }
 
     if (legacyNextSignedPreKeyId > -1) {
-      account.setNextSignedPreKeyId(legacyNextSignedPreKeyId);
+      account.setAciNextSignedPreKeyId(legacyNextSignedPreKeyId);
       legacyNextSignedPreKeyId = -1;
       needsSave = true;
     }

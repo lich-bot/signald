@@ -35,11 +35,14 @@ public interface IAccountDataTable {
     LAST_ACCOUNT_REFRESH, // server account updates when new device properties are added
     PRE_KEY_ID_OFFSET,
     NEXT_SIGNED_PRE_KEY_ID,
+    PNI_NEXT_SIGNED_PRE_KEY_ID,
     LAST_ACCOUNT_REPAIR, // fixes to historical signald bugs (see ../AccountRepair.java)
     STORAGE_KEY,
     STORAGE_MANIFEST_VERSION,
     PNI,
     PENDING_DELETION, // indicates the account is about to be deleted
+    ACI_NEXT_KYBER_PRE_KEY_ID,
+    PNI_NEXT_KYBER_PRE_KEY_ID,
   }
 
   // Default implementations for setting values
