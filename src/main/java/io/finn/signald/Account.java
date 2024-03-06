@@ -7,6 +7,8 @@
 
 package io.finn.signald;
 
+import static io.finn.signald.ServiceConfig.PREKEY_MAXIMUM_ID;
+
 import io.finn.signald.db.*;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
@@ -33,8 +35,6 @@ import org.whispersystems.signalservice.api.util.DeviceNameUtil;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.push.WhoAmIResponse;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
-
-import static io.finn.signald.ServiceConfig.PREKEY_MAXIMUM_ID;
 
 public class Account {
   private static final Logger logger = LogManager.getLogger();
@@ -236,9 +236,6 @@ public class Account {
   public void setPNINextKyberPreKeyId(int nextKyberPreKeyId) throws SQLException {
     Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.PNI_NEXT_KYBER_PRE_KEY_ID, nextKyberPreKeyId);
   }
-
-
-
 
   public Recipient getSelf() throws SQLException, IOException { return getDB().RecipientsTable.get(aci); }
 

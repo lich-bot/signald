@@ -7,7 +7,6 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import io.finn.signald.*;
 import io.finn.signald.Account;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
@@ -279,7 +278,7 @@ public class Common {
     Optional<IGroupsTable.IGroup> g;
     try {
       g = Database.Get(aci).GroupsTable.get(groupIdentifier);
-    } catch (SQLException | InvalidProtocolBufferException | InvalidInputException e) {
+    } catch (SQLException | InvalidInputException | IOException e) {
       throw new InternalError("error getting group", e);
     }
     if (g.isEmpty()) {
@@ -307,7 +306,7 @@ public class Common {
     Optional<IGroupsTable.IGroup> g;
     try {
       g = Database.Get(account.getACI()).GroupsTable.get(groupIdentifier);
-    } catch (SQLException | InvalidProtocolBufferException | InvalidInputException e) {
+    } catch (SQLException | InvalidInputException | IOException e) {
       throw new InternalError("error getting group", e);
     }
     if (g.isEmpty()) {

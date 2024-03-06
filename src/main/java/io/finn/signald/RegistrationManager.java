@@ -7,6 +7,8 @@
 
 package io.finn.signald;
 
+import static io.finn.signald.ServiceConfig.PREKEY_MAXIMUM_ID;
+
 import io.finn.signald.db.Database;
 import io.finn.signald.db.IAccountDataTable;
 import io.finn.signald.db.IPendingAccountDataTable;
@@ -48,8 +50,6 @@ import org.whispersystems.signalservice.internal.configuration.SignalServiceConf
 import org.whispersystems.signalservice.internal.push.RegistrationSessionMetadataResponse;
 import org.whispersystems.signalservice.internal.push.VerifyAccountResponse;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
-
-import static io.finn.signald.ServiceConfig.PREKEY_MAXIMUM_ID;
 
 public class RegistrationManager {
   private final static Logger logger = LogManager.getLogger();
@@ -200,20 +200,25 @@ public class RegistrationManager {
   }
 
   private PreKeyCollection generatePreKeyCollection(ServiceIdType type) throws SQLException {
-    IdentityKeyPair keyPair = new IdentityKeyPair(Database.Get().PendingAccountDataTable.getBytes(e164, type == ServiceIdType.ACI ? IPendingAccountDataTable.Key.ACI_IDENTITY_KEY_PAIR : IPendingAccountDataTable.Key.PNI_IDENTITY_KEY_PAIR));
+    IdentityKeyPair keyPair = new IdentityKeyPair(Database.Get().PendingAccountDataTable.getBytes(
+        e164, type == ServiceIdType.ACI ? IPendingAccountDataTable.Key.ACI_IDENTITY_KEY_PAIR : IPendingAccountDataTable.Key.PNI_IDENTITY_KEY_PAIR));
 
-    int nextSignedPreKeyId = Database.Get().PendingAccountDataTable.getInt(e164, type == ServiceIdType.ACI ? IPendingAccountDataTable.Key.ACI_NEXT_SIGNED_PRE_KEY_ID : IPendingAccountDataTable.Key.PNI_NEXT_SIGNED_PRE_KEY_ID);
-    if(nextSignedPreKeyId < 0) {
+    int nextSignedPreKeyId = Database.Get().PendingAccountDataTable.getInt(e164, type == ServiceIdType.ACI ? IPendingAccountDataTable.Key.ACI_NEXT_SIGNED_PRE_KEY_ID
+                                                                                                           : IPendingAccountDataTable.Key.PNI_NEXT_SIGNED_PRE_KEY_ID);
+    if (nextSignedPreKeyId < 0) {
       nextSignedPreKeyId = KeyUtil.getRandomInt(PREKEY_MAXIMUM_ID);
-      Database.Get().PendingAccountDataTable.set(e164, type == ServiceIdType.ACI ? IPendingAccountDataTable.Key.ACI_NEXT_SIGNED_PRE_KEY_ID : IPendingAccountDataTable.Key.PNI_NEXT_SIGNED_PRE_KEY_ID, nextSignedPreKeyId);
+      Database.Get().PendingAccountDataTable.set(
+          e164, type == ServiceIdType.ACI ? IPendingAccountDataTable.Key.ACI_NEXT_SIGNED_PRE_KEY_ID : IPendingAccountDataTable.Key.PNI_NEXT_SIGNED_PRE_KEY_ID, nextSignedPreKeyId);
     }
 
     SignedPreKeyRecord signedPreKey = generateSignedPreKeyRecord(nextSignedPreKeyId, keyPair.getPrivateKey());
 
-    int nextKyberPreKeyId = Database.Get().PendingAccountDataTable.getInt(e164, type == ServiceIdType.ACI ? IPendingAccountDataTable.Key.ACI_NEXT_KYBER_PRE_KEY_ID : IPendingAccountDataTable.Key.PNI_NEXT_KYBER_PRE_KEY_ID);
-    if(nextKyberPreKeyId < 0) {
+    int nextKyberPreKeyId = Database.Get().PendingAccountDataTable.getInt(e164, type == ServiceIdType.ACI ? IPendingAccountDataTable.Key.ACI_NEXT_KYBER_PRE_KEY_ID
+                                                                                                          : IPendingAccountDataTable.Key.PNI_NEXT_KYBER_PRE_KEY_ID);
+    if (nextKyberPreKeyId < 0) {
       nextKyberPreKeyId = KeyUtil.getRandomInt(PREKEY_MAXIMUM_ID);
-      Database.Get().PendingAccountDataTable.set(e164, type == ServiceIdType.ACI ? IPendingAccountDataTable.Key.ACI_NEXT_KYBER_PRE_KEY_ID : IPendingAccountDataTable.Key.PNI_NEXT_KYBER_PRE_KEY_ID, nextKyberPreKeyId);
+      Database.Get().PendingAccountDataTable.set(
+          e164, type == ServiceIdType.ACI ? IPendingAccountDataTable.Key.ACI_NEXT_KYBER_PRE_KEY_ID : IPendingAccountDataTable.Key.PNI_NEXT_KYBER_PRE_KEY_ID, nextKyberPreKeyId);
     }
     KyberPreKeyRecord lastResortKyberPreKey = generateKyberPreKeyRecord(nextKyberPreKeyId, keyPair.getPrivateKey());
 

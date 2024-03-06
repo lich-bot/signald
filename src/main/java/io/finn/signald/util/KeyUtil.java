@@ -7,6 +7,9 @@
 
 package io.finn.signald.util;
 
+import static io.finn.signald.ServiceConfig.PREKEY_MAXIMUM_ID;
+
+import java.security.SecureRandom;
 import org.asamk.signal.util.RandomUtils;
 import org.signal.libsignal.protocol.IdentityKey;
 import org.signal.libsignal.protocol.IdentityKeyPair;
@@ -15,10 +18,6 @@ import org.signal.libsignal.protocol.ecc.ECKeyPair;
 import org.signal.libsignal.protocol.ecc.ECPrivateKey;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
-
-import java.security.SecureRandom;
-
-import static io.finn.signald.ServiceConfig.PREKEY_MAXIMUM_ID;
 
 public class KeyUtil {
   private static final SecureRandom secureRandom = new SecureRandom();
@@ -31,9 +30,7 @@ public class KeyUtil {
     return new IdentityKeyPair(djbIdentityKey, djbPrivateKey);
   }
 
-  public static int getRandomInt(int bound) {
-    return secureRandom.nextInt(bound);
-  }
+  public static int getRandomInt(int bound) { return secureRandom.nextInt(bound); }
 
   public static ProfileKey generateProfileKey() throws InvalidInputException {
     byte[] key = new byte[32];

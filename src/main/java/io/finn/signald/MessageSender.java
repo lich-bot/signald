@@ -172,7 +172,7 @@ public class MessageSender {
       SenderKeyGroupEventsLogger sendEvents = new SenderKeyGroupEventsLogger();
       try {
         List<SendMessageResult> skdmResults = messageSender.sendGroupDataMessage(distributionId, recipientAddresses, access, isRecipientUpdate, ContentHint.DEFAULT,
-                                                                                 message.build(), sendEvents, isUrgent, isForStory);
+                                                                                 message.build(), sendEvents, isUrgent, isForStory, null, null);
         Set<ServiceId> networkFailAddressesForRetry = new HashSet<>();
         if (sendEvents.isSyncMessageSent()) {
           isRecipientUpdate = true; // prevent duplicate sync messages from being sent
@@ -220,8 +220,8 @@ public class MessageSender {
 
           SenderKeyGroupEventsLogger sendEventsRetry = new SenderKeyGroupEventsLogger();
 
-          List<SendMessageResult> senderKeyRetryResults = messageSender.sendGroupDataMessage(distributionId, retryRecipientAddresses, access, isRecipientUpdate,
-                                                                                             ContentHint.DEFAULT, message.build(), sendEventsRetry, isUrgent, isForStory);
+          List<SendMessageResult> senderKeyRetryResults = messageSender.sendGroupDataMessage(
+              distributionId, retryRecipientAddresses, access, isRecipientUpdate, ContentHint.DEFAULT, message.build(), sendEventsRetry, isUrgent, isForStory, null, null);
           if (!isRecipientUpdate && sendEventsRetry.isSyncMessageSent()) {
             isRecipientUpdate = true;
           }
