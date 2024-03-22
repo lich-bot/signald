@@ -33,6 +33,8 @@ import org.whispersystems.signalservice.api.crypto.UnidentifiedAccessPair;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
+import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
+import org.whispersystems.signalservice.api.messages.multidevice.ReadMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
 import org.whispersystems.signalservice.api.push.DistributionId;
 import org.whispersystems.signalservice.api.push.ServiceId;
@@ -325,6 +327,31 @@ public class MessageSender {
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
       account.getProtocolStore().handleUntrustedIdentityException(e);
       throw e;
+    }
+  }
+
+  public SendMessageResult sendReceipt(SignalServiceReceiptMessage message, Recipient recipient)
+      throws IOException, SQLException, NoSuchAccountException, ServerNotFoundException, InvalidProxyException {
+    SignalServiceAddress recipientAddress = recipient.getAddress();
+    UnidentifiedAccessUtil unidentifiedAccessUtil = new UnidentifiedAccessUtil(account.getACI());
+    try {
+      SignalServiceMessageSender messageSender = account.getSignalDependencies().getMessageSender();
+      try (SignalSessionLock.Lock ignored = account.getSignalDependencies().getSessionLock().acquire()) {
+        messageSender.sendReceipt(recipientAddress, unidentifiedAccessUtil.getAccessPairFor(recipient), message, recipient.isNeedsPniSignature());
+      }
+      if (message.getType() == SignalServiceReceiptMessage.Type.READ) {
+        List<ReadMessage> readMessages = new LinkedList<>();
+        for (Long ts : message.getTimestamps()) {
+          readMessages.add(new ReadMessage(recipientAddress.getServiceId(), ts));
+        }
+        try (SignalSessionLock.Lock ignored = account.getSignalDependencies().getSessionLock().acquire()) {
+          messageSender.sendSyncMessage(SignalServiceSyncMessage.forRead(readMessages), unidentifiedAccessUtil.getAccessPairFor(self));
+        }
+      }
+      return null;
+    } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
+      account.getProtocolStore().handleUntrustedIdentityException(e);
+      return SendMessageResult.identityFailure(recipientAddress, e.getIdentityKey());
     }
   }
 

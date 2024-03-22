@@ -12,15 +12,15 @@ import io.finn.signald.db.*;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
-import io.finn.signald.jobs.BackgroundJobRunnerThread;
-import io.finn.signald.jobs.ResetSessionJob;
-import io.finn.signald.jobs.SendRetryMessageRequestJob;
+import io.finn.signald.jobs.*;
+import io.finn.signald.util.FileUtil;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.Histogram;
 import io.sentry.Sentry;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
+import java.nio.file.Files;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.Semaphore;
@@ -32,15 +32,24 @@ import org.signal.libsignal.metadata.*;
 import org.signal.libsignal.metadata.certificate.CertificateValidator;
 import org.signal.libsignal.protocol.*;
 import org.signal.libsignal.protocol.ecc.ECPublicKey;
+import org.signal.libsignal.protocol.groups.GroupSessionBuilder;
+import org.signal.libsignal.protocol.message.DecryptionErrorMessage;
+import org.signal.libsignal.protocol.message.SenderKeyDistributionMessage;
+import org.signal.libsignal.zkgroup.InvalidInputException;
+import org.signal.libsignal.zkgroup.VerificationFailedException;
+import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.InvalidMessageStructureException;
+import org.whispersystems.signalservice.api.SignalServiceMessageReceiver;
 import org.whispersystems.signalservice.api.SignalWebSocket;
+import org.whispersystems.signalservice.api.crypto.SignalGroupSessionBuilder;
 import org.whispersystems.signalservice.api.crypto.SignalServiceCipher;
 import org.whispersystems.signalservice.api.crypto.SignalServiceCipherResult;
-import org.whispersystems.signalservice.api.messages.EnvelopeContentValidator;
-import org.whispersystems.signalservice.api.messages.EnvelopeResponse;
-import org.whispersystems.signalservice.api.messages.SignalServiceContent;
-import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
+import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
+import org.whispersystems.signalservice.api.messages.*;
+import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.push.exceptions.MissingConfigurationException;
 import org.whispersystems.signalservice.api.websocket.WebSocketConnectionState;
 import org.whispersystems.signalservice.internal.push.Envelope;
 import org.whispersystems.signalservice.internal.push.UnsupportedDataMessageException;
@@ -237,7 +246,9 @@ public class MessageReceiver implements Runnable {
 
     try {
       while (true) {
-        processQueuedMessages();
+        for (StoredEnvelope storedEnvelope = messageQueueTable.nextEnvelope(); storedEnvelope != null; storedEnvelope = messageQueueTable.nextEnvelope()) {
+          processNextMessage(storedEnvelope);
+        }
         try {
           websocket.readMessageBatch(3600000, 1, envelopeResponses -> {
             logger.debug("received a batch of {} messages", envelopeResponses.size());
@@ -264,18 +275,18 @@ public class MessageReceiver implements Runnable {
     }
   }
 
-  private void processQueuedMessages() throws SQLException {
-    for (StoredEnvelope storedEnvelope = messageQueueTable.nextEnvelope(); storedEnvelope != null; storedEnvelope = messageQueueTable.nextEnvelope()) {
-      processNextMessage(storedEnvelope);
+  private void processNextMessage(StoredEnvelope storedEnvelope) throws SQLException {
+    if (storedEnvelope.envelope.isReceipt()) {
+      // wat do?
+      return;
     }
-  }
 
-  private boolean processNextMessage(StoredEnvelope storedEnvelope) throws SQLException {
     try {
       // TODO: signal-cli checks if storedEnvelope.envelope.isReceipt() and skips a lot of this if it is
       // https://github.com/AsamK/signal-cli/blob/375bdb79485ec90beb9a154112821a4657740b7a/lib/src/main/java/org/asamk/signal/manager/helper/IncomingMessageHandler.java#L101
       SignalServiceCipherResult cipherResult = decryptMessage(storedEnvelope.envelope);
       SignalServiceContent content = validate(storedEnvelope.envelope, cipherResult);
+      handleIncomingMessage(storedEnvelope.envelope, content);
       this.sockets.broadcastIncomingMessage(storedEnvelope.envelope, content);
       receivedMessagesCounter.labels(this.account.getACI().toString(), "").inc();
     } catch (Exception e) {
@@ -296,7 +307,6 @@ public class MessageReceiver implements Runnable {
       receivedMessagesCounter.labels(this.account.getACI().toString(), errorLabel).inc();
     }
     messageQueueTable.deleteEnvelope(storedEnvelope.databaseId);
-    return true;
   }
 
   private SignalServiceCipherResult decryptMessage(SignalServiceEnvelope envelope)
@@ -385,6 +395,220 @@ public class MessageReceiver implements Runnable {
     }
 
     return SignalServiceContent.Companion.createFrom(account.getE164(), envelope.getProto(), envelopeMetadata, content, envelope.getServerDeliveredTimestamp());
+  }
+
+  private void handleIncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content) throws SQLException, IOException, NoSuchAccountException,
+                                                                                                          ServerNotFoundException, InvalidProxyException, InvalidInputException,
+                                                                                                          MissingConfigurationException, VerificationFailedException {
+    Database db = account.getDB();
+    SignalDependencies signalDependencies = account.getSignalDependencies();
+
+    SignalServiceAddress sourceSignalServiceAddress;
+    if (envelope.getSourceServiceId().isPresent()) {
+      sourceSignalServiceAddress = new SignalServiceAddress(ServiceId.parseOrNull(envelope.getSourceServiceId().get()));
+    } else {
+      sourceSignalServiceAddress = content.getSender();
+    }
+    Recipient source = db.RecipientsTable.get(sourceSignalServiceAddress);
+    int sourceDeviceId = envelope.isUnidentifiedSender() ? envelope.getSourceDevice() : content.getSenderDevice();
+
+    if (content.getCallMessage().isPresent()) {
+      // TODO
+    }
+
+    if (content.getDataMessage().isPresent()) {
+      if (content.isNeedsReceipt()) {
+        BackgroundJobRunnerThread.queue(new SendDeliveryReceiptJob(account, source, content.getTimestamp()));
+      }
+      SignalServiceDataMessage message = content.getDataMessage().get();
+      handleSignalServiceDataMessage(message, false, source, account.getSelf());
+    }
+
+    if (content.getDecryptionErrorMessage().isPresent()) {
+      DecryptionErrorMessage message = content.getDecryptionErrorMessage().get();
+      logger.debug("Received a decryption error message (resend request for {})", message.getTimestamp());
+      if (message.getRatchetKey().isPresent()) {
+        if (message.getDeviceId() == account.getDeviceId() && account.getProtocolStore().isCurrentRatchetKey(source, sourceDeviceId, message.getRatchetKey().get())) {
+          logger.debug("Resetting the session with sender");
+          BackgroundJobRunnerThread.queue(new ResetSessionJob(account, source));
+        }
+      } else {
+        logger.debug("Reset shared sender keys with this recipient");
+        db.SenderKeySharedTable.deleteSharedWith(source);
+      }
+    }
+
+    if (content.getEditMessage().isPresent()) {
+      // TODO
+    }
+
+    if (content.getPniSignatureMessage().isPresent()) {
+      // TODO
+    }
+
+    if (content.getReceiptMessage().isPresent()) {
+      // TODO
+    }
+
+    if (content.getSenderKeyDistributionMessage().isPresent()) {
+      logger.debug("handling sender key distribution message from {}", Util.redact(content.getSender().getIdentifier()));
+      SenderKeyDistributionMessage message = content.getSenderKeyDistributionMessage().get();
+      SignalProtocolAddress protocolAddress = sourceSignalServiceAddress.getServiceId().toProtocolAddress(sourceDeviceId);
+      new SignalGroupSessionBuilder(signalDependencies.getSessionLock(), new GroupSessionBuilder(account.getProtocolStore())).process(protocolAddress, message);
+    }
+
+    if (content.getStoryMessage().isPresent()) {
+      // TODO
+    }
+
+    if (content.getSyncMessage().isPresent()) {
+      // TODO
+    }
+
+    if (content.getTypingMessage().isPresent()) {
+      // TODO
+    }
+
+    if (envelope.isPreKeySignalMessage()) {
+      BackgroundJobRunnerThread.queue(new RefreshPreKeysJob(account));
+    }
+  }
+
+  private void handleSignalServiceDataMessage(SignalServiceDataMessage message, boolean isSync, Recipient source, Recipient destination)
+      throws MissingConfigurationException, IOException, VerificationFailedException, SQLException, InvalidInputException {
+
+    if (message.getGroupContext().isPresent()) {
+      SignalServiceGroupContext groupContext = message.getGroupContext().get();
+      if (groupContext.getGroupV2().isPresent()) {
+        SignalServiceGroupV2 group = message.getGroupContext().get().getGroupV2().get();
+        var localState = Database.Get(account.getACI()).GroupsTable.get(group);
+
+        if (localState.isEmpty() || localState.get().getRevision() < group.getRevision()) {
+          try {
+            account.getGroups().getGroup(group);
+          } catch (InvalidGroupStateException | InvalidProxyException | NoSuchAccountException | ServerNotFoundException e) {
+            logger.warn("error fetching state of incoming group", e);
+          }
+        }
+      }
+    } else {
+      account.getDB().ContactsTable.update(isSync ? destination : source, null, null, null, message.getExpiresInSeconds(), null);
+    }
+
+    if (message.isEndSession()) {
+      handleEndSession(isSync ? destination : source);
+    }
+
+    if (message.getAttachments().isPresent()) {
+      for (SignalServiceAttachment attachment : message.getAttachments().get()) {
+        if (attachment.isPointer()) {
+          try {
+            retrieveAttachment(attachment.asPointer());
+          } catch (IOException | InvalidMessageException | NoSuchAccountException | ServerNotFoundException | InvalidProxyException e) {
+            logger.warn("Failed to retrieve attachment (" + attachment.asPointer().getRemoteId() + "): " + e.getMessage());
+          }
+        }
+      }
+    }
+
+    if (message.getPreviews().isPresent()) {
+      for (SignalServicePreview preview : message.getPreviews().get()) {
+        if (preview.getImage().isPresent()) {
+          SignalServiceAttachment attachment = preview.getImage().get();
+          if (attachment.isPointer()) {
+            try {
+              retrieveAttachment(attachment.asPointer());
+            } catch (IOException | InvalidMessageException | NoSuchAccountException | ServerNotFoundException | InvalidProxyException e) {
+              logger.warn("Failed to retrieve preview attachment ({}): {}", attachment.asPointer().getRemoteId(), e);
+            }
+          }
+        }
+      }
+    }
+
+    if (message.getProfileKey().isPresent() && message.getProfileKey().get().length == 32) {
+      final ProfileKey profileKey;
+      try {
+        profileKey = new ProfileKey(message.getProfileKey().get());
+      } catch (InvalidInputException e) {
+        throw new AssertionError(e);
+      }
+      account.getDB().ProfileKeysTable.setProfileKey(source, profileKey);
+      RefreshProfileJob.queueIfNeeded(account, source);
+    }
+
+    if (message.getSticker().isPresent()) {
+      DownloadStickerJob job = new DownloadStickerJob(account.getACI(), message.getSticker().get());
+      if (job.needsDownload()) {
+        try {
+          job.run();
+        } catch (NoSuchAccountException | InvalidMessageException | ServerNotFoundException | InvalidKeyException | InvalidProxyException e) {
+          logger.error("Sticker failed to download");
+          Sentry.captureException(e);
+        }
+      }
+    }
+
+    if (message.getSharedContacts().isPresent()) {
+      for (var contact : message.getSharedContacts().get()) {
+        if (contact.getAvatar().isPresent()) {
+          try {
+            retrieveAttachment(contact.getAvatar().get().getAttachment().asPointer());
+          } catch (InvalidMessageException | NoSuchAccountException | ServerNotFoundException | InvalidProxyException e) {
+            logger.error("error downloading profile picture for shared account: ", e);
+          }
+        }
+      }
+    }
+  }
+
+  private void handleEndSession(Recipient address) { account.getProtocolStore().deleteAllSessions(address); }
+
+  private void retrieveAttachment(SignalServiceAttachmentPointer pointer)
+      throws IOException, InvalidMessageException, MissingConfigurationException, NoSuchAccountException, SQLException, ServerNotFoundException, InvalidProxyException {
+    retrieveAttachment(pointer, true);
+  }
+
+  public void retrieveAttachment(SignalServiceAttachmentPointer pointer, boolean storePreview)
+      throws IOException, InvalidMessageException, MissingConfigurationException, NoSuchAccountException, SQLException, ServerNotFoundException, InvalidProxyException {
+    if (storePreview && pointer.getPreview().isPresent()) {
+      File previewFile = FileUtil.attachmentFile(pointer.getRemoteId(), "preview");
+      try (OutputStream output = new FileOutputStream(previewFile)) {
+        byte[] preview = pointer.getPreview().get();
+        output.write(preview, 0, preview.length);
+      } catch (FileNotFoundException e) {
+        logger.catching(e);
+        return;
+      }
+    }
+
+    retrieveAttachment(pointer, FileUtil.attachmentFile(pointer.getRemoteId()));
+  }
+
+  public void retrieveAttachment(SignalServiceAttachmentPointer pointer, File destination)
+      throws IOException, InvalidMessageException, MissingConfigurationException, NoSuchAccountException, SQLException, ServerNotFoundException, InvalidProxyException {
+
+    final SignalServiceMessageReceiver messageReceiver = account.getSignalDependencies().getMessageReceiver();
+    File tmpFile = FileUtil.createTempFile();
+
+    try (InputStream input = messageReceiver.retrieveAttachment(pointer, tmpFile, ServiceConfig.MAX_ATTACHMENT_SIZE)) {
+      try (OutputStream output = new FileOutputStream(destination)) {
+        byte[] buffer = new byte[4096];
+        int read;
+
+        while ((read = input.read(buffer)) != -1) {
+          output.write(buffer, 0, read);
+        }
+      } catch (FileNotFoundException e) {
+        logger.catching(e);
+      }
+    } finally {
+      try {
+        Files.delete(tmpFile.toPath());
+      } catch (IOException e) {
+        logger.warn("Failed to delete received attachment temp file “" + tmpFile + "”: " + e.getMessage());
+      }
+    }
   }
 
   static class SocketManager {

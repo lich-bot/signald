@@ -18,7 +18,10 @@ import java.util.EnumSet;
 import java.util.Optional;
 import java.util.Set;
 import org.apache.logging.log4j.LogManager;
+import org.thoughtcrime.securesms.util.Hex;
+import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentRemoteId;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStream;
+import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 // FileUtil should be used for all disk operations. Not everything has been moved to this yet, move stuff if you find it
@@ -89,6 +92,12 @@ public class FileUtil {
     return new File(avatarsPath, "contact-" + address.getIdentifier());
   }
 
+  public static File getStickerFile(SignalServiceDataMessage.Sticker sticker) {
+    String packID = Hex.toStringCondensed(sticker.getPackId());
+    String stickerID = String.valueOf(sticker.getStickerId());
+    return new File(stickersPath + "/" + packID, stickerID);
+  }
+
   private static SignalServiceAttachmentStream createAttachment(File attachmentFile) throws IOException {
     InputStream attachmentStream = new FileInputStream(attachmentFile);
     final long attachmentSize = attachmentFile.length();
@@ -99,4 +108,8 @@ public class FileUtil {
     return new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), false, false, false, false, Optional.empty(), 0, 0,
                                              System.currentTimeMillis(), Optional.empty(), Optional.empty(), null, null, Optional.empty());
   }
+
+  public static File attachmentFile(SignalServiceAttachmentRemoteId attachmentId) { return new File(attachmentsPath, attachmentId.toString()); }
+
+  public static File attachmentFile(SignalServiceAttachmentRemoteId attachmentId, String suffix) { return new File(attachmentsPath, attachmentId.toString() + "." + suffix); }
 }
