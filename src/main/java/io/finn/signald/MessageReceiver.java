@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.asamk.signal.TrustLevel;
 import org.signal.libsignal.metadata.*;
 import org.signal.libsignal.metadata.certificate.CertificateValidator;
 import org.signal.libsignal.protocol.*;
@@ -46,12 +47,14 @@ import org.whispersystems.signalservice.api.crypto.SignalServiceCipher;
 import org.whispersystems.signalservice.api.crypto.SignalServiceCipherResult;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.*;
+import org.whispersystems.signalservice.api.messages.multidevice.*;
 import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.MissingConfigurationException;
+import org.whispersystems.signalservice.api.storage.StorageKey;
 import org.whispersystems.signalservice.api.websocket.WebSocketConnectionState;
-import org.whispersystems.signalservice.internal.push.Envelope;
+import org.whispersystems.signalservice.internal.push.SyncMessage;
 import org.whispersystems.signalservice.internal.push.UnsupportedDataMessageException;
 
 public class MessageReceiver implements Runnable {
@@ -397,9 +400,9 @@ public class MessageReceiver implements Runnable {
     return SignalServiceContent.Companion.createFrom(account.getE164(), envelope.getProto(), envelopeMetadata, content, envelope.getServerDeliveredTimestamp());
   }
 
-  private void handleIncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content) throws SQLException, IOException, NoSuchAccountException,
-                                                                                                          ServerNotFoundException, InvalidProxyException, InvalidInputException,
-                                                                                                          MissingConfigurationException, VerificationFailedException {
+  private void handleIncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content)
+      throws SQLException, IOException, NoSuchAccountException, ServerNotFoundException, InvalidProxyException, InvalidInputException, MissingConfigurationException,
+             VerificationFailedException, InvalidMessageException {
     Database db = account.getDB();
     SignalDependencies signalDependencies = account.getSignalDependencies();
 
@@ -411,10 +414,6 @@ public class MessageReceiver implements Runnable {
     }
     Recipient source = db.RecipientsTable.get(sourceSignalServiceAddress);
     int sourceDeviceId = envelope.isUnidentifiedSender() ? envelope.getSourceDevice() : content.getSenderDevice();
-
-    if (content.getCallMessage().isPresent()) {
-      // TODO
-    }
 
     if (content.getDataMessage().isPresent()) {
       if (content.isNeedsReceipt()) {
@@ -458,15 +457,15 @@ public class MessageReceiver implements Runnable {
     }
 
     if (content.getStoryMessage().isPresent()) {
-      // TODO
+      // TODO: download any story attachments
+      SignalServiceStoryMessage story = content.getStoryMessage().get();
+      if (story.getFileAttachment().isPresent()) {
+        retrieveAttachment(story.getFileAttachment().get());
+      }
     }
 
     if (content.getSyncMessage().isPresent()) {
-      // TODO
-    }
-
-    if (content.getTypingMessage().isPresent()) {
-      // TODO
+      handleSyncMessage(content);
     }
 
     if (envelope.isPreKeySignalMessage()) {
@@ -501,12 +500,11 @@ public class MessageReceiver implements Runnable {
 
     if (message.getAttachments().isPresent()) {
       for (SignalServiceAttachment attachment : message.getAttachments().get()) {
-        if (attachment.isPointer()) {
-          try {
-            retrieveAttachment(attachment.asPointer());
-          } catch (IOException | InvalidMessageException | NoSuchAccountException | ServerNotFoundException | InvalidProxyException e) {
-            logger.warn("Failed to retrieve attachment (" + attachment.asPointer().getRemoteId() + "): " + e.getMessage());
-          }
+        try {
+          retrieveAttachment(attachment);
+        } catch (IOException | InvalidMessageException | NoSuchAccountException | ServerNotFoundException | InvalidProxyException e) {
+          String id = attachment.isPointer() ? attachment.asPointer().getRemoteId().toString() : "";
+          logger.warn("Failed to retrieve attachment ({}): {}", id, e.getMessage());
         }
       }
     }
@@ -515,12 +513,11 @@ public class MessageReceiver implements Runnable {
       for (SignalServicePreview preview : message.getPreviews().get()) {
         if (preview.getImage().isPresent()) {
           SignalServiceAttachment attachment = preview.getImage().get();
-          if (attachment.isPointer()) {
-            try {
-              retrieveAttachment(attachment.asPointer());
-            } catch (IOException | InvalidMessageException | NoSuchAccountException | ServerNotFoundException | InvalidProxyException e) {
-              logger.warn("Failed to retrieve preview attachment ({}): {}", attachment.asPointer().getRemoteId(), e);
-            }
+          try {
+            retrieveAttachment(attachment);
+          } catch (IOException | InvalidMessageException | NoSuchAccountException | ServerNotFoundException | InvalidProxyException e) {
+            String id = attachment.isPointer() ? attachment.asPointer().getRemoteId().toString() : "";
+            logger.warn("Failed to retrieve preview attachment ({}): {}", id, e);
           }
         }
       }
@@ -553,7 +550,7 @@ public class MessageReceiver implements Runnable {
       for (var contact : message.getSharedContacts().get()) {
         if (contact.getAvatar().isPresent()) {
           try {
-            retrieveAttachment(contact.getAvatar().get().getAttachment().asPointer());
+            retrieveAttachment(contact.getAvatar().get().getAttachment());
           } catch (InvalidMessageException | NoSuchAccountException | ServerNotFoundException | InvalidProxyException e) {
             logger.error("error downloading profile picture for shared account: ", e);
           }
@@ -562,53 +559,182 @@ public class MessageReceiver implements Runnable {
     }
   }
 
-  private void handleEndSession(Recipient address) { account.getProtocolStore().deleteAllSessions(address); }
+  private void handleSyncMessage(SignalServiceContent content) throws SQLException, IOException, InvalidInputException, MissingConfigurationException, VerificationFailedException {
+    if (content.getSyncMessage().isEmpty()) {
+      return;
+    }
 
-  private void retrieveAttachment(SignalServiceAttachmentPointer pointer)
-      throws IOException, InvalidMessageException, MissingConfigurationException, NoSuchAccountException, SQLException, ServerNotFoundException, InvalidProxyException {
-    retrieveAttachment(pointer, true);
+    SignalServiceSyncMessage syncMessage = content.getSyncMessage().get();
+    Database db = account.getDB();
+
+    account.setMultiDevice(true);
+    if (syncMessage.getSent().isPresent()) {
+      SentTranscriptMessage sentTranscriptMessage = syncMessage.getSent().get();
+      if (sentTranscriptMessage.getDataMessage().isPresent()) {
+        SignalServiceDataMessage message = sentTranscriptMessage.getDataMessage().get();
+
+        Recipient sendMessageRecipient = null;
+        if (syncMessage.getSent().get().getDestination().isPresent()) {
+          sendMessageRecipient = db.RecipientsTable.get(syncMessage.getSent().get().getDestination().get());
+        }
+
+        handleSignalServiceDataMessage(message, true, account.getSelf(), sendMessageRecipient);
+      }
+    }
+
+    if (syncMessage.getRequest().isPresent() && account.getDeviceId() == SignalServiceAddress.DEFAULT_DEVICE_ID) {
+      RequestMessage rm = syncMessage.getRequest().get();
+      if (rm.isContactsRequest()) {
+        BackgroundJobRunnerThread.queue(new SendContactsSyncJob(account));
+      }
+      logger.info("received contact sync request from device " + content.getSenderDevice());
+    }
+
+    if (syncMessage.getBlockedList().isPresent()) {
+      // TODO store list of blocked numbers
+      logger.info("received list of blocked users from device " + content.getSenderDevice());
+    }
+
+    if (syncMessage.getContacts().isPresent()) {
+      File tmpFile = null;
+      try {
+        tmpFile = FileUtil.createTempFile();
+        final ContactsMessage contactsMessage = syncMessage.getContacts().get();
+        try (InputStream attachmentAsStream = retrieveAttachmentAsStream(contactsMessage.getContactsStream().asPointer(), tmpFile)) {
+          DeviceContactsInputStream s = new DeviceContactsInputStream(attachmentAsStream);
+          DeviceContact c;
+          while ((c = s.read()) != null) {
+            Recipient recipient = db.RecipientsTable.get(c.getAddress());
+            db.ContactsTable.update(c);
+            if (c.getAvatar().isPresent()) {
+              retrieveAttachment((SignalServiceAttachment)c.getAvatar().get(), FileUtil.getContactAvatarFile(recipient));
+            }
+            if (c.getProfileKey().isPresent()) {
+              db.ProfileKeysTable.setProfileKey(recipient, c.getProfileKey().get());
+            }
+          }
+        }
+        logger.info("received contacts from device " + content.getSenderDevice());
+      } catch (Exception e) {
+        logger.catching(e);
+      } finally {
+        if (tmpFile != null) {
+          try {
+            Files.delete(tmpFile.toPath());
+          } catch (IOException e) {
+            logger.warn("Failed to delete received contacts temp file \"" + tmpFile + "\": " + e.getMessage());
+          }
+        }
+      }
+    }
+
+    if (syncMessage.getVerified().isPresent()) {
+      VerifiedMessage verifiedMessage = syncMessage.getVerified().get();
+      Recipient destination = db.RecipientsTable.get(verifiedMessage.getDestination());
+      TrustLevel trustLevel = TrustLevel.fromVerifiedState(verifiedMessage.getVerified());
+      account.getProtocolStore().saveIdentity(destination, verifiedMessage.getIdentityKey(), trustLevel);
+      logger.info("received verified state update from device {}", content.getSenderDevice());
+    }
+
+    if (syncMessage.getKeys().isPresent()) {
+      KeysMessage keysMessage = syncMessage.getKeys().get();
+      logger.info("received storage keys from device " + content.getSenderDevice());
+      if (keysMessage.getStorageService().isPresent()) {
+        StorageKey storageKey = keysMessage.getStorageService().get();
+        account.setStorageKey(storageKey);
+        BackgroundJobRunnerThread.queue(new SyncStorageDataJob(account));
+      }
+    }
+
+    if (syncMessage.getFetchType().isPresent()) {
+      switch (syncMessage.getFetchType().get()) {
+      case LOCAL_PROFILE:
+        BackgroundJobRunnerThread.queue(new RefreshProfileJob(account, account.getSelf()));
+        break;
+      case STORAGE_MANIFEST:
+        BackgroundJobRunnerThread.queue(new SyncStorageDataJob(account));
+        break;
+      }
+      logger.info("received {} fetch request device {}", syncMessage.getFetchType().get().name(), content.getSenderDevice());
+    }
+
+    //      if (syncMessage.getPniIdentity().isPresent()) {
+    //        SyncMessage.PniIdentity pniIdentity = syncMessage.getPniIdentity().get();
+    //        IdentityKey pniIdentityKey = new IdentityKey(pniIdentity.getPublicKey().toByteArray());
+    //        ECPrivateKey pniPrivateKey = Curve.decodePrivatePoint(pniIdentity.getPrivateKey().toByteArray());
+    //        account.setPNIIdentityKeyPair(new IdentityKeyPair(pniIdentityKey, pniPrivateKey));
+    //        logger.info("received PNI identity key from device {}", content.getSenderDevice());
+    //      }
+    if (syncMessage.getPniChangeNumber().isPresent()) {
+      SyncMessage.PniChangeNumber pniChangeNumber = syncMessage.getPniChangeNumber().get();
+      //        account.setPniRegistrationId(pniChangeNumber.registrationId);
+      //        account.setPNI(ServiceId.PNI.from());
+      logger.info("account phone number has changed to {}", Util.redact(pniChangeNumber.newE164));
+    }
   }
 
-  public void retrieveAttachment(SignalServiceAttachmentPointer pointer, boolean storePreview)
-      throws IOException, InvalidMessageException, MissingConfigurationException, NoSuchAccountException, SQLException, ServerNotFoundException, InvalidProxyException {
-    if (storePreview && pointer.getPreview().isPresent()) {
-      File previewFile = FileUtil.attachmentFile(pointer.getRemoteId(), "preview");
+  private void handleEndSession(Recipient address) { account.getProtocolStore().deleteAllSessions(address); }
+
+  public void retrieveAttachment(SignalServiceAttachment attachment)
+      throws NoSuchAccountException, InvalidMessageException, MissingConfigurationException, SQLException, IOException, ServerNotFoundException, InvalidProxyException {
+    if (!attachment.isPointer()) {
+      logger.warn("asked to download attachment that is a stream, but no filename provided");
+      return;
+    }
+
+    File destination = FileUtil.attachmentFile(attachment.asPointer().getRemoteId());
+    retrieveAttachment(attachment, destination);
+  }
+
+  public void retrieveAttachment(SignalServiceAttachment attachment, File destination)
+      throws NoSuchAccountException, InvalidMessageException, MissingConfigurationException, SQLException, IOException, ServerNotFoundException, InvalidProxyException {
+    if (attachment.isPointer() && attachment.asPointer().getPreview().isPresent()) {
+      // store preview
+      File previewFile = FileUtil.attachmentFile(attachment.asPointer().getRemoteId(), "preview");
       try (OutputStream output = new FileOutputStream(previewFile)) {
-        byte[] preview = pointer.getPreview().get();
+        byte[] preview = attachment.asPointer().getPreview().get();
         output.write(preview, 0, preview.length);
       } catch (FileNotFoundException e) {
         logger.catching(e);
-        return;
       }
     }
 
-    retrieveAttachment(pointer, FileUtil.attachmentFile(pointer.getRemoteId()));
+    if (attachment.isPointer()) {
+      final File tmpFile = FileUtil.createTempFile();
+      final SignalServiceMessageReceiver messageReceiver = account.getSignalDependencies().getMessageReceiver();
+      try (InputStream input = messageReceiver.retrieveAttachment(attachment.asPointer(), tmpFile, ServiceConfig.MAX_ATTACHMENT_SIZE)) {
+        saveAttachment(input, destination);
+      } finally {
+        try {
+          Files.delete(tmpFile.toPath());
+        } catch (IOException e) {
+          logger.warn("Failed to delete received attachment temp file \"{}\": {}", tmpFile, e.getMessage());
+        }
+      }
+    } else {
+      try (SignalServiceAttachmentStream stream = attachment.asStream()) {
+        try (InputStream input = stream.getInputStream()) {
+          saveAttachment(input, destination);
+        }
+      }
+    }
   }
 
-  public void retrieveAttachment(SignalServiceAttachmentPointer pointer, File destination)
-      throws IOException, InvalidMessageException, MissingConfigurationException, NoSuchAccountException, SQLException, ServerNotFoundException, InvalidProxyException {
+  private void saveAttachment(InputStream input, File destination) throws IOException {
+    try (OutputStream output = new FileOutputStream(destination)) {
+      byte[] buffer = new byte[4096];
+      int read;
 
-    final SignalServiceMessageReceiver messageReceiver = account.getSignalDependencies().getMessageReceiver();
-    File tmpFile = FileUtil.createTempFile();
-
-    try (InputStream input = messageReceiver.retrieveAttachment(pointer, tmpFile, ServiceConfig.MAX_ATTACHMENT_SIZE)) {
-      try (OutputStream output = new FileOutputStream(destination)) {
-        byte[] buffer = new byte[4096];
-        int read;
-
-        while ((read = input.read(buffer)) != -1) {
-          output.write(buffer, 0, read);
-        }
-      } catch (FileNotFoundException e) {
-        logger.catching(e);
-      }
-    } finally {
-      try {
-        Files.delete(tmpFile.toPath());
-      } catch (IOException e) {
-        logger.warn("Failed to delete received attachment temp file “" + tmpFile + "”: " + e.getMessage());
+      while ((read = input.read(buffer)) != -1) {
+        output.write(buffer, 0, read);
       }
     }
+  }
+
+  private InputStream retrieveAttachmentAsStream(SignalServiceAttachmentPointer pointer, File tmpFile)
+      throws IOException, InvalidMessageException, MissingConfigurationException, NoSuchAccountException, SQLException, ServerNotFoundException, InvalidProxyException {
+    final SignalServiceMessageReceiver messageReceiver = account.getSignalDependencies().getMessageReceiver();
+    return messageReceiver.retrieveAttachment(pointer, tmpFile, ServiceConfig.MAX_ATTACHMENT_SIZE);
   }
 
   static class SocketManager {

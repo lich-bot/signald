@@ -24,7 +24,6 @@ import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.exceptions.MissingConfigurationException;
 
 public class DownloadStickerJob implements Job {
-  //  Manager manager;
   ServiceId.ACI aci;
   SignalServiceDataMessage.Sticker sticker;
 
@@ -37,7 +36,7 @@ public class DownloadStickerJob implements Job {
   public void run() throws IOException, SQLException, NoSuchAccountException, MissingConfigurationException, InvalidMessageException, ServerNotFoundException, InvalidKeyException,
                            InvalidProxyException {
     File stickerFile = FileUtil.getStickerFile(sticker);
-    new MessageReceiver(aci).retrieveAttachment(sticker.getAttachment().asPointer(), false);
+    new MessageReceiver(aci).retrieveAttachment(sticker.getAttachment(), stickerFile);
   }
 
   public boolean needsDownload() { return !Manager.getStickerFile(sticker).exists(); }
