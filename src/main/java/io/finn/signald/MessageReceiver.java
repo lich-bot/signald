@@ -457,7 +457,6 @@ public class MessageReceiver implements Runnable {
     }
 
     if (content.getStoryMessage().isPresent()) {
-      // TODO: download any story attachments
       SignalServiceStoryMessage story = content.getStoryMessage().get();
       if (story.getFileAttachment().isPresent()) {
         retrieveAttachment(story.getFileAttachment().get());

@@ -13,10 +13,7 @@ import io.finn.signald.db.Recipient;
 import io.finn.signald.util.AddressUtil;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -196,7 +193,7 @@ public class SessionsTable implements ISessionsTable {
     }
   }
 
-  public Set<SignalProtocolAddress> getAllAddressesWithActiveSessions(List<String> list) {
+  public Map<SignalProtocolAddress, SessionRecord> getAllAddressesWithActiveSessions(List<String> list) {
     List<SignalServiceAddress> addressList = list.stream().map(AddressUtil::fromIdentifier).collect(Collectors.toList());
     try {
       var recipientList = Database.Get(aci).RecipientsTable.get(addressList);
@@ -215,13 +212,13 @@ public class SessionsTable implements ISessionsTable {
           statement.setInt(i++, recipient.getId());
         }
         try (var rows = Database.executeQuery(TABLE_NAME + "_get_addresses_with_active_sessions", statement)) {
-          Set<SignalProtocolAddress> results = new HashSet<>();
+          Map<SignalProtocolAddress, SessionRecord> results = new HashMap<>();
           while (rows.next()) {
             String name = rows.getString(RecipientsTable.UUID);
             int deviceId = rows.getInt(DEVICE_ID);
             SessionRecord record = new SessionRecord(rows.getBytes(RECORD));
             if (record.hasSenderChain() && record.getSessionVersion() == CiphertextMessage.CURRENT_VERSION) { // signal-cli calls this "isActive"
-              results.add(new SignalProtocolAddress(name, deviceId));
+              results.put(new SignalProtocolAddress(name, deviceId), record);
             }
           }
           return results;
@@ -230,7 +227,7 @@ public class SessionsTable implements ISessionsTable {
     } catch (SQLException | IOException | InvalidMessageException e) {
       logger.catching(e);
     }
-    return new HashSet<>();
+    return new HashMap<>();
   }
 
   public void archiveAllSessions(Recipient recipient) throws SQLException {

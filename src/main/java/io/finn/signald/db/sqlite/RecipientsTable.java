@@ -214,11 +214,15 @@ public class RecipientsTable implements IRecipientsTable {
   }
 
   private Map<String, ACI> getRegisteredUsers(final Set<String> numbers) throws IOException, InvalidProxyException, SQLException, ServerNotFoundException, NoSuchAccountException {
+    Set<String> previousNumbers = Set.of(); // TODO
     var server = Database.Get().AccountsTable.getServer(uuid);
     var accountManager = SignalDependencies.get(uuid).getAccountManager();
+
+    token = previousNumbers.isEmpty() ? Optional.<byte[]>empty() : Optional.ofNullable(account.getCdsiToken());
+
     logger.debug("querying server for UUIDs of " + numbers.size() + " e164 identifiers");
     try {
-      return accountManager.getRegisteredUsers(server.getIASKeyStore(), numbers, server.getCdsMrenclave());
+      return accountManager.getRegisteredUsersWithCdsi(Set.of(), numbers, server.getIASKeyStore(), server.getCdsMrenclave());
     } catch (InvalidKeyException | KeyStoreException | CertificateException | NoSuchAlgorithmException | Quote.InvalidQuoteFormatException | UnauthenticatedQuoteException |
              SignatureException | UnauthenticatedResponseException e) {
       throw new IOException(e);

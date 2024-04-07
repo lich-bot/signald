@@ -109,4 +109,14 @@ public class PreKeysTable implements IPreKeysTable {
       Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
     }
   }
+
+  @Override
+  public void deleteAllStaleOneTimeEcPreKeys(long l, int i) {
+    throw new RuntimeException("not yet implemented");
+  }
+
+  @Override
+  public void markAllOneTimeEcPreKeysStaleIfNecessary(long l) {
+    throw new RuntimeException("not yet implemented");
+  }
 }

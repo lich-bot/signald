@@ -84,7 +84,7 @@ public class RegistrationManager {
     numberVerification = new NumberVerification(accountManager);
   }
 
-  public RegistrationSessionMetadataResponse register(boolean voiceVerification, UUID server) throws IOException, InvalidInputException, SQLException {
+  public RegistrationSessionMetadataResponse register(boolean voiceVerification, Optional<String> captcha, UUID server) throws IOException, InvalidInputException, SQLException {
     Database.Get().PendingAccountDataTable.set(e164, IPendingAccountDataTable.Key.LOCAL_REGISTRATION_ID, KeyHelper.generateRegistrationId(false));
     Database.Get().PendingAccountDataTable.set(e164, IPendingAccountDataTable.Key.LOCAL_PNI_REGISTRATION_ID, KeyHelper.generateRegistrationId(false));
     Database.Get().PendingAccountDataTable.set(e164, IPendingAccountDataTable.Key.ACI_IDENTITY_KEY_PAIR, KeyUtil.generateIdentityKeyPair().serialize());
