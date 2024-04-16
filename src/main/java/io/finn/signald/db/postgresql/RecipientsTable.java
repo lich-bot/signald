@@ -228,19 +228,21 @@ public class RecipientsTable implements IRecipientsTable {
   }
 
   private Map<String, ACI> getRegisteredUsers(final Set<String> numbers) throws IOException, InvalidProxyException, SQLException, ServerNotFoundException, NoSuchAccountException {
-    final Map<String, ACI> registeredUsers;
-    var server = Database.Get().AccountsTable.getServer(accountUUID);
-    SignalServiceAccountManager accountManager = SignalDependencies.get(accountUUID).getAccountManager();
-    logger.debug("querying server for UUIDs of {} e164 identifiers", numbers.size());
-    try {
-      registeredUsers = accountManager.getRegisteredUsers(server.getIASKeyStore(), numbers, server.getCdsMrenclave());
-    } catch (InvalidKeyException | KeyStoreException | CertificateException | NoSuchAlgorithmException | Quote.InvalidQuoteFormatException | UnauthenticatedQuoteException |
-             SignatureException | UnauthenticatedResponseException e) {
-      throw new IOException(e);
-    }
-    logger.trace("got {} results from server", registeredUsers.size());
+    throw new RuntimeException("registered users not yet implemented");
 
-    return registeredUsers;
+    //    final Map<String, ACI> registeredUsers;
+    //    var server = Database.Get().AccountsTable.getServer(accountUUID);
+    //    SignalServiceAccountManager accountManager = SignalDependencies.get(accountUUID).getAccountManager();
+    //    logger.debug("querying server for UUIDs of {} e164 identifiers", numbers.size());
+    //    try {
+    //      registeredUsers = accountManager.getRegisteredUsers(server.getIASKeyStore(), numbers, server.getCdsMrenclave());
+    //    } catch (InvalidKeyException | KeyStoreException | CertificateException | NoSuchAlgorithmException | Quote.InvalidQuoteFormatException | UnauthenticatedQuoteException |
+    //             SignatureException | UnauthenticatedResponseException e) {
+    //      throw new IOException(e);
+    //    }
+    //    logger.trace("got {} results from server", registeredUsers.size());
+    //
+    //    return registeredUsers;
   }
 
   public void setRegistrationStatus(Recipient recipient, boolean registered) throws SQLException { update(REGISTERED, registered, recipient.getId()); }

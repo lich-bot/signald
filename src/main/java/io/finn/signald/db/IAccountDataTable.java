@@ -43,6 +43,7 @@ public interface IAccountDataTable {
     PENDING_DELETION, // indicates the account is about to be deleted
     ACI_NEXT_KYBER_PRE_KEY_ID,
     PNI_NEXT_KYBER_PRE_KEY_ID,
+    CDSI_TOKEN,
   }
 
   // Default implementations for setting values

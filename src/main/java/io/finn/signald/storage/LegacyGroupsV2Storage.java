@@ -41,7 +41,7 @@ public class LegacyGroupsV2Storage {
     groups = new ArrayList<>();
   }
 
-  public boolean migrateToDB(Account account) throws SQLException, InvalidInputException, InvalidProtocolBufferException {
+  public boolean migrateToDB(Account account) throws SQLException, InvalidInputException, IOException {
     boolean needsSave = false;
 
     // credentials format changed, don't migrate credentials (will be automatically re-fetched when first needed)

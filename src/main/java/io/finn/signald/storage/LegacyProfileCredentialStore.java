@@ -18,8 +18,6 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.signal.libsignal.zkgroup.profiles.ProfileKey;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 @Deprecated
 public class LegacyProfileCredentialStore {
   private final static Logger logger = LogManager.getLogger();
@@ -53,49 +51,4 @@ public class LegacyProfileCredentialStore {
   }
 
   void initialize(Recipient self) { this.self = self; }
-
-  @Deprecated
-  public LegacyProfileAndCredentialEntry storeProfileKey(Recipient recipient, ProfileKey profileKey) {
-    return storeProfileKey(recipient.getAddress(), profileKey);
-  }
-
-  @Deprecated
-  public LegacyProfileAndCredentialEntry storeProfileKey(SignalServiceAddress owner, ProfileKey profileKey) {
-    LegacyProfileAndCredentialEntry newEntry =
-        new LegacyProfileAndCredentialEntry(owner, 0, profileKey, null, null, LegacyProfileAndCredentialEntry.UnidentifiedAccessMode.UNKNOWN);
-    synchronized (profiles) {
-      for (int i = 0; i < profiles.size(); i++) {
-        if (profiles.get(i).getServiceAddress().matches(owner)) {
-          if (!profiles.get(i).getProfileKey().equals(profileKey)) {
-            profiles.set(i, newEntry);
-            unsaved = true;
-          }
-          return newEntry;
-        }
-      }
-      profiles.add(newEntry);
-    }
-    unsaved = true;
-    return newEntry;
-  }
-
-  /**
-   * @return a non-null entry iff the profile key was stored
-   */
-  @Deprecated
-  public LegacyProfileAndCredentialEntry storeProfileKeyIfAbsent(SignalServiceAddress owner, ProfileKey profileKey) {
-    LegacyProfileAndCredentialEntry newEntry =
-        new LegacyProfileAndCredentialEntry(owner, profileKey, 0, null, null, LegacyProfileAndCredentialEntry.UnidentifiedAccessMode.UNKNOWN);
-    synchronized (profiles) {
-      for (LegacyProfileAndCredentialEntry profileEntry : profiles) {
-        // not sure if ProfileAndCredentialEntry can ever have null profileKeys
-        if (profileEntry.getServiceAddress().matches(owner) && profileEntry.getProfileKey() != null) {
-          return null;
-        }
-      }
-      profiles.add(newEntry);
-    }
-    unsaved = true;
-    return newEntry;
-  }
 }

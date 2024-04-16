@@ -86,11 +86,6 @@ public interface IAccountsTable {
         accountData.legacyContactStore = null;
       }
 
-      if (accountData.legacyProfileCredentialStore != null) {
-        accountData.legacyProfileCredentialStore.migrateToDB(account);
-        accountData.legacyProfileCredentialStore = null;
-      }
-
       accountData.migrateToDB(account);
 
       accountData.version = LegacyAccountData.DELETED_DO_NOT_SAVE;

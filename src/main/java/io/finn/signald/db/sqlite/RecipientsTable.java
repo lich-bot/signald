@@ -7,6 +7,7 @@
 
 package io.finn.signald.db.sqlite;
 
+import io.finn.signald.Account;
 import io.finn.signald.SignalDependencies;
 import io.finn.signald.db.Database;
 import io.finn.signald.db.IRecipientsTable;
@@ -29,6 +30,7 @@ import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
+import org.whispersystems.signalservice.api.services.CdsiV2Service;
 import org.whispersystems.signalservice.internal.contacts.crypto.Quote;
 import org.whispersystems.signalservice.internal.contacts.crypto.UnauthenticatedQuoteException;
 import org.whispersystems.signalservice.internal.contacts.crypto.UnauthenticatedResponseException;
@@ -214,19 +216,22 @@ public class RecipientsTable implements IRecipientsTable {
   }
 
   private Map<String, ACI> getRegisteredUsers(final Set<String> numbers) throws IOException, InvalidProxyException, SQLException, ServerNotFoundException, NoSuchAccountException {
+    Account account = new Account(ACI.from(uuid));
+
     Set<String> previousNumbers = Set.of(); // TODO
+
     var server = Database.Get().AccountsTable.getServer(uuid);
     var accountManager = SignalDependencies.get(uuid).getAccountManager();
 
-    token = previousNumbers.isEmpty() ? Optional.<byte[]>empty() : Optional.ofNullable(account.getCdsiToken());
+    Optional<byte[]> token = previousNumbers.isEmpty() ? Optional.empty() : account.getCdsiToken();
 
     logger.debug("querying server for UUIDs of " + numbers.size() + " e164 identifiers");
-    try {
-      return accountManager.getRegisteredUsersWithCdsi(Set.of(), numbers, server.getIASKeyStore(), server.getCdsMrenclave());
-    } catch (InvalidKeyException | KeyStoreException | CertificateException | NoSuchAlgorithmException | Quote.InvalidQuoteFormatException | UnauthenticatedQuoteException |
-             SignatureException | UnauthenticatedResponseException e) {
-      throw new IOException(e);
-    }
+    CdsiV2Service.Response response = accountManager.getRegisteredUsersWithCdsi(Set.of(), numbers, null, true, token, server.getCdsMrenclave(), null, null);
+    logger.error("GET REGISTERED USERS NOT YET IMPLEMENTED");
+
+    throw new RuntimeException("registered users not yet implemented");
+
+    //    return new HashMap<>();
   }
 
   public void setRegistrationStatus(Recipient recipient, boolean registered) throws SQLException {

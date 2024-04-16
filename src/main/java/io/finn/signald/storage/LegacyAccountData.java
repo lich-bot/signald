@@ -120,7 +120,7 @@ public class LegacyAccountData {
         try {
           ProfileKey p = new ProfileKey(c.profileKey);
           Recipient recipient = Database.Get(ACI.from(self.getServiceId().getRawUuid())).RecipientsTable.get(c.recipient.getServiceId());
-          legacyProfileCredentialStore.storeProfileKey(recipient, p);
+          //          legacyProfileCredentialStore.storeProfileKey(recipient, p);
         } catch (InvalidInputException e) {
           logger.warn("Invalid profile key while migrating profile keys from contacts", e);
         }
@@ -129,7 +129,7 @@ public class LegacyAccountData {
       if (legacyProfileKey != null) {
         try {
           ProfileKey p = new ProfileKey(Base64.decode(legacyProfileKey));
-          legacyProfileCredentialStore.storeProfileKey(self, p);
+          //          legacyProfileCredentialStore.storeProfileKey(self, p);
         } catch (InvalidInputException e) {
           logger.warn("Invalid profile key while migrating own profile key", e);
         }

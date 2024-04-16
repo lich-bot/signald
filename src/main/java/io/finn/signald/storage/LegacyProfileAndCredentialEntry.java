@@ -131,7 +131,8 @@ public class LegacyProfileAndCredentialEntry {
         unidentifiedAccessMode = UnidentifiedAccessMode.fromMode(node.get("unidentifiedAccessMode").asInt());
       }
 
-      return new LegacyProfileAndCredentialEntry(address, profileKey, lastUpdateTimestamp, profile, profileKeyCredential, unidentifiedAccessMode);
+      //      return new LegacyProfileAndCredentialEntry(address, profileKey, lastUpdateTimestamp, profile, null, unidentifiedAccessMode);
+      return null; // TODO
     }
   }
 
@@ -145,9 +146,9 @@ public class LegacyProfileAndCredentialEntry {
         return; // don't store profiles without an address
       }
 
-      if (value.profileKey != null) {
-        node.put("profileKey", Base64.encodeWithPadding(value.profileKey.serialize()));
-      }
+      //      if (value.profileKey != null) {
+      //        node.put("profileKey", Base64.encodeWithPadding(value.profileKey.serialize()));
+      //      }
 
       node.put("lastUpdateTimestamp", value.lastUpdateTimestamp);
 

@@ -17,6 +17,7 @@ import io.finn.signald.util.KeyUtil;
 import io.sentry.Sentry;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Optional;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -236,6 +237,9 @@ public class Account {
   public void setPNINextKyberPreKeyId(int nextKyberPreKeyId) throws SQLException {
     Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.PNI_NEXT_KYBER_PRE_KEY_ID, nextKyberPreKeyId);
   }
+
+  public Optional<byte[]> getCdsiToken() throws SQLException { return Optional.ofNullable(Database.Get().AccountDataTable.getBytes(aci, IAccountDataTable.Key.CDSI_TOKEN)); }
+  public void setCdsiToken(byte[] token) throws SQLException { Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.CDSI_TOKEN, token); }
 
   public Recipient getSelf() throws SQLException, IOException { return getDB().RecipientsTable.get(aci); }
 
