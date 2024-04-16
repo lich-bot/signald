@@ -34,7 +34,15 @@ public class Util {
     }
   }
 
-  public static String redact(ServiceId serviceId) { return redact(serviceId.toString()); }
+  public static String redact(ServiceId serviceId) {
+    String prefix = "";
+    if (serviceId instanceof ServiceId.ACI) {
+      prefix = "ACI:";
+    } else if (serviceId instanceof ServiceId.PNI) {
+      prefix = "PNI:";
+    }
+    return prefix + redact(serviceId.getRawUuid().toString());
+  }
 
   public static String redact(UUID uuid) { return redact(uuid.toString()); }
 

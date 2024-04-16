@@ -18,7 +18,7 @@ public class UtilTest {
 
     UUID u = UUID.fromString("a59eef85-fd26-4f4f-bf7b-d4948e28b230");
     Assertions.assertEquals("[redacted 33]230", Util.redact(u));
-    Assertions.assertEquals("[redacted 33]230", Util.redact(ACI.from(u)));
-    Assertions.assertEquals("[redacted 33]230", Util.redact(PNI.from(u)));
+    Assertions.assertEquals("ACI:[redacted 33]230", Util.redact(ACI.from(u)));
+    Assertions.assertEquals("PNI:[redacted 33]230", Util.redact(PNI.from(u)));
   }
 }

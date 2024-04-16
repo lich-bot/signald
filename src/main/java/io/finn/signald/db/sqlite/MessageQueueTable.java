@@ -35,9 +35,7 @@ public class MessageQueueTable implements IMessageQueueTable {
       statement.setInt(i++, 2); // Version is hard-coded to 2
       statement.setInt(i++, envelope.getType());
       statement.setString(i++, envelope.getDestinationServiceId());
-      if (envelope.getSourceServiceId().isPresent()) {
-        statement.setString(i++, envelope.getSourceServiceId().get());
-      }
+      statement.setString(i++, envelope.getSourceServiceId().orElse(null));
       statement.setInt(i++, envelope.getSourceDevice());
       statement.setLong(i++, envelope.getTimestamp());
       if (envelope.hasContent()) {
