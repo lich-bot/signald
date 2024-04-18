@@ -71,8 +71,6 @@ public class Manager {
   private final ECPublicKey unidentifiedSenderTrustRoot;
 
   private static final ConcurrentHashMap<String, Manager> managers = new ConcurrentHashMap<>();
-  private static final Histogram messageDecryptionTime =
-      Histogram.build().name(BuildConfig.NAME + "_message_decryption_time").help("Time (in seconds) to decrypt incoming messages").labelNames("account_uuid").register();
 
   private static String dataPath;
   private static String attachmentsPath;
