@@ -104,17 +104,13 @@ public class ProvisioningManager {
     }
 
     IdentityKeyPair aciKeyPair = newDeviceRegistration.getAciIdentity();
-    int aciNextSignedPreKeyId = 0; // TODO: where does this come from?
-    SignedPreKeyRecord aciSignedPreKey = RegistrationManager.generateSignedPreKeyRecord(aciNextSignedPreKeyId, aciKeyPair.getPrivateKey());
-    int aciKyberPreKeyIdOffset = 0; // TODO: where does this come from?
-    KyberPreKeyRecord aciLastResortKyberPreKey = RegistrationManager.generateKyberPreKeyRecord(aciKyberPreKeyIdOffset, aciKeyPair.getPrivateKey());
+    SignedPreKeyRecord aciSignedPreKey = RegistrationManager.generateSignedPreKeyRecord(1, aciKeyPair.getPrivateKey());
+    KyberPreKeyRecord aciLastResortKyberPreKey = RegistrationManager.generateKyberPreKeyRecord(1, aciKeyPair.getPrivateKey());
     PreKeyCollection aciPreKeyCollection = new PreKeyCollection(aciKeyPair.getPublicKey(), aciSignedPreKey, aciLastResortKyberPreKey);
 
     IdentityKeyPair pniKeyPair = newDeviceRegistration.getPniIdentity();
-    int pniNextSignedPreKeyId = 0; // TODO: where does this come from?
-    SignedPreKeyRecord pniSignedPreKey = RegistrationManager.generateSignedPreKeyRecord(pniNextSignedPreKeyId, pniKeyPair.getPrivateKey());
-    int pniKyberPreKeyIdOffset = 0; // TODO: where does this come from?
-    KyberPreKeyRecord pniLastResortKyberPreKey = RegistrationManager.generateKyberPreKeyRecord(pniKyberPreKeyIdOffset, pniKeyPair.getPrivateKey());
+    SignedPreKeyRecord pniSignedPreKey = RegistrationManager.generateSignedPreKeyRecord(1, pniKeyPair.getPrivateKey());
+    KyberPreKeyRecord pniLastResortKyberPreKey = RegistrationManager.generateKyberPreKeyRecord(1, pniKeyPair.getPrivateKey());
     PreKeyCollection pniPreKeyCollection = new PreKeyCollection(pniKeyPair.getPublicKey(), pniSignedPreKey, pniLastResortKyberPreKey);
 
     byte[] unidentifiedAccessKey = UnidentifiedAccess.deriveAccessKeyFrom(newDeviceRegistration.getProfileKey());
