@@ -7,6 +7,7 @@
 
 package io.finn.signald.db.sqlite;
 
+import io.finn.signald.Config;
 import io.finn.signald.db.Database;
 import io.finn.signald.db.ISessionsTable;
 import io.finn.signald.db.Recipient;
@@ -15,6 +16,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
+import javax.crypto.Cipher;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.protocol.InvalidMessageException;
@@ -139,7 +141,7 @@ public class SessionsTable implements ISessionsTable {
             return false;
           }
           SessionRecord sessionRecord = new SessionRecord(rows.getBytes(RECORD));
-          return sessionRecord.hasSenderChain() && sessionRecord.getSessionVersion() == CiphertextMessage.CURRENT_VERSION;
+          return sessionRecord.hasSenderChain();
         }
       }
     } catch (SQLException | IOException | InvalidMessageException e) {
