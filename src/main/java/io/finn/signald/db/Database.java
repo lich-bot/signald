@@ -188,14 +188,15 @@ public class Database {
 
   public static IServersTable.AbstractServer NewServer(UUID uuid, String serviceURL, Map<Integer, String> cdns, String contactDiscoveryURL, String keyBackupURL, String storageURL,
                                                        byte[] zkParams, byte[] unidentifiedSenderRoot, String proxy, byte[] ca, String keyBackupServiceName,
-                                                       byte[] keyBackupServiceId, String keyBackupMrenclave, String cdsMrenclave, byte[] iasCa) throws InvalidProxyException {
+                                                       byte[] keyBackupServiceId, String keyBackupMrenclave, String cdsMrenclave, byte[] iasCa, String cdsiUrl, String svr2Url)
+      throws InvalidProxyException {
     switch (GetConnectionType()) {
     case SQLITE:
       return new io.finn.signald.db.sqlite.ServersTable.Server(uuid, serviceURL, cdns, contactDiscoveryURL, keyBackupURL, storageURL, zkParams, unidentifiedSenderRoot, proxy, ca,
-                                                               keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, iasCa, "");
+                                                               keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, iasCa, cdsiUrl, svr2Url);
     case POSTGRESQL:
       return new io.finn.signald.db.postgresql.ServersTable.Server(uuid, serviceURL, cdns, contactDiscoveryURL, keyBackupURL, storageURL, zkParams, unidentifiedSenderRoot, proxy,
-                                                                   ca, keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, iasCa, "");
+                                                                   ca, keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, iasCa, cdsiUrl, svr2Url);
     default:
       throw new IllegalArgumentException("Invalid connection type");
     }

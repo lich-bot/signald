@@ -53,7 +53,8 @@ public interface IServersTable {
   String KEY_BACKUP_MRENCLAVE = "key_backup_mrenclave";
   String CDS_MRENCLAVE = "cds_mrenclave";
   String IAS_CA = "ias_ca";
-  String CDSH_URL = "cdsh_url";
+  String CDSI_URL = "cdsi_url";
+  String SVR2_URL = "svr2_url";
 
   Interceptor userAgentInterceptor = chain -> chain.proceed(chain.request().newBuilder().header("User-Agent", BuildConfig.USER_AGENT).build());
   Logger logger = LogManager.getLogger();
@@ -82,14 +83,14 @@ public interface IServersTable {
     public String keyBackupMrenclave;
     public String cdsMrenclave;
     public byte[] iasCa;
-
-    public String cdshURL;
+    public String cdsiUrl;
+    public String svr2Url;
 
     public abstract TrustStore GetTrustStore(UUID uuid, String field);
 
     public AbstractServer(UUID uuid, String serviceURL, Map<Integer, String> cdnURLs, String contactDiscoveryURL, String keyBackupURL, String storageURL, byte[] zkParams,
                           byte[] unidentifiedSenderRoot, String proxy, byte[] ca, String keyBackupServiceName, byte[] keyBackupServiceId, String keyBackupMrenclave,
-                          String cdsMrenclave, byte[] iasCa, String cdshURL) throws InvalidProxyException {
+                          String cdsMrenclave, byte[] iasCa, String cdsiUrl, String svr2Url) throws InvalidProxyException {
       this.uuid = uuid;
       this.serviceURL = serviceURL;
       this.cdnURLs = cdnURLs;
@@ -113,15 +114,16 @@ public interface IServersTable {
       this.keyBackupMrenclave = keyBackupMrenclave;
       this.cdsMrenclave = cdsMrenclave;
       this.iasCa = iasCa;
-      this.cdshURL = cdshURL;
+      this.cdsiUrl = cdsiUrl;
+      this.svr2Url = svr2Url;
     }
 
     // constructor that takes cdnURLs as a JSON-encoded string
     public AbstractServer(UUID uuid, String serviceURL, String cdnURLs, String contactDiscoveryURL, String keyBackupURL, String storageURL, byte[] zkParam,
                           byte[] unidentifiedSenderRoot, String proxy, byte[] ca, String keyBackupServiceName, byte[] keyBackupServiceId, String keyBackupMrenclave,
-                          String cdsMrenclave, byte[] cdsCa, String cdshURL) throws IOException, InvalidProxyException {
+                          String cdsMrenclave, byte[] cdsCa, String cdsiUrl, String svr2Url) throws IOException, InvalidProxyException {
       this(uuid, serviceURL, (HashMap<Integer, String>)null, contactDiscoveryURL, keyBackupURL, storageURL, zkParam, unidentifiedSenderRoot, proxy, ca, keyBackupServiceName,
-           keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, cdsCa, cdshURL);
+           keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, cdsCa, cdsiUrl, svr2Url);
       var cdnURLType = new TypeReference<HashMap<Integer, String>>() {};
       this.cdnURLs = JSONUtil.GetMapper().readValue(cdnURLs, cdnURLType);
     }

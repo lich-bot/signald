@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.SQLException;
 import java.util.*;
-import okhttp3.Interceptor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.core.util.Base64;
@@ -48,15 +47,16 @@ public class ServersTable implements IServersTable {
     byte[] cdsCa = Base64.decode(BuildConfig.CDS_CA);
 
     return new Server(DEFAULT_SERVER, BuildConfig.SIGNAL_URL, cdns, BuildConfig.SIGNAL_CONTACT_DISCOVERY_URL, BuildConfig.SIGNAL_KEY_BACKUP_URL, BuildConfig.SIGNAL_STORAGE_URL,
-                      zkparam, unidentifiedSenderRoot, BuildConfig.SIGNAL_PROXY, ca, keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, cdsCa, "");
+                      zkparam, unidentifiedSenderRoot, BuildConfig.SIGNAL_PROXY, ca, keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, cdsCa,
+                      BuildConfig.CDSI_URL, BuildConfig.SVR2_URL);
   }
 
   @Override
   public AbstractServer getServer(UUID uuid) throws SQLException, IOException, ServerNotFoundException, InvalidProxyException {
-    var query = String.format("SELECT %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s FROM %s WHERE %s=?",
+    var query = String.format("SELECT %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s FROM %s WHERE %s=?",
                               // FIELDS
                               SERVER_UUID, SERVICE_URL, CDN_URLS, CONTACT_DISCOVERY_URL, KEY_BACKUP_URL, STORAGE_URL, ZK_GROUP_PUBLIC_PARAMS, UNIDENTIFIED_SENDER_ROOT, PROXY, CA,
-                              KEY_BACKUP_SERVICE_NAME, KEY_BACKUP_SERVICE_ID, KEY_BACKUP_MRENCLAVE, CDS_MRENCLAVE, IAS_CA,
+                              KEY_BACKUP_SERVICE_NAME, KEY_BACKUP_SERVICE_ID, KEY_BACKUP_MRENCLAVE, CDS_MRENCLAVE, IAS_CA, CDSI_URL, SVR2_URL,
                               // FROM, WHERE
                               TABLE_NAME, SERVER_UUID);
     try (var statement = Database.getConn().prepareStatement(query)) {
@@ -89,9 +89,11 @@ public class ServersTable implements IServersTable {
         String keyBackupMrenclave = rows.getString(KEY_BACKUP_MRENCLAVE);
         String cdsMrenclave = rows.getString(CDS_MRENCLAVE);
         byte[] cdsCa = rows.getBytes(IAS_CA);
+        String cdsiUrl = rows.getString(CDSI_URL);
+        String svr2Url = rows.getString(SVR2_URL);
 
         return new Server(serverUUID, serviceURL, cdnURLs, contactDiscoveryURL, keyBackupURL, storageURL, zkGroupPublicParams, unidentifiedSenderRoot, proxyString, ca,
-                          keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, cdsCa, "");
+                          keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, cdsCa, cdsiUrl, svr2Url);
       }
     }
   }
@@ -124,10 +126,12 @@ public class ServersTable implements IServersTable {
           String keyBackupMrenclave = rows.getString(KEY_BACKUP_MRENCLAVE);
           String cdsMrenclave = rows.getString(CDS_MRENCLAVE);
           byte[] cdsCa = rows.getBytes(IAS_CA);
+          String cdsiUrl = rows.getString(CDSI_URL);
+          String svr2Url = rows.getString(SVR2_URL);
 
           try {
             Server server = new Server(serverUUID, serviceURL, cdnURLs, contactDiscoveryURL, keyBackupURL, storageURL, zkGroupPublicParams, unidentifiedSenderRoot, proxyString, ca,
-                                       keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, cdsCa, "");
+                                       keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, cdsCa, cdsiUrl, svr2Url);
             servers.add(server);
           } catch (IOException | InvalidProxyException e) {
             logger.warn("failed to load signal server " + serverUUID + " from database: " + e.getMessage());
@@ -179,16 +183,16 @@ public class ServersTable implements IServersTable {
   public static class Server extends AbstractServer {
     public Server(UUID uuid, String serviceURL, Map<Integer, String> cdnURLs, String contactDiscoveryURL, String keyBackupURL, String storageURL, byte[] zkParams,
                   byte[] unidentifiedSenderRoot, String proxy, byte[] ca, String keyBackupServiceName, byte[] keyBackupServiceId, String keyBackupMrenclave, String cdsMrenclave,
-                  byte[] iasCa, String cdshURL) throws InvalidProxyException {
+                  byte[] iasCa, String cdsiURL, String svr2Url) throws InvalidProxyException {
       super(uuid, serviceURL, cdnURLs, contactDiscoveryURL, keyBackupURL, storageURL, zkParams, unidentifiedSenderRoot, proxy, ca, keyBackupServiceName, keyBackupServiceId,
-            keyBackupMrenclave, cdsMrenclave, iasCa, cdshURL);
+            keyBackupMrenclave, cdsMrenclave, iasCa, cdsiURL, svr2Url);
     }
 
     public Server(UUID uuid, String serviceURL, String cdnURLs, String contactDiscoveryURL, String keyBackupURL, String storageURL, byte[] zkParam, byte[] unidentifiedSenderRoot,
-                  String proxy, byte[] ca, String keyBackupServiceName, byte[] keyBackupServiceId, String keyBackupMrenclave, String cdsMrenclave, byte[] cdsCa, String cdshURL)
-        throws IOException, InvalidProxyException {
+                  String proxy, byte[] ca, String keyBackupServiceName, byte[] keyBackupServiceId, String keyBackupMrenclave, String cdsMrenclave, byte[] cdsCa, String cdsiURL,
+                  String svr2Url) throws IOException, InvalidProxyException {
       super(uuid, serviceURL, cdnURLs, contactDiscoveryURL, keyBackupURL, storageURL, zkParam, unidentifiedSenderRoot, proxy, ca, keyBackupServiceName, keyBackupServiceId,
-            keyBackupMrenclave, cdsMrenclave, cdsCa, cdshURL);
+            keyBackupMrenclave, cdsMrenclave, cdsCa, cdsiURL, svr2Url);
     }
 
     @Override

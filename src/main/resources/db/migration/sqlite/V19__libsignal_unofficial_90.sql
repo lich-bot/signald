@@ -8,3 +8,6 @@ CREATE TABLE kyber_prekey_store (
 
 ALTER TABLE group_credentials ADD COLUMN credential_type TEXT NOT NULL DEFAULT "pni";
 ALTER TABLE prekeys ADD COLUMN stale_timestamp INTEGER;
+
+ALTER TABLE servers ADD COLUMN cdsi_url VARCHAR(64);
+ALTER TABLE servers ADD COLUMN svr2_url VARCHAR(64);

@@ -37,6 +37,8 @@ public class Server {
   @JsonProperty("key_backup_mrenclave") String keyBackupMrenclave;
   @JsonProperty("cds_mrenclave") String cdsMrenclave;
   @Doc("base64 encoded trust store, password must be 'whisper'") @JsonProperty("ias_ca") String iasCa;
+  @JsonProperty("cdsi_url") String cdsiUrl;
+  @JsonProperty("svr2_url") String svr2Url;
 
   public Server() {}
 
@@ -54,6 +56,8 @@ public class Server {
     keyBackupMrenclave = server.getKeyBackupMrenclave();
     cdsMrenclave = server.getCdsMrenclave();
     iasCa = server.getIasCa() == null ? null : Base64.encodeWithPadding(server.getIasCa());
+    cdsiUrl = server.cdsiUrl;
+    svr2Url = server.svr2Url;
   }
 
   @JsonIgnore
@@ -70,6 +74,6 @@ public class Server {
     byte[] decodedIasCa = iasCa == null ? null : Base64.decode(iasCa);
 
     return Database.NewServer(uuid, serviceURL, cdns, contactDiscoveryURL, keyBackupURL, storageURL, decodedZkParams, decodedUnidentifiedSenderRoot, proxy, decodedCa,
-                              keyBackupServiceName, decodedKeyBackupServiceId, keyBackupMrenclave, cdsMrenclave, decodedIasCa);
+                              keyBackupServiceName, decodedKeyBackupServiceId, keyBackupMrenclave, cdsMrenclave, decodedIasCa, cdsiUrl, svr2Url);
   }
 }

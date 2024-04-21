@@ -26,6 +26,7 @@ import java.net.SocketException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.newsclub.net.unix.AFUNIXSocket;
+import org.newsclub.net.unix.SocketClosedException;
 import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
 
 public class ClientConnection implements Runnable {
@@ -79,7 +80,10 @@ public class ClientConnection implements Runnable {
   }
 
   private void handleError(PrintWriter w, Throwable error, JsonRequest request) {
-    if (error instanceof NoSuchAccountError) {
+    if (error instanceof SocketClosedException) {
+      logger.debug("error attempting to read from closed connections");
+      return;
+    } else if (error instanceof NoSuchAccountError) {
       logger.warn("unable to process request for non-existent account");
     } else if (error instanceof UnregisteredUserException) {
       logger.warn("failed to send to an address that is not on Signal (UnregisteredUserException)");

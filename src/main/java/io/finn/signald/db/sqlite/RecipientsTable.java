@@ -10,6 +10,7 @@ package io.finn.signald.db.sqlite;
 import io.finn.signald.Account;
 import io.finn.signald.SignalDependencies;
 import io.finn.signald.db.Database;
+import io.finn.signald.db.IProfileKeysTable;
 import io.finn.signald.db.IRecipientsTable;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
@@ -21,11 +22,15 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.cert.CertificateException;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import javax.xml.crypto.Data;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.protocol.InvalidKeyException;
+import org.signal.libsignal.zkgroup.InvalidInputException;
+import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -226,7 +231,8 @@ public class RecipientsTable implements IRecipientsTable {
     Optional<byte[]> token = previousNumbers.isEmpty() ? Optional.empty() : account.getCdsiToken();
 
     logger.debug("querying server for UUIDs of " + numbers.size() + " e164 identifiers");
-    CdsiV2Service.Response response = accountManager.getRegisteredUsersWithCdsi(Set.of(), numbers, null, true, token, server.getCdsMrenclave(), null, null);
+    CdsiV2Service.Response response =
+        accountManager.getRegisteredUsersWithCdsi(Set.of(), numbers, getServiceIdToProfileKeyMap(), true, token, server.getCdsMrenclave(), null, null);
     logger.error("GET REGISTERED USERS NOT YET IMPLEMENTED");
 
     throw new RuntimeException("registered users not yet implemented");
@@ -241,6 +247,30 @@ public class RecipientsTable implements IRecipientsTable {
       statement.setString(2, uuid.toString());
       statement.setInt(3, recipient.getId());
       Database.executeUpdate(TABLE_NAME + "_set_registered", statement);
+    }
+  }
+
+  private Map<ServiceId, ProfileKey> getServiceIdToProfileKeyMap() throws SQLException {
+    String query = "SELECT " + TABLE_NAME + ".uuid, " + ProfileKeysTable.TABLE_NAME + "." + ProfileKeysTable.PROFILE_KEY + " FROM " + TABLE_NAME + "," +
+                   ProfileKeysTable.TABLE_NAME + " WHERE " + TABLE_NAME + "." + ACCOUNT_UUID + " = ? AND " + ProfileKeysTable.TABLE_NAME + "." + ACCOUNT_UUID + " = ? AND " +
+                   TABLE_NAME + ".rowid = " + ProfileKeysTable.TABLE_NAME + "." + ProfileKeysTable.RECIPIENT + " AND " + ProfileKeysTable.PROFILE_KEY + " IS NOT NULL AND " +
+                   TABLE_NAME + "." + UUID + " IS NOT NULL";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, uuid.toString());
+      statement.setString(2, uuid.toString());
+      try (ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_service_id_to_profile_key_map", statement)) {
+        Map<ServiceId, ProfileKey> results = new HashMap<>();
+        while (rows.next()) {
+          String aci = rows.getString(1);
+          byte[] profileKey = rows.getBytes(2);
+          try {
+            results.put(ACI.parseOrNull(aci), new ProfileKey(profileKey));
+          } catch (InvalidInputException e) {
+            logger.warn("error while parsing a profile key in the database", e);
+          }
+        }
+        return results;
+      }
     }
   }
 }
