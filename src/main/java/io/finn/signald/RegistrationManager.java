@@ -46,7 +46,9 @@ import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.ServiceId.PNI;
 import org.whispersystems.signalservice.api.push.ServiceIdType;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.push.exceptions.CaptchaRequiredException;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
+import org.whispersystems.signalservice.internal.push.RegistrationSessionMetadataJson;
 import org.whispersystems.signalservice.internal.push.RegistrationSessionMetadataResponse;
 import org.whispersystems.signalservice.internal.push.VerifyAccountResponse;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
@@ -66,7 +68,7 @@ public class RegistrationManager {
     }
     RegistrationManager m = new RegistrationManager(e164, server);
     registrationManagers.put(key, m);
-    logger.info("Created a registration manager for " + Util.redact(e164));
+    logger.info("Created a registration manager for {}", Util.redact(e164));
     return m;
   }
 
@@ -84,14 +86,20 @@ public class RegistrationManager {
     numberVerification = new NumberVerification(accountManager);
   }
 
-  public RegistrationSessionMetadataResponse register(boolean voiceVerification, Optional<String> captcha, UUID server) throws IOException, InvalidInputException, SQLException {
+  public RegistrationSessionMetadataJson register(boolean voiceVerification, Optional<String> captcha, UUID server) throws IOException, InvalidInputException, SQLException {
     Database.Get().PendingAccountDataTable.set(e164, IPendingAccountDataTable.Key.LOCAL_REGISTRATION_ID, KeyHelper.generateRegistrationId(false));
     Database.Get().PendingAccountDataTable.set(e164, IPendingAccountDataTable.Key.LOCAL_PNI_REGISTRATION_ID, KeyHelper.generateRegistrationId(false));
     Database.Get().PendingAccountDataTable.set(e164, IPendingAccountDataTable.Key.ACI_IDENTITY_KEY_PAIR, KeyUtil.generateIdentityKeyPair().serialize());
     Database.Get().PendingAccountDataTable.set(e164, IPendingAccountDataTable.Key.PNI_IDENTITY_KEY_PAIR, KeyUtil.generateIdentityKeyPair().serialize());
     Database.Get().PendingAccountDataTable.set(e164, IPendingAccountDataTable.Key.SERVER_UUID, server.toString());
 
-    return numberVerification.requestVerificationCode(voiceVerification);
+    if (captcha.isPresent()) {
+      numberVerification.submitCaptcha(captcha.get());
+    }
+
+    RegistrationSessionMetadataResponse result = numberVerification.requestVerificationCode(voiceVerification);
+
+    return result.getBody();
   }
 
   public Manager verifyAccount(String verificationCode)
