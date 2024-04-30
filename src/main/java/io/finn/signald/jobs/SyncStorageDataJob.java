@@ -86,13 +86,16 @@ public class SyncStorageDataJob implements Job {
         continue;
       }
 
-      if (record.getType() == ManifestRecord.Identifier.Type.GROUPV2.getValue()) {
+      switch (ManifestRecord.Identifier.Type.fromValue(record.getType())) {
+      case GROUPV2:
         logger.debug("reading groupv2 record");
         readGroupV2Record(record);
-      } else if (record.getType() == ManifestRecord.Identifier.Type.CONTACT.getValue()) {
+        break;
+      case CONTACT:
         logger.debug("reading contact record");
         readContactRecord(record);
-      } else {
+        break;
+      default:
         logger.debug("ignoring record of unknown type {}", ManifestRecord.Identifier.Type.fromValue(record.getType()).name());
       }
     }

@@ -251,6 +251,7 @@ public class MessageReceiver implements Runnable {
       while (true) {
         for (StoredEnvelope storedEnvelope = messageQueueTable.nextEnvelope(); storedEnvelope != null; storedEnvelope = messageQueueTable.nextEnvelope()) {
           processNextMessage(storedEnvelope);
+          messageQueueTable.deleteEnvelope(storedEnvelope.databaseId);
         }
         try {
           websocket.readMessageBatch(3600000, 1, envelopeResponses -> {
@@ -280,6 +281,7 @@ public class MessageReceiver implements Runnable {
 
   private void processNextMessage(StoredEnvelope storedEnvelope) throws SQLException {
     if (storedEnvelope.envelope.isReceipt()) {
+      logger.debug("ignoring receipt envelope");
       // wat do?
       return;
     }
@@ -288,6 +290,9 @@ public class MessageReceiver implements Runnable {
       // TODO: signal-cli checks if storedEnvelope.envelope.isReceipt() and skips a lot of this if it is
       // https://github.com/AsamK/signal-cli/blob/375bdb79485ec90beb9a154112821a4657740b7a/lib/src/main/java/org/asamk/signal/manager/helper/IncomingMessageHandler.java#L101
       SignalServiceCipherResult cipherResult = decryptMessage(storedEnvelope.envelope);
+      if (cipherResult == null) {
+        return; // decryptMessage sometimes returns a null if we should ignore the message
+      }
       SignalServiceContent content = validate(storedEnvelope.envelope, cipherResult);
       handleIncomingMessage(storedEnvelope.envelope, content);
       this.sockets.broadcastIncomingMessage(storedEnvelope.envelope, content);
@@ -309,7 +314,6 @@ public class MessageReceiver implements Runnable {
       String errorLabel = e.getClass().getCanonicalName();
       receivedMessagesCounter.labels(this.account.getACI().toString(), errorLabel).inc();
     }
-    messageQueueTable.deleteEnvelope(storedEnvelope.databaseId);
   }
 
   private SignalServiceCipherResult decryptMessage(SignalServiceEnvelope envelope)
@@ -606,7 +610,7 @@ public class MessageReceiver implements Runnable {
             Recipient recipient = db.RecipientsTable.get(c.getAddress());
             db.ContactsTable.update(c);
             if (c.getAvatar().isPresent()) {
-              retrieveAttachment((SignalServiceAttachment)c.getAvatar().get(), FileUtil.getContactAvatarFile(recipient));
+              retrieveAttachment(c.getAvatar().get(), FileUtil.getContactAvatarFile(recipient));
             }
             if (c.getProfileKey().isPresent()) {
               db.ProfileKeysTable.setProfileKey(recipient, c.getProfileKey().get());
