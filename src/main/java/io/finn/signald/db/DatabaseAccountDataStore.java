@@ -9,9 +9,12 @@ package io.finn.signald.db;
 
 import io.finn.signald.Account;
 import io.finn.signald.Config;
+import io.finn.signald.Util;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.asamk.signal.TrustLevel;
 import org.jetbrains.annotations.NotNull;
 import org.signal.libsignal.protocol.*;
@@ -24,9 +27,9 @@ import org.signal.libsignal.protocol.state.SignedPreKeyRecord;
 import org.whispersystems.signalservice.api.SignalServiceAccountDataStore;
 import org.whispersystems.signalservice.api.push.DistributionId;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
-import org.whispersystems.signalservice.api.push.ServiceIdType;
 
 public class DatabaseAccountDataStore implements SignalServiceAccountDataStore {
+  private static final Logger logger = LogManager.getLogger();
   private final IPreKeysTable preKeys;
   private final ISessionsTable sessions;
   private final ISignedPreKeysTable signedPrekeys;
@@ -190,6 +193,7 @@ public class DatabaseAccountDataStore implements SignalServiceAccountDataStore {
 
   @Override
   public void storeSenderKey(SignalProtocolAddress signalProtocolAddress, UUID distributionId, SenderKeyRecord senderKeyRecord) {
+    logger.debug("storing sender key for {}", Util.redact(signalProtocolAddress));
     senderKeys.storeSenderKey(signalProtocolAddress, distributionId, senderKeyRecord);
   }
 

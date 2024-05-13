@@ -423,7 +423,7 @@ public class MessageReceiver implements Runnable {
       sourceSignalServiceAddress = content.getSender();
     }
     Recipient source = db.RecipientsTable.get(sourceSignalServiceAddress);
-    int sourceDeviceId = envelope.isUnidentifiedSender() ? envelope.getSourceDevice() : content.getSenderDevice();
+    int sourceDeviceId = envelope.isUnidentifiedSender() ? content.getSenderDevice() : envelope.getSourceDevice();
 
     if (content.getDataMessage().isPresent()) {
       if (content.isNeedsReceipt()) {
@@ -460,7 +460,7 @@ public class MessageReceiver implements Runnable {
     }
 
     if (content.getSenderKeyDistributionMessage().isPresent()) {
-      logger.debug("handling sender key distribution message from {}", Util.redact(content.getSender().getIdentifier()));
+      logger.debug("handling sender key distribution message from {}", Util.redact(content.getSender()));
       SenderKeyDistributionMessage message = content.getSenderKeyDistributionMessage().get();
       SignalProtocolAddress protocolAddress = sourceSignalServiceAddress.getServiceId().toProtocolAddress(sourceDeviceId);
       new SignalGroupSessionBuilder(signalDependencies.getSessionLock(), new GroupSessionBuilder(account.getProtocolStore())).process(protocolAddress, message);

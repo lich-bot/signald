@@ -12,7 +12,9 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.UUID;
 import org.signal.core.util.Base64;
+import org.signal.libsignal.protocol.SignalProtocolAddress;
 import org.whispersystems.signalservice.api.push.ServiceId;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class Util {
   public static String getSecret(int size) {
@@ -33,6 +35,10 @@ public class Util {
       throw new AssertionError(e);
     }
   }
+
+  public static String redact(SignalProtocolAddress address) { return redact(address.getName()) + "." + address.getDeviceId(); }
+
+  public static String redact(SignalServiceAddress address) { return redact(address.getServiceId()); }
 
   public static String redact(ServiceId serviceId) {
     String prefix = "";
