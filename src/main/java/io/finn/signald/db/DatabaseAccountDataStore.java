@@ -24,6 +24,7 @@ import org.signal.libsignal.protocol.state.SignedPreKeyRecord;
 import org.whispersystems.signalservice.api.SignalServiceAccountDataStore;
 import org.whispersystems.signalservice.api.push.DistributionId;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
+import org.whispersystems.signalservice.api.push.ServiceIdType;
 
 public class DatabaseAccountDataStore implements SignalServiceAccountDataStore {
   private final IPreKeysTable preKeys;

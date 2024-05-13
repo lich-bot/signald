@@ -200,13 +200,6 @@ public class RegistrationManager {
     return new SignedPreKeyRecord(signedPreKeyId, System.currentTimeMillis(), keyPair, signature);
   }
 
-  public static KyberPreKeyRecord generateKyberPreKeyRecord(final int preKeyId, final ECPrivateKey privateKey) {
-    KEMKeyPair keyPair = KEMKeyPair.generate(KEMKeyType.KYBER_1024);
-    byte[] signature = privateKey.calculateSignature(keyPair.getPublicKey().serialize());
-
-    return new KyberPreKeyRecord(preKeyId, System.currentTimeMillis(), keyPair, signature);
-  }
-
   private PreKeyCollection generatePreKeyCollection(ServiceIdType type) throws SQLException {
     IdentityKeyPair keyPair = new IdentityKeyPair(Database.Get().PendingAccountDataTable.getBytes(
         e164, type == ServiceIdType.ACI ? IPendingAccountDataTable.Key.ACI_IDENTITY_KEY_PAIR : IPendingAccountDataTable.Key.PNI_IDENTITY_KEY_PAIR));
@@ -228,7 +221,7 @@ public class RegistrationManager {
       Database.Get().PendingAccountDataTable.set(
           e164, type == ServiceIdType.ACI ? IPendingAccountDataTable.Key.ACI_NEXT_KYBER_PRE_KEY_ID : IPendingAccountDataTable.Key.PNI_NEXT_KYBER_PRE_KEY_ID, nextKyberPreKeyId);
     }
-    KyberPreKeyRecord lastResortKyberPreKey = generateKyberPreKeyRecord(nextKyberPreKeyId, keyPair.getPrivateKey());
+    KyberPreKeyRecord lastResortKyberPreKey = KeyUtil.generateKyberPreKeyRecord(nextKyberPreKeyId, keyPair.getPrivateKey());
 
     return new PreKeyCollection(keyPair.getPublicKey(), signedPreKey, lastResortKyberPreKey);
   }

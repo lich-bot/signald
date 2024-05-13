@@ -25,6 +25,7 @@ import java.util.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.protocol.InvalidKeyException;
+import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
@@ -246,4 +247,6 @@ public class RecipientsTable implements IRecipientsTable {
   }
 
   public void setRegistrationStatus(Recipient recipient, boolean registered) throws SQLException { update(REGISTERED, registered, recipient.getId()); }
+
+  public Map<ServiceId, ProfileKey> getServiceIdToProfileKeyMap() throws SQLException { throw new SQLException("not yet implemented"); }
 }

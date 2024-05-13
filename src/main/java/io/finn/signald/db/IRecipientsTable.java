@@ -1,16 +1,26 @@
 package io.finn.signald.db;
 
+import io.finn.signald.Account;
+import io.finn.signald.SignalDependencies;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.signal.libsignal.zkgroup.profiles.ProfileKey;
+import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.services.CdsiV2Service;
 
 public interface IRecipientsTable {
+  Logger logger = LogManager.getLogger();
+
   String ROW_ID = "rowid";
   String ACCOUNT_UUID = "account_uuid";
   String UUID = "uuid";
@@ -22,6 +32,8 @@ public interface IRecipientsTable {
   Recipient self() throws SQLException, IOException;
   void setRegistrationStatus(Recipient recipient, boolean registered) throws SQLException, IOException;
   void deleteAccount(ACI aci) throws SQLException;
+
+  public Map<ServiceId, ProfileKey> getServiceIdToProfileKeyMap() throws SQLException;
 
   default List<Recipient> get(List<SignalServiceAddress> addresses) throws SQLException, IOException {
     List<Recipient> results = new ArrayList<>();
@@ -45,5 +57,23 @@ public interface IRecipientsTable {
     } else {
       return get(null, ACI.from(java.util.UUID.fromString(identifier)));
     }
+  }
+
+  default Map<String, ACI> getRegisteredUsers(Account account, final Set<String> numbers)
+      throws IOException, InvalidProxyException, SQLException, ServerNotFoundException, NoSuchAccountException {
+    Set<String> previousNumbers = Set.of(); // TODO
+
+    SignalServiceAccountManager accountManager = account.getSignalDependencies().getAccountManager();
+
+    Optional<byte[]> token = previousNumbers.isEmpty() ? Optional.empty() : account.getCdsiToken();
+
+    logger.debug("querying server for UUIDs of " + numbers.size() + " e164 identifiers");
+    CdsiV2Service.Response response =
+        accountManager.getRegisteredUsersWithCdsi(Set.of(), numbers, getServiceIdToProfileKeyMap(), true, token, account.getCdsMrenclave(), null, null);
+    logger.error("GET REGISTERED USERS NOT YET IMPLEMENTED");
+
+    throw new RuntimeException("registered users not yet implemented");
+
+    //    return new HashMap<>();
   }
 }

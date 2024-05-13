@@ -43,12 +43,16 @@ import org.whispersystems.signalservice.api.account.PreKeyCollection;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
+import org.whispersystems.signalservice.api.push.ServiceIdType;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.push.SyncMessage;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
 
+/**
+ * ProvisioningManager is used to hold data about ongoing account linking operations.
+ */
 public class ProvisioningManager {
   private final static ConcurrentHashMap<String, ProvisioningManager> provisioningManagers = new ConcurrentHashMap<>();
   private final static Logger logger = LogManager.getLogger();
@@ -106,14 +110,14 @@ public class ProvisioningManager {
     int aciNextSignedPreKeyId = KeyUtil.getRandomInt(ServiceConfig.PREKEY_MAXIMUM_ID);
     SignedPreKeyRecord aciSignedPreKey = RegistrationManager.generateSignedPreKeyRecord(aciNextSignedPreKeyId, aciKeyPair.getPrivateKey());
     int aciKyberPreKeyIdOffset = KeyUtil.getRandomInt(ServiceConfig.PREKEY_MAXIMUM_ID);
-    KyberPreKeyRecord aciLastResortKyberPreKey = RegistrationManager.generateKyberPreKeyRecord(aciKyberPreKeyIdOffset, aciKeyPair.getPrivateKey());
+    KyberPreKeyRecord aciLastResortKyberPreKey = KeyUtil.generateKyberPreKeyRecord(aciKyberPreKeyIdOffset, aciKeyPair.getPrivateKey());
     PreKeyCollection aciPreKeyCollection = new PreKeyCollection(aciKeyPair.getPublicKey(), aciSignedPreKey, aciLastResortKyberPreKey);
 
     IdentityKeyPair pniKeyPair = newDeviceRegistration.getPniIdentity();
     int pniNextSignedPreKeyId = KeyUtil.getRandomInt(ServiceConfig.PREKEY_MAXIMUM_ID);
     SignedPreKeyRecord pniSignedPreKey = RegistrationManager.generateSignedPreKeyRecord(pniNextSignedPreKeyId, pniKeyPair.getPrivateKey());
     int pniKyberPreKeyIdOffset = KeyUtil.getRandomInt(ServiceConfig.PREKEY_MAXIMUM_ID);
-    KyberPreKeyRecord pniLastResortKyberPreKey = RegistrationManager.generateKyberPreKeyRecord(pniKyberPreKeyIdOffset, pniKeyPair.getPrivateKey());
+    KyberPreKeyRecord pniLastResortKyberPreKey = KeyUtil.generateKyberPreKeyRecord(pniKyberPreKeyIdOffset, pniKeyPair.getPrivateKey());
     PreKeyCollection pniPreKeyCollection = new PreKeyCollection(pniKeyPair.getPublicKey(), pniSignedPreKey, pniLastResortKyberPreKey);
 
     byte[] unidentifiedAccessKey = UnidentifiedAccess.deriveAccessKeyFrom(newDeviceRegistration.getProfileKey());
@@ -144,6 +148,7 @@ public class ProvisioningManager {
     account.setPniNextSignedPreKeyId(pniNextSignedPreKeyId);
     account.setACINextKyberPreKeyId(aciKyberPreKeyIdOffset);
     account.setPNINextKyberPreKeyId(pniKyberPreKeyIdOffset);
+    account.addLastResortKyberPreKey(ServiceIdType.ACI, aciLastResortKyberPreKey);
 
     // store all known identifiers in the recipients table
     account.getDB().RecipientsTable.get(newDeviceRegistration.getNumber(), newDeviceRegistration.getAci());

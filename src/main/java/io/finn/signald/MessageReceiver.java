@@ -84,6 +84,7 @@ public class MessageReceiver implements Runnable {
 
   public static void subscribe(ACI aci, MessageEncoder receiver)
       throws SQLException, IOException, NoSuchAccountException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+    logger.debug("new subscriber for {}", Util.redact(aci));
     synchronized (receivers) {
       if (!receivers.containsKey(aci.toString())) {
         MessageReceiver r = new MessageReceiver(aci);
@@ -96,6 +97,7 @@ public class MessageReceiver implements Runnable {
   }
 
   public static boolean unsubscribe(ACI aci, Socket s) {
+    logger.debug("lost subscriber for {}", Util.redact(aci));
     synchronized (receivers) {
       if (!receivers.containsKey(aci.toString())) {
         return false;
@@ -105,6 +107,7 @@ public class MessageReceiver implements Runnable {
   }
 
   public static void unsubscribeAll(Socket s) {
+    logger.debug("dropping all subscribers from socket");
     synchronized (receivers) {
       for (String r : receivers.keySet()) {
         synchronizedUnsubscribe(ACI.from(UUID.fromString(r)), s);
@@ -113,6 +116,7 @@ public class MessageReceiver implements Runnable {
   }
 
   public static void unsubscribeAll(UUID account) {
+    logger.debug("dropping all subscriptions for account {}", Util.redact(account));
     synchronized (receivers) {
       if (!receivers.containsKey(account.toString())) {
         return;
@@ -122,6 +126,7 @@ public class MessageReceiver implements Runnable {
   }
 
   public static void handleWebSocketConnectionStateChange(UUID accountUUID, WebSocketConnectionState connectionState, boolean unidentified) throws SQLException {
+    logger.debug("{}websocket connection state for account {} changed to {}", unidentified ? "Unidentified " : "", Util.redact(accountUUID), connectionState.name());
     synchronized (receivers) {
       MessageReceiver receiver = receivers.get(accountUUID.toString());
       if (receiver == null) {
@@ -146,6 +151,7 @@ public class MessageReceiver implements Runnable {
   }
 
   public static void broadcastStorageStateChange(UUID accountUUID, long version) throws SQLException {
+    logger.debug("broadcasting storage state change for {}", Util.redact(accountUUID));
     synchronized (receivers) {
       MessageReceiver receiver = receivers.get(accountUUID.toString());
       if (receiver == null) {

@@ -80,7 +80,7 @@ public class KyberPreKeyTable implements IKyberPreKeyStore {
 
   @Override
   public void markAllOneTimeKyberPreKeysStaleIfNecessary(long timestamp) {
-    var query = "UPDATE " + TABLE_NAME + " SET " + STALE_TIMESTAMP + " WHERE " + ACCOUNT_UUID + " = ? AND " + STALE_TIMESTAMP + " IS NULL AND " + IS_LAST_RESORT + " = FALSE";
+    var query = "UPDATE " + TABLE_NAME + " SET " + STALE_TIMESTAMP + " = ? WHERE " + ACCOUNT_UUID + " = ? AND " + STALE_TIMESTAMP + " IS NULL AND " + IS_LAST_RESORT + " = FALSE";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setLong(1, timestamp);
       statement.setString(2, account.getACI().toString());

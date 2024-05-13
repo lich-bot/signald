@@ -8,9 +8,7 @@
 package io.finn.signald.db.sqlite;
 
 import io.finn.signald.Account;
-import io.finn.signald.SignalDependencies;
 import io.finn.signald.db.Database;
-import io.finn.signald.db.IProfileKeysTable;
 import io.finn.signald.db.IRecipientsTable;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
@@ -18,38 +16,28 @@ import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.sentry.Sentry;
 import java.io.IOException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.SignatureException;
-import java.security.cert.CertificateException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
-import javax.xml.crypto.Data;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
-import org.whispersystems.signalservice.api.services.CdsiV2Service;
-import org.whispersystems.signalservice.internal.contacts.crypto.Quote;
-import org.whispersystems.signalservice.internal.contacts.crypto.UnauthenticatedQuoteException;
-import org.whispersystems.signalservice.internal.contacts.crypto.UnauthenticatedResponseException;
 
 public class RecipientsTable implements IRecipientsTable {
   private static final Logger logger = LogManager.getLogger();
 
   static final String TABLE_NAME = "recipients";
 
-  private final UUID uuid;
+  private final Account account;
 
-  public RecipientsTable(java.util.UUID u) { uuid = u; }
+  public RecipientsTable(java.util.UUID u) { account = new Account(ACI.from(u)); }
 
-  public RecipientsTable(ACI aci) { uuid = aci.getRawUuid(); }
+  public RecipientsTable(ACI aci) { account = new Account(aci); }
 
   public Recipient get(String e164, ServiceId serviceId) throws SQLException, IOException {
     List<Recipient> results = new ArrayList<>();
@@ -64,7 +52,7 @@ public class RecipientsTable implements IRecipientsTable {
         statement.setString(2, e164);
       }
 
-      statement.setString(3, uuid.toString());
+      statement.setString(3, account.getACI().toString());
       try (var rows = Database.executeQuery(TABLE_NAME + "_get", statement)) {
         while (rows.next()) {
           int rowId = rows.getInt(ROW_ID);
@@ -73,7 +61,7 @@ public class RecipientsTable implements IRecipientsTable {
           boolean registered = rows.getBoolean(REGISTERED);
           boolean needsPniSignature = rows.getBoolean(NEEDS_PNI_SIGNATURE);
           SignalServiceAddress a = storedUUID == null ? null : new SignalServiceAddress(ACI.from(java.util.UUID.fromString(storedUUID)), storedE164);
-          results.add(new Recipient(uuid, rowId, a, registered, needsPniSignature));
+          results.add(new Recipient(account.getUUID(), rowId, a, registered, needsPniSignature));
         }
       }
     }
@@ -147,15 +135,15 @@ public class RecipientsTable implements IRecipientsTable {
       rowId = storeNew(serviceId, e164);
     }
 
-    return new Recipient(uuid, rowId, new SignalServiceAddress(storedServiceId, storedE164), registered, false);
+    return new Recipient(account.getUUID(), rowId, new SignalServiceAddress(storedServiceId, storedE164), registered, false);
   }
 
-  public Recipient self() throws SQLException, IOException { return get(uuid); }
+  public Recipient self() throws SQLException, IOException { return get(account.getUUID()); }
 
   private int storeNew(ServiceId serviceId, String e164) throws SQLException {
     var query = "INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + UUID + "," + E164 + ") VALUES (?, ?, ?)";
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setString(1, uuid.toString());
+      statement.setString(1, account.getUUID().toString());
       statement.setString(2, serviceId.toString());
       if (e164 != null) {
         statement.setString(3, e164);
@@ -176,7 +164,7 @@ public class RecipientsTable implements IRecipientsTable {
     var query = "UPDATE " + TABLE_NAME + " SET " + column + " = ? WHERE " + ACCOUNT_UUID + " = ? AND " + ROW_ID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setString(1, value);
-      statement.setString(2, uuid.toString());
+      statement.setString(2, account.getUUID().toString());
       statement.setInt(3, row);
       Database.executeUpdate(TABLE_NAME + "_update", statement);
     }
@@ -186,7 +174,7 @@ public class RecipientsTable implements IRecipientsTable {
     var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ROW_ID + " = ? AND " + ACCOUNT_UUID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setInt(1, row);
-      statement.setString(2, uuid.toString());
+      statement.setString(2, account.getUUID().toString());
       Database.executeUpdate(TABLE_NAME + "_delete", statement);
     }
   }
@@ -205,7 +193,7 @@ public class RecipientsTable implements IRecipientsTable {
     try {
       Set<String> numbers = new HashSet<>();
       numbers.add(number);
-      aciMap = getRegisteredUsers(numbers);
+      aciMap = getRegisteredUsers(account, numbers);
     } catch (NumberFormatException e) {
       throw new UnregisteredUserException(number, e);
     } catch (InvalidProxyException | ServerNotFoundException | NoSuchAccountException e) {
@@ -220,44 +208,24 @@ public class RecipientsTable implements IRecipientsTable {
     return aci;
   }
 
-  private Map<String, ACI> getRegisteredUsers(final Set<String> numbers) throws IOException, InvalidProxyException, SQLException, ServerNotFoundException, NoSuchAccountException {
-    Account account = new Account(ACI.from(uuid));
-
-    Set<String> previousNumbers = Set.of(); // TODO
-
-    var server = Database.Get().AccountsTable.getServer(uuid);
-    var accountManager = SignalDependencies.get(uuid).getAccountManager();
-
-    Optional<byte[]> token = previousNumbers.isEmpty() ? Optional.empty() : account.getCdsiToken();
-
-    logger.debug("querying server for UUIDs of " + numbers.size() + " e164 identifiers");
-    CdsiV2Service.Response response =
-        accountManager.getRegisteredUsersWithCdsi(Set.of(), numbers, getServiceIdToProfileKeyMap(), true, token, server.getCdsMrenclave(), null, null);
-    logger.error("GET REGISTERED USERS NOT YET IMPLEMENTED");
-
-    throw new RuntimeException("registered users not yet implemented");
-
-    //    return new HashMap<>();
-  }
-
   public void setRegistrationStatus(Recipient recipient, boolean registered) throws SQLException {
     var query = "UPDATE " + TABLE_NAME + " SET " + REGISTERED + " = ? WHERE " + ACCOUNT_UUID + " = ? AND " + ROW_ID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setBoolean(1, registered);
-      statement.setString(2, uuid.toString());
+      statement.setString(2, account.getUUID().toString());
       statement.setInt(3, recipient.getId());
       Database.executeUpdate(TABLE_NAME + "_set_registered", statement);
     }
   }
 
-  private Map<ServiceId, ProfileKey> getServiceIdToProfileKeyMap() throws SQLException {
+  public Map<ServiceId, ProfileKey> getServiceIdToProfileKeyMap() throws SQLException {
     String query = "SELECT " + TABLE_NAME + ".uuid, " + ProfileKeysTable.TABLE_NAME + "." + ProfileKeysTable.PROFILE_KEY + " FROM " + TABLE_NAME + "," +
                    ProfileKeysTable.TABLE_NAME + " WHERE " + TABLE_NAME + "." + ACCOUNT_UUID + " = ? AND " + ProfileKeysTable.TABLE_NAME + "." + ACCOUNT_UUID + " = ? AND " +
                    TABLE_NAME + ".rowid = " + ProfileKeysTable.TABLE_NAME + "." + ProfileKeysTable.RECIPIENT + " AND " + ProfileKeysTable.PROFILE_KEY + " IS NOT NULL AND " +
                    TABLE_NAME + "." + UUID + " IS NOT NULL";
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setString(1, uuid.toString());
-      statement.setString(2, uuid.toString());
+      statement.setString(1, account.getUUID().toString());
+      statement.setString(2, account.getUUID().toString());
       try (ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_service_id_to_profile_key_map", statement)) {
         Map<ServiceId, ProfileKey> results = new HashMap<>();
         while (rows.next()) {
