@@ -23,6 +23,7 @@ public class ServiceConfig {
   public static final long PREKEY_ARCHIVE_AGE = TimeUnit.DAYS.toMillis(30);
   public static final long PREKEY_STALE_AGE = TimeUnit.DAYS.toMillis(90);
   public static final long SIGNED_PREKEY_ROTATE_AGE = TimeUnit.DAYS.toMillis(2);
+  public static final int CDSI_MAXIMUM_ONE_OFF_REQUEST_SIZE = 3;
   public static final AccountAttributes.Capabilities CAPABILITIES = new AccountAttributes.Capabilities(false, // storage
                                                                                                        true,  // sender key
                                                                                                        true,  // announcement groups

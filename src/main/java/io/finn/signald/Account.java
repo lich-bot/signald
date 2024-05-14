@@ -20,9 +20,11 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.protocol.IdentityKeyPair;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.protocol.ServiceId;
@@ -254,8 +256,16 @@ public class Account {
   }
 
   public Optional<byte[]> getCdsiToken() throws SQLException { return Optional.ofNullable(Database.Get().AccountDataTable.getBytes(aci, IAccountDataTable.Key.CDSI_TOKEN)); }
-  public void setCdsiToken(byte[] token) throws SQLException { Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.CDSI_TOKEN, token); }
 
+  public Consumer<byte[]> getTokenSaver() {
+    return token -> {
+      try {
+        Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.CDSI_TOKEN, token);
+      } catch (SQLException e) {
+        logger.catching(e);
+      }
+    };
+  }
   public Recipient getSelf() throws SQLException, IOException { return getDB().RecipientsTable.get(aci); }
 
   public void setStorageKey(StorageKey storageKey) throws SQLException { Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.STORAGE_KEY, storageKey.serialize()); }
