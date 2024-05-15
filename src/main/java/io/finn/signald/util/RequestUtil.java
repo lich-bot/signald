@@ -67,7 +67,8 @@ public class RequestUtil {
       GetGroupRevisionPagesRequest.class,                                                                                 // v1        get_group_revision_pages
       SendSyncMessageRequest.class,                                                                                       // v1        send_sync_message
       BanUserRequest.class,                                                                                               // v1        ban_user
-      UnbanUserRequest.class                                                                                              // v1        unban_user
+      UnbanUserRequest.class,                                                                                             // v1        unban_user
+      ResolveUsernameRequest.class                                                                                        // v1        resolve_username
   );
 
   public static String getVersion(Class<?> t) {
