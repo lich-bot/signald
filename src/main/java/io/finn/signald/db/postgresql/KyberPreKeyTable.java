@@ -7,6 +7,7 @@
 
 package io.finn.signald.db.postgresql;
 
+import io.finn.signald.Account;
 import io.finn.signald.db.IKyberPreKeyStore;
 import java.sql.SQLException;
 import java.util.List;
@@ -16,7 +17,9 @@ import org.signal.libsignal.protocol.state.KyberPreKeyRecord;
 import org.whispersystems.signalservice.api.push.ServiceId;
 
 public class KyberPreKeyTable implements IKyberPreKeyStore {
-  public KyberPreKeyTable(ServiceId.ACI aci) { throw new RuntimeException("not yet implemented"); }
+  private final Account account;
+
+  public KyberPreKeyTable(ServiceId.ACI aci) { account = new Account(aci); }
 
   @Override
   public void deleteAllStaleOneTimeKyberPreKeys(long l, int i) {
