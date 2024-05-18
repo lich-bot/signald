@@ -149,6 +149,7 @@ public class ProvisioningManager {
     account.setACINextKyberPreKeyId(aciKyberPreKeyIdOffset);
     account.setPNINextKyberPreKeyId(pniKyberPreKeyIdOffset);
     account.addLastResortKyberPreKey(ServiceIdType.ACI, aciLastResortKyberPreKey);
+    account.setMasterKey(newDeviceRegistration.getMasterKey());
 
     // store all known identifiers in the recipients table
     account.getDB().RecipientsTable.get(newDeviceRegistration.getNumber(), newDeviceRegistration.getAci());
@@ -157,7 +158,7 @@ public class ProvisioningManager {
       account.getDB().ProfileKeysTable.setProfileKey(account.getSelf(), newDeviceRegistration.getProfileKey());
     }
 
-    Manager m = new Manager(newDeviceRegistration.getAci());
+    //    Manager m = new Manager(newDeviceRegistration.getAci());
 
     Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.LAST_ACCOUNT_REPAIR, AccountRepair.getLatestVersion());
 

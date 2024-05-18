@@ -447,17 +447,17 @@ public class MessageReceiver implements Runnable {
       }
     }
 
-    if (content.getEditMessage().isPresent()) {
-      // TODO
-    }
+    //    if (content.getEditMessage().isPresent()) {
+    //      // TODO
+    //    }
+    //
+    //    if (content.getPniSignatureMessage().isPresent()) {
+    //      // TODO
+    //    }
 
-    if (content.getPniSignatureMessage().isPresent()) {
-      // TODO
-    }
-
-    if (content.getReceiptMessage().isPresent()) {
-      // TODO
-    }
+    //    if (content.getReceiptMessage().isPresent()) {
+    //      // TODO
+    //    }
 
     if (content.getSenderKeyDistributionMessage().isPresent()) {
       logger.debug("handling sender key distribution message from {}", Util.redact(content.getSender()));
@@ -596,6 +596,7 @@ public class MessageReceiver implements Runnable {
       if (rm.isContactsRequest()) {
         BackgroundJobRunnerThread.queue(new SendContactsSyncJob(account));
       }
+
       logger.info("received contact sync request from device " + content.getSenderDevice());
     }
 
@@ -647,12 +648,16 @@ public class MessageReceiver implements Runnable {
 
     if (syncMessage.getKeys().isPresent()) {
       KeysMessage keysMessage = syncMessage.getKeys().get();
-      logger.info("received storage keys from device " + content.getSenderDevice());
-      if (keysMessage.getStorageService().isPresent()) {
-        StorageKey storageKey = keysMessage.getStorageService().get();
-        account.setStorageKey(storageKey);
-        BackgroundJobRunnerThread.queue(new SyncStorageDataJob(account));
+
+      if (keysMessage.getMaster().isPresent()) {
+        account.setMasterKey(keysMessage.getMaster().get());
       }
+
+      if (keysMessage.getStorageService().isPresent()) {
+        account.setStorageKey(keysMessage.getStorageService().get());
+      }
+
+      BackgroundJobRunnerThread.queue(new SyncStorageDataJob(account));
     }
 
     if (syncMessage.getFetchType().isPresent()) {
@@ -674,10 +679,11 @@ public class MessageReceiver implements Runnable {
     //        account.setPNIIdentityKeyPair(new IdentityKeyPair(pniIdentityKey, pniPrivateKey));
     //        logger.info("received PNI identity key from device {}", content.getSenderDevice());
     //      }
+
     if (syncMessage.getPniChangeNumber().isPresent()) {
       SyncMessage.PniChangeNumber pniChangeNumber = syncMessage.getPniChangeNumber().get();
-      //        account.setPniRegistrationId(pniChangeNumber.registrationId);
-      //        account.setPNI(ServiceId.PNI.from());
+      //      account.setPniRegistrationId(pniChangeNumber.registrationId);
+      //      account.setPNI(ServiceId.PNI.from());
       logger.info("account phone number has changed to {}", Util.redact(pniChangeNumber.newE164));
     }
   }

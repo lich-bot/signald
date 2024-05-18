@@ -32,6 +32,7 @@ import org.signal.libsignal.protocol.state.KyberPreKeyRecord;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.account.AccountAttributes;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
+import org.whispersystems.signalservice.api.kbs.MasterKey;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.ServiceId.PNI;
 import org.whispersystems.signalservice.api.push.ServiceIdType;
@@ -352,5 +353,16 @@ public class Account {
     }
     getProtocolStore().storeLastResortKyberPreKey(lastResortKyberPreKeyRecord.getId(), lastResortKyberPreKeyRecord);
     setActiveLastResortKyberPreKeyId(serviceIdType, lastResortKyberPreKeyRecord.getId());
+  }
+
+  public void setMasterKey(MasterKey masterKey) throws SQLException { Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.MASTER_KEY, masterKey.serialize()); }
+
+  public MasterKey getMasterKey() throws SQLException {
+    byte[] serialized = Database.Get().AccountDataTable.getBytes(aci, IAccountDataTable.Key.MASTER_KEY);
+    if (serialized == null) {
+      return null;
+    }
+
+    return new MasterKey(serialized);
   }
 }

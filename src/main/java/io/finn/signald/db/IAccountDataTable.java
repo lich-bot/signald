@@ -36,7 +36,6 @@ public interface IAccountDataTable {
     PRE_KEY_ID_OFFSET,
     NEXT_SIGNED_PRE_KEY_ID,
     PNI_NEXT_SIGNED_PRE_KEY_ID,
-
     ACI_ACTIVE_SIGNED_PREKEY_ID,
     PNI_ACTIVE_SIGNED_PREKEY_ID,
     LAST_ACCOUNT_REPAIR, // fixes to historical signald bugs (see ../AccountRepair.java)
@@ -49,6 +48,7 @@ public interface IAccountDataTable {
     ACI_ACTIVE_LAST_RESORT_KYBER_PRE_KEY_ID,
     PNI_ACTIVE_LAST_RESORT_KYBER_PRE_KEY_ID,
     CDSI_TOKEN,
+    MASTER_KEY,
   }
 
   // Default implementations for setting values
