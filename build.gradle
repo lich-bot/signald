@@ -21,7 +21,7 @@ compileJava.options.encoding = 'UTF-8'
 // crappy rust target detection
 static String getTarget() {
     String target = System.getenv("SIGNALD_TARGET") // Allow overriding the architecture
-    if(target != null) {
+    if (target != null) {
         System.out.println("skipping target detection, using " + target)
         return target
     }
@@ -31,48 +31,48 @@ static String getTarget() {
     String third = null
 
     ArchitectureInternal arch = DefaultNativePlatform.getCurrentArchitecture()
-    switch(arch.getName()) {
+    switch (arch.getName()) {
         case ["x86_64", "x64", "x86-64"]:  // based on https://github.com/wasmerio/wasmer-java/blob/d1fc32347b206f28ddaf48896267a9740770323e/build.gradle#L79-L82
             first = "x86_64"
-        break
+            break
         case "aarch64":
             first = "aarch64"
-        break
+            break
         case "arm-v7":
             throw new Exception("Unsupported architecture, only 64-bit arm is supported. " +
-                                "For more info: https://gitlab.com/signald/signald/-/issues/349\n" +
-                                "To override, set environment variable SIGNALD_TARGET")
-        break
+                    "For more info: https://gitlab.com/signald/signald/-/issues/349\n" +
+                    "To override, set environment variable SIGNALD_TARGET")
+            break
     }
 
     OperatingSystemInternal os = DefaultNativePlatform.getCurrentOperatingSystem()
-    if(os.isLinux()) {
+    if (os.isLinux()) {
         second = "unknown-linux"
         third = "gnu"
     }
 
-    if(os.isMacOsX()) {
+    if (os.isMacOsX()) {
         second = "apple"
         third = "darwin"
     }
 
-    if(first == null || second == null || third == null) {
+    if (first == null || second == null || third == null) {
         throw new Exception("Unable to detect architecture." +
                 "\n * os: " + os.getName() +
                 "\n * arch: " + arch.getName() +
                 "\n * linux: " + os.isLinux() ? "yes" : "no" +
-                "\n * osx:" + os.isMacOsX() ? "yes": "no" +
+                "\n * osx:" + os.isMacOsX() ? "yes" : "no" +
                 "\n\n Set environment variable SIGNALD_TARGET to force a target" +
                 "\n See https://gitlab.com/signald/signald/-/merge_requests/44")
     }
     target = first + "-" + second + "-" + third
-    System.out.println("detected build target: " + target + " (arch=" + arch.getName() + " os=" + os.getName() +")")
+    System.out.println("detected build target: " + target + " (arch=" + arch.getName() + " os=" + os.getName() + ")")
     return target
 }
 
 static String getVersion() {
     String version = System.getenv("VERSION")
-    if(version != null) {
+    if (version != null) {
         System.out.println("signald version set to " + version)
         return version
     }
@@ -81,7 +81,8 @@ static String getVersion() {
 }
 
 repositories {
-    maven {url "https://gitlab.com/api/v4/groups/6853927/-/packages/maven"} // https://gitlab.com/groups/signald/-/packages
+    maven { url "https://gitlab.com/api/v4/groups/6853927/-/packages/maven" }
+    // https://gitlab.com/groups/signald/-/packages
     mavenCentral()
 }
 
@@ -109,42 +110,42 @@ dependencies {
 
 
 buildConfig {
-  packageName("io.finn.signald")
+    packageName("io.finn.signald")
 
-  buildConfigField('String', 'NAME', "\"signald\"")
-  buildConfigField('String', 'VERSION', "\"" + getVersion() + "\"")
-  buildConfigField('String', "ERROR_REPORTING_URL", "\"https://gitlab.com/signald/signald/-/issues/new\"")
+    buildConfigField('String', 'NAME', "\"signald\"")
+    buildConfigField('String', 'VERSION', "\"" + getVersion() + "\"")
+    buildConfigField('String', "ERROR_REPORTING_URL", "\"https://gitlab.com/signald/signald/-/issues/new\"")
 
-  buildConfigField('String', 'BRANCH', "\"" + (System.getenv("CI_BUILD_REF_NAME") ?: "") + "\"")
-  buildConfigField('String', 'COMMIT', "\"" + (System.getenv("CI_COMMIT_SHA") ?: "") + "\"")
+    buildConfigField('String', 'BRANCH', "\"" + (System.getenv("CI_BUILD_REF_NAME") ?: "") + "\"")
+    buildConfigField('String', 'COMMIT', "\"" + (System.getenv("CI_COMMIT_SHA") ?: "") + "\"")
 
-  buildConfigField('String', 'USER_AGENT', System.getenv("USER_AGENT") ? "\"" + System.getenv("USER_AGENT") + "\"" : "NAME + \"/\" + VERSION")
-  buildConfigField('String', 'SIGNAL_AGENT', System.getenv("SIGNAL_AGENT") ? "\"" + System.getenv("SIGNAL_AGENT") + "\"" : "NAME")
+    buildConfigField('String', 'USER_AGENT', System.getenv("USER_AGENT") ? "\"" + System.getenv("USER_AGENT") + "\"" : "NAME + \"/\" + VERSION")
+    buildConfigField('String', 'SIGNAL_AGENT', System.getenv("SIGNAL_AGENT") ? "\"" + System.getenv("SIGNAL_AGENT") + "\"" : "NAME")
 
-  // Parameters for the default server to provision new accounts with, if not specified in the protocol.
-  // the server UUID is internal to signald, must be changed if any other server values are changed.
-  buildConfigField('String', "DEFAULT_SERVER_UUID", "\"" + (System.getenv("DEFAULT_SERVER_UUID") ?: "6e2eb5a8-5706-45d0-8377-127a816411a4") + "\"")
-  buildConfigField('String', 'SIGNAL_URL', "\"" + (System.getenv("SIGNAL_URL") ?: "https://chat.signal.org") + "\"")
-  buildConfigField('String', 'SIGNAL_CDN_URL', "\"" + (System.getenv("SIGNAL_CDN_URL") ?: "https://cdn.signal.org") + "\"")
-  buildConfigField('String', 'SIGNAL_CDN2_URL', "\"" + (System.getenv("SIGNAL_CDN_URL") ?: "https://cdn2.signal.org") + "\"")
-  buildConfigField('String', 'SIGNAL_KEY_BACKUP_URL', "\"" + (System.getenv("SIGNAL_KEY_BACKUP_URL") ?: "https://api.backup.signal.org") + "\"")
-  buildConfigField('String', 'SIGNAL_STORAGE_URL', "\"" + (System.getenv("SIGNAL_STORAGE_URL") ?: "https://storage.signal.org") + "\"")
-  buildConfigField('String', 'SIGNAL_CONTACT_DISCOVERY_URL', "\"" + (System.getenv("SIGNAL_CONTACT_DISCOVERY_URL") ?: "https://cms.souqcdn.com") + "\"")
-  buildConfigField('String', "UNIDENTIFIED_SENDER_TRUST_ROOT", "\"" + (System.getenv("SIGNAL_UNIDENTIFIED_SENDER_ROOT") ?: "BXu6QIKVz5MA8gstzfOgRQGqyLqOwNKHL6INkv3IHWMF") + "\"")
-  buildConfigField('String', "SIGNAL_ZK_GROUP_SERVER_PUBLIC_PARAMS", "\"" + (System.getenv("SIGNAL_ZK_GROUP_SERVER_PUBLIC_PARAMS") ?: "AMhf5ywVwITZMsff/eCyudZx9JDmkkkbV6PInzG4p8x3VqVJSFiMvnvlEKWuRob/1eaIetR31IYeAbm0NdOuHH8Qi+Rexi1wLlpzIo1gstHWBfZzy1+qHRV5A4TqPp15YzBPm0WSggW6PbSn+F4lf57VCnHF7p8SvzAA2ZZJPYJURt8X7bbg+H3i+PEjH9DXItNEqs2sNcug37xZQDLm7X36nOoGPs54XsEGzPdEV+itQNGUFEjY6X9Uv+Acuks7NpyGvCoKxGwgKgE5XyJ+nNKlyHHOLb6N1NuHyBrZrgtY/JYJHRooo5CEqYKBqdFnmbTVGEkCvJKxLnjwKWf+fEPoWeQFj5ObDjcKMZf2Jm2Ae69x+ikU5gBXsRmoF94GXTLfN0/vLt98KDPnxwAQL9j5V1jGOY8jQl6MLxEs56cwXN0dqCnImzVH3TZT1cJ8SW1BRX6qIVxEzjsSGx3yxF3suAilPMqGRp4ffyopjMD1JXiKR2RwLKzizUe5e8XyGOy9fplzhw3jVzTRyUZTRSZKkMLWcQ/gv0E4aONNqs4P") + "\"")
-  // the base64 encoded trust store
-  buildConfigField('String', "CA", "\"" + (System.getenv("SIGNAL_CA") ?: "AAAAAQAAABThGWAvYIoB26b2A/AhL6OoW74wfAAAB7cBABF0ZXh0c2VjdXJlLWdjbS1jYQAAAT2jsW+pAAAAAAAFWC41MDkAAAPzMIID7zCCAtegAwIBAgIJAIm6LatK5PNiMA0GCSqGSIb3DQEBBQUAMIGNMQswCQYDVQQGEwJVUzETMBEGA1UECAwKQ2FsaWZvcm5pYTEWMBQGA1UEBwwNU2FuIEZyYW5jaXNjbzEdMBsGA1UECgwUT3BlbiBXaGlzcGVyIFN5c3RlbXMxHTAbBgNVBAsMFE9wZW4gV2hpc3BlciBTeXN0ZW1zMRMwEQYDVQQDDApUZXh0U2VjdXJlMB4XDTEzMDMyNTIyMTgzNVoXDTIzMDMyMzIyMTgzNVowgY0xCzAJBgNVBAYTAlVTMRMwEQYDVQQIDApDYWxpZm9ybmlhMRYwFAYDVQQHDA1TYW4gRnJhbmNpc2NvMR0wGwYDVQQKDBRPcGVuIFdoaXNwZXIgU3lzdGVtczEdMBsGA1UECwwUT3BlbiBXaGlzcGVyIFN5c3RlbXMxEzARBgNVBAMMClRleHRTZWN1cmUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDBSWBpOCBDF0i4q2d4jAXkSXUGpbeWugVPQCjaL6qD9QDOxeW1afvfPo863i6Crq1KDxHpB36EwzVcjwLkFTIMeo7t9s1FQolAt3mErV2U0vie6Ves+yj6grSfxwIDAcdsKmI0a1SQCZlr3Q1tcHAkAKFRxYNawADyps5B+Zmqcgf653TXS5/0IPPQLocLn8GWLwOYNnYfBvILKDMItmZTtEbucdigxEA9mfIvvHADEbteLtVgwBm9R5vVvtwrD6CCxI3pgH7EH7kMP0Od93wLisvn1yhHY7FuYlrkYqdkMvWUrKoASVw4jb69vaeJCUdU+HCoXOSP1PQcL6WenNCHAgMBAAGjUDBOMB0GA1UdDgQWBBQBixjxP/s5GURuhYa+lGUypzI8kDAfBgNVHSMEGDAWgBQBixjxP/s5GURuhYa+lGUypzI8kDAMBgNVHRMEBTADAQH/MA0GCSqGSIb3DQEBBQUAA4IBAQB+Hr4hC56m0LvJAu1RK6NuPDbTMEN7/jMojFHxH4P3XPFfupjR+bkDq0pPOU6JjIxnrD1XD/EVmTTaTVY5iOheyv7UzJOefb2pLOc9qsuvI4fnaESh9bhzln+LXxtCrRPGhkxA1IMIo3J/s2WF/KVYZyciu6b4ubJ91XPAuBNZwImug7/srWvbpk0hq6A6z140WTVSKtJG7EP41kJe/oF4usY5J7LPkxK3LWzMJnb5EIJDmRvyH8pyRwWg6Qm6qiGFaI4nL8QU4La1x2en4DGXRaLMPRwjELNgQPodR38zoCMuA8gHZfZYYoZ7D7Q1wNUiVHcxuFrEeBaYJbLErwLVALvy/4I2uFTpAiDQ7Wz7yaNw7tAl") + "\"")
-  // proxy should be specified in host:port form
-  buildConfigField('String', "SIGNAL_PROXY", "\"" + (System.getenv("SIGNAL_PROXY") ?: "") + "\"")
+    // Parameters for the default server to provision new accounts with, if not specified in the protocol.
+    // the server UUID is internal to signald, must be changed if any other server values are changed.
+    buildConfigField('String', "DEFAULT_SERVER_UUID", "\"" + (System.getenv("DEFAULT_SERVER_UUID") ?: "6e2eb5a8-5706-45d0-8377-127a816411a4") + "\"")
+    buildConfigField('String', 'SIGNAL_URL', "\"" + (System.getenv("SIGNAL_URL") ?: "https://chat.signal.org") + "\"")
+    buildConfigField('String', 'SIGNAL_CDN_URL', "\"" + (System.getenv("SIGNAL_CDN_URL") ?: "https://cdn.signal.org") + "\"")
+    buildConfigField('String', 'SIGNAL_CDN2_URL', "\"" + (System.getenv("SIGNAL_CDN_URL") ?: "https://cdn2.signal.org") + "\"")
+    buildConfigField('String', 'SIGNAL_KEY_BACKUP_URL', "\"" + (System.getenv("SIGNAL_KEY_BACKUP_URL") ?: "https://api.backup.signal.org") + "\"")
+    buildConfigField('String', 'SIGNAL_STORAGE_URL', "\"" + (System.getenv("SIGNAL_STORAGE_URL") ?: "https://storage.signal.org") + "\"")
+    buildConfigField('String', 'SIGNAL_CONTACT_DISCOVERY_URL', "\"" + (System.getenv("SIGNAL_CONTACT_DISCOVERY_URL") ?: "https://cms.souqcdn.com") + "\"")
+    buildConfigField('String', "UNIDENTIFIED_SENDER_TRUST_ROOT", "\"" + (System.getenv("SIGNAL_UNIDENTIFIED_SENDER_ROOT") ?: "BXu6QIKVz5MA8gstzfOgRQGqyLqOwNKHL6INkv3IHWMF") + "\"")
+    buildConfigField('String', "SIGNAL_ZK_GROUP_SERVER_PUBLIC_PARAMS", "\"" + (System.getenv("SIGNAL_ZK_GROUP_SERVER_PUBLIC_PARAMS") ?: "AMhf5ywVwITZMsff/eCyudZx9JDmkkkbV6PInzG4p8x3VqVJSFiMvnvlEKWuRob/1eaIetR31IYeAbm0NdOuHH8Qi+Rexi1wLlpzIo1gstHWBfZzy1+qHRV5A4TqPp15YzBPm0WSggW6PbSn+F4lf57VCnHF7p8SvzAA2ZZJPYJURt8X7bbg+H3i+PEjH9DXItNEqs2sNcug37xZQDLm7X36nOoGPs54XsEGzPdEV+itQNGUFEjY6X9Uv+Acuks7NpyGvCoKxGwgKgE5XyJ+nNKlyHHOLb6N1NuHyBrZrgtY/JYJHRooo5CEqYKBqdFnmbTVGEkCvJKxLnjwKWf+fEPoWeQFj5ObDjcKMZf2Jm2Ae69x+ikU5gBXsRmoF94GXTLfN0/vLt98KDPnxwAQL9j5V1jGOY8jQl6MLxEs56cwXN0dqCnImzVH3TZT1cJ8SW1BRX6qIVxEzjsSGx3yxF3suAilPMqGRp4ffyopjMD1JXiKR2RwLKzizUe5e8XyGOy9fplzhw3jVzTRyUZTRSZKkMLWcQ/gv0E4aONNqs4P") + "\"")
+    // the base64 encoded trust store
+    buildConfigField('String', "CA", "\"" + (System.getenv("SIGNAL_CA") ?: "AAAAAQAAABThGWAvYIoB26b2A/AhL6OoW74wfAAAB7cBABF0ZXh0c2VjdXJlLWdjbS1jYQAAAT2jsW+pAAAAAAAFWC41MDkAAAPzMIID7zCCAtegAwIBAgIJAIm6LatK5PNiMA0GCSqGSIb3DQEBBQUAMIGNMQswCQYDVQQGEwJVUzETMBEGA1UECAwKQ2FsaWZvcm5pYTEWMBQGA1UEBwwNU2FuIEZyYW5jaXNjbzEdMBsGA1UECgwUT3BlbiBXaGlzcGVyIFN5c3RlbXMxHTAbBgNVBAsMFE9wZW4gV2hpc3BlciBTeXN0ZW1zMRMwEQYDVQQDDApUZXh0U2VjdXJlMB4XDTEzMDMyNTIyMTgzNVoXDTIzMDMyMzIyMTgzNVowgY0xCzAJBgNVBAYTAlVTMRMwEQYDVQQIDApDYWxpZm9ybmlhMRYwFAYDVQQHDA1TYW4gRnJhbmNpc2NvMR0wGwYDVQQKDBRPcGVuIFdoaXNwZXIgU3lzdGVtczEdMBsGA1UECwwUT3BlbiBXaGlzcGVyIFN5c3RlbXMxEzARBgNVBAMMClRleHRTZWN1cmUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDBSWBpOCBDF0i4q2d4jAXkSXUGpbeWugVPQCjaL6qD9QDOxeW1afvfPo863i6Crq1KDxHpB36EwzVcjwLkFTIMeo7t9s1FQolAt3mErV2U0vie6Ves+yj6grSfxwIDAcdsKmI0a1SQCZlr3Q1tcHAkAKFRxYNawADyps5B+Zmqcgf653TXS5/0IPPQLocLn8GWLwOYNnYfBvILKDMItmZTtEbucdigxEA9mfIvvHADEbteLtVgwBm9R5vVvtwrD6CCxI3pgH7EH7kMP0Od93wLisvn1yhHY7FuYlrkYqdkMvWUrKoASVw4jb69vaeJCUdU+HCoXOSP1PQcL6WenNCHAgMBAAGjUDBOMB0GA1UdDgQWBBQBixjxP/s5GURuhYa+lGUypzI8kDAfBgNVHSMEGDAWgBQBixjxP/s5GURuhYa+lGUypzI8kDAMBgNVHRMEBTADAQH/MA0GCSqGSIb3DQEBBQUAA4IBAQB+Hr4hC56m0LvJAu1RK6NuPDbTMEN7/jMojFHxH4P3XPFfupjR+bkDq0pPOU6JjIxnrD1XD/EVmTTaTVY5iOheyv7UzJOefb2pLOc9qsuvI4fnaESh9bhzln+LXxtCrRPGhkxA1IMIo3J/s2WF/KVYZyciu6b4ubJ91XPAuBNZwImug7/srWvbpk0hq6A6z140WTVSKtJG7EP41kJe/oF4usY5J7LPkxK3LWzMJnb5EIJDmRvyH8pyRwWg6Qm6qiGFaI4nL8QU4La1x2en4DGXRaLMPRwjELNgQPodR38zoCMuA8gHZfZYYoZ7D7Q1wNUiVHcxuFrEeBaYJbLErwLVALvy/4I2uFTpAiDQ7Wz7yaNw7tAl") + "\"")
+    // proxy should be specified in host:port form
+    buildConfigField('String', "SIGNAL_PROXY", "\"" + (System.getenv("SIGNAL_PROXY") ?: "") + "\"")
 
-  buildConfigField('String', "KEY_BACKUP_SERVICE_NAME", "\"" + (System.getenv("KEY_BACKUP_SERVICE_NAME") ?: "fe7c1bfae98f9b073d220366ea31163ee82f6d04bead774f71ca8e5c40847bfe") + "\"")
-  buildConfigField('String', "KEY_BACKUP_SERVICE_ID", "\"" + (System.getenv("KEY_BACKUP_SERVICE_ID") ?: "/nwb+umPmwc9IgNm6jEWPugvbQS+rXdPccqOXECEe/4=") + "\"")
-  buildConfigField('String', "KEY_BACKUP_MRENCLAVE", "\"" + (System.getenv("KEY_BACKUP_MRENCLAVE") ?: "o7qrGe9s5vNKueuyW6ciclrkSohy3A/witbYOpSJ3oc=") + "\"")
-  buildConfigField('String', "CDS_MRENCLAVE", "\"" + (System.getenv("CDS_MRENCLAVE") ?: "yY4ApOP/l3pWr+/nNion5JYeTxniEf6/uxm4l+a4CxU=") + "\"")
-  buildConfigField('String', "CDS_CA", "\"" + (System.getenv("CDS_CA") ?: "AAAAAgAAABQeE5h3wTEjUgA1bUjXQbnoU41KKQAAB4EBAANpYXMAAAFkret5dgAAAAAABVguNTA5AAAFTzCCBUswggOzoAMCAQICCQDRB3ZdMqOwlDANBgkqhkiG9w0BAQsFADB+MQswCQYDVQQGEwJVUzELMAkGA1UECAwCQ0ExFDASBgNVBAcMC1NhbnRhIENsYXJhMRowGAYDVQQKDBFJbnRlbCBDb3Jwb3JhdGlvbjEwMC4GA1UEAwwnSW50ZWwgU0dYIEF0dGVzdGF0aW9uIFJlcG9ydCBTaWduaW5nIENBMCAXDTE2MTExNDE1MzczMVoYDzIwNDkxMjMxMjM1OTU5WjB+MQswCQYDVQQGEwJVUzELMAkGA1UECAwCQ0ExFDASBgNVBAcMC1NhbnRhIENsYXJhMRowGAYDVQQKDBFJbnRlbCBDb3Jwb3JhdGlvbjEwMC4GA1UEAwwnSW50ZWwgU0dYIEF0dGVzdGF0aW9uIFJlcG9ydCBTaWduaW5nIENBMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAnzxkfrV3PLtRLScywNdBXrtVoPqe3i5kkZnmgh25ENUxdzcJd0Zqal5HhszS3evUFJ1qL2MlUp3RDMmHN7B3nBoH4pxHoa4ASUhHbEifRaWhXXrI7MasxkWttD2HZ531nAk7xaLpaWxUeFQbl551S1c5FL5V0y/0wJ3fJyGZNM2ZBSez+S7Xj78pJGq+y3EkDvOcLXEHtEdUWn/7EOsGCmiphYAhnjaRCVJoOJLWpeKoCAMZPkB1MUBONrMVYjeZqoJQdECXVKLf6PWv1f5jHh/CrzgIkG8op5DZ3Z/gYJObEleQxYBdA331aplTG5bead4z7SJswSB9EEK1yat/QE/HEcD+R2n7lXix3A7EaeoaJeD/mRSIbvJpmyNbtIR91v9AtgbmFweTwvuYsxRYf5z9JXNi3+qxCzvS2XZzoaS9RMRTqvR/wfLT0POE90oG+JwInw2mzbf87ujJghqOVPJcBBbRjEaDml+AEvvdPcdNJWJ5rcLA1Vr/bwYiQl0bAgMBAAGjgckwgcYwYAYDVR0fBFkwVzBVoFOgUYZPaHR0cDovL3RydXN0ZWRzZXJ2aWNlcy5pbnRlbC5jb20vY29udGVudC9DUkwvU0dYL0F0dGVzdGF0aW9uUmVwb3J0U2lnbmluZ0NBLmNybDAdBgNVHQ4EFgQUeEN7dqZ+vNCvfkI36zV8O4cBUTwwHwYDVR0jBBgwFoAUeEN7dqZ+vNCvfkI36zV8O4cBUTwwDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQIMAYBAf8CAQAwDQYJKoZIhvcNAQELBQADggGBAHhfLWDFyAr0Knl2ECE5FdqCybKeieCQKiWmx1sWCRxoqyBKrnEYiUksfh4yCRFFWo/BNEIxLnemOZTZl5XI6kV2gjzqitHhkc+oYvq4qTLT2bBTWgcC0FVfdOUg4wMw8zSA563J18geIHAxQr8AxSioC0Yzgf1gKoLHA1KBquWVYsy1M06okD5lCwEGgfXOjrYurJxBSYgkOuyS8lvxPN/368wpjuUbulo1OLZrJsvEWlHeADytMGUxrXz11O8PiAXRuRM9JBNas8RkGi+ICDSdczMpXg527kvFInIyYo76gNedkqtOPREg8/ta0RnNjVRKodSmhl5rV76sV3Ewfi48uQcNpHtL/Ihp4BQT6gk1Qd6KeSgRt0Y2xekUUs8M7lny+0BKzQvFhMucg1QEc0wOfsZgXN/PL/Q5ttRxn3AvDgw/oE/bEqbLKtGrHJrx+PTDoI7dcqMrC7XQrSVv/RWaaDsqWh8dEfpiUy8D11TK7w2lc1oeWohMfonZEhjJ1wCFFeX1mSzMRx87G8Gq7CSimX5q0w==") + "\"" )
-  buildConfigField('int',    "SENDER_KEY_MAX_AGE_DAYS", System.getenv("SENDER_KEY_MAX_AGE_DAYS") ?: "14")
-  buildConfigField('String', "CDSI_URL", "\"" + (System.getenv("CDSI_URL") ?: "https://cdsi.signal.org") + "\"")
-  buildConfigField('String', "SVR2_URL", "\"" + (System.getenv("SVR2_URL") ?: "https://svr2.signal.org") + "\"")
+    buildConfigField('String', "KEY_BACKUP_SERVICE_NAME", "\"" + (System.getenv("KEY_BACKUP_SERVICE_NAME") ?: "fe7c1bfae98f9b073d220366ea31163ee82f6d04bead774f71ca8e5c40847bfe") + "\"")
+    buildConfigField('String', "KEY_BACKUP_SERVICE_ID", "\"" + (System.getenv("KEY_BACKUP_SERVICE_ID") ?: "/nwb+umPmwc9IgNm6jEWPugvbQS+rXdPccqOXECEe/4=") + "\"")
+    buildConfigField('String', "KEY_BACKUP_MRENCLAVE", "\"" + (System.getenv("KEY_BACKUP_MRENCLAVE") ?: "o7qrGe9s5vNKueuyW6ciclrkSohy3A/witbYOpSJ3oc=") + "\"")
+    buildConfigField('String', "CDS_MRENCLAVE", "\"" + (System.getenv("CDS_MRENCLAVE") ?: "yY4ApOP/l3pWr+/nNion5JYeTxniEf6/uxm4l+a4CxU=") + "\"")
+    buildConfigField('String', "CDS_CA", "\"" + (System.getenv("CDS_CA") ?: "AAAAAgAAABQeE5h3wTEjUgA1bUjXQbnoU41KKQAAB4EBAANpYXMAAAFkret5dgAAAAAABVguNTA5AAAFTzCCBUswggOzoAMCAQICCQDRB3ZdMqOwlDANBgkqhkiG9w0BAQsFADB+MQswCQYDVQQGEwJVUzELMAkGA1UECAwCQ0ExFDASBgNVBAcMC1NhbnRhIENsYXJhMRowGAYDVQQKDBFJbnRlbCBDb3Jwb3JhdGlvbjEwMC4GA1UEAwwnSW50ZWwgU0dYIEF0dGVzdGF0aW9uIFJlcG9ydCBTaWduaW5nIENBMCAXDTE2MTExNDE1MzczMVoYDzIwNDkxMjMxMjM1OTU5WjB+MQswCQYDVQQGEwJVUzELMAkGA1UECAwCQ0ExFDASBgNVBAcMC1NhbnRhIENsYXJhMRowGAYDVQQKDBFJbnRlbCBDb3Jwb3JhdGlvbjEwMC4GA1UEAwwnSW50ZWwgU0dYIEF0dGVzdGF0aW9uIFJlcG9ydCBTaWduaW5nIENBMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAnzxkfrV3PLtRLScywNdBXrtVoPqe3i5kkZnmgh25ENUxdzcJd0Zqal5HhszS3evUFJ1qL2MlUp3RDMmHN7B3nBoH4pxHoa4ASUhHbEifRaWhXXrI7MasxkWttD2HZ531nAk7xaLpaWxUeFQbl551S1c5FL5V0y/0wJ3fJyGZNM2ZBSez+S7Xj78pJGq+y3EkDvOcLXEHtEdUWn/7EOsGCmiphYAhnjaRCVJoOJLWpeKoCAMZPkB1MUBONrMVYjeZqoJQdECXVKLf6PWv1f5jHh/CrzgIkG8op5DZ3Z/gYJObEleQxYBdA331aplTG5bead4z7SJswSB9EEK1yat/QE/HEcD+R2n7lXix3A7EaeoaJeD/mRSIbvJpmyNbtIR91v9AtgbmFweTwvuYsxRYf5z9JXNi3+qxCzvS2XZzoaS9RMRTqvR/wfLT0POE90oG+JwInw2mzbf87ujJghqOVPJcBBbRjEaDml+AEvvdPcdNJWJ5rcLA1Vr/bwYiQl0bAgMBAAGjgckwgcYwYAYDVR0fBFkwVzBVoFOgUYZPaHR0cDovL3RydXN0ZWRzZXJ2aWNlcy5pbnRlbC5jb20vY29udGVudC9DUkwvU0dYL0F0dGVzdGF0aW9uUmVwb3J0U2lnbmluZ0NBLmNybDAdBgNVHQ4EFgQUeEN7dqZ+vNCvfkI36zV8O4cBUTwwHwYDVR0jBBgwFoAUeEN7dqZ+vNCvfkI36zV8O4cBUTwwDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQIMAYBAf8CAQAwDQYJKoZIhvcNAQELBQADggGBAHhfLWDFyAr0Knl2ECE5FdqCybKeieCQKiWmx1sWCRxoqyBKrnEYiUksfh4yCRFFWo/BNEIxLnemOZTZl5XI6kV2gjzqitHhkc+oYvq4qTLT2bBTWgcC0FVfdOUg4wMw8zSA563J18geIHAxQr8AxSioC0Yzgf1gKoLHA1KBquWVYsy1M06okD5lCwEGgfXOjrYurJxBSYgkOuyS8lvxPN/368wpjuUbulo1OLZrJsvEWlHeADytMGUxrXz11O8PiAXRuRM9JBNas8RkGi+ICDSdczMpXg527kvFInIyYo76gNedkqtOPREg8/ta0RnNjVRKodSmhl5rV76sV3Ewfi48uQcNpHtL/Ihp4BQT6gk1Qd6KeSgRt0Y2xekUUs8M7lny+0BKzQvFhMucg1QEc0wOfsZgXN/PL/Q5ttRxn3AvDgw/oE/bEqbLKtGrHJrx+PTDoI7dcqMrC7XQrSVv/RWaaDsqWh8dEfpiUy8D11TK7w2lc1oeWohMfonZEhjJ1wCFFeX1mSzMRx87G8Gq7CSimX5q0w==") + "\"")
+    buildConfigField('int', "SENDER_KEY_MAX_AGE_DAYS", System.getenv("SENDER_KEY_MAX_AGE_DAYS") ?: "14")
+    buildConfigField('String', "CDSI_URL", "\"" + (System.getenv("CDSI_URL") ?: "https://cdsi.signal.org") + "\"")
+    buildConfigField('String', "SVR2_URL", "\"" + (System.getenv("SVR2_URL") ?: "https://svr2.signal.org") + "\"")
 }
 
 
