@@ -183,12 +183,6 @@ public class RegistrationManager {
     }
   }
 
-  private ProfileKey generateProfileKey() throws InvalidInputException {
-    byte[] key = new byte[32];
-    RandomUtils.getSecureRandom().nextBytes(key);
-    return new ProfileKey(key);
-  }
-
   public static SignedPreKeyRecord generateSignedPreKeyRecord(final int signedPreKeyId, final ECPrivateKey privateKey) {
     var keyPair = Curve.generateKeyPair();
     byte[] signature;
