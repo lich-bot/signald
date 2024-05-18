@@ -11,9 +11,9 @@ import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
 import org.gradle.nativeplatform.platform.internal.OperatingSystemInternal
 
 plugins {
-   id 'com.github.gmazzo.buildconfig' version '3.0.3'
-   id 'org.beryx.runtime' version '1.12.7'
-   id 'application'
+    id 'com.github.gmazzo.buildconfig' version '5.3.5'
+    id 'org.beryx.runtime' version '1.13.1'
+    id 'application'
 }
 
 compileJava.options.encoding = 'UTF-8'
@@ -89,22 +89,22 @@ repositories {
 dependencies {
     implementation 'org.signald:signal-service-java-' + getTarget() + ':2.15.3_unofficial_90'
     implementation 'org.signald:core-util-jvm:2.15.3_unofficial_90'
-    implementation 'org.bouncycastle:bcprov-jdk15on:1.70'
-    implementation 'com.kohlschutter.junixsocket:junixsocket-common:2.6.1'
-    implementation 'com.kohlschutter.junixsocket:junixsocket-native-common:2.6.1'
-    implementation 'org.apache.logging.log4j:log4j-api:2.19.0'
-    implementation 'org.apache.logging.log4j:log4j-core:2.19.0'
-    implementation 'org.slf4j:slf4j-nop:2.0.5'
-    implementation 'info.picocli:picocli:4.7.0'
-    implementation 'org.xerial:sqlite-jdbc:3.40.0.0'
-    implementation 'org.postgresql:postgresql:42.5.1'
-    implementation 'org.flywaydb:flyway-core:9.10.2'
-    implementation 'com.google.protobuf:protobuf-javalite:3.21.11'
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1'
+    implementation 'com.kohlschutter.junixsocket:junixsocket-common:2.9.1'
+    implementation 'com.kohlschutter.junixsocket:junixsocket-native-common:2.9.1'
+    implementation 'org.apache.logging.log4j:log4j-api:2.23.1'
+    implementation 'org.apache.logging.log4j:log4j-core:2.23.1'
+    implementation 'org.slf4j:slf4j-nop:2.0.13'
+    implementation 'info.picocli:picocli:4.7.6'
+    implementation 'org.xerial:sqlite-jdbc:3.45.3.0'
+    implementation 'org.postgresql:postgresql:42.7.3'
+    implementation 'org.flywaydb:flyway-core:10.13.0'
+    implementation 'com.google.protobuf:protobuf-javalite:4.26.1'
     implementation 'io.prometheus:simpleclient:0.16.0'
     implementation 'io.prometheus:simpleclient_hotspot:0.16.0'
     implementation 'io.prometheus:simpleclient_httpserver:0.16.0'
-    implementation 'com.squareup.okhttp3:logging-interceptor:4.10.0'
-    implementation 'io.sentry:sentry:6.11.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.12.0'
+    implementation 'io.sentry:sentry:7.9.0'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.9.0'
 }
 
