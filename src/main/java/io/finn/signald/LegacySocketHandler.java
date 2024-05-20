@@ -291,7 +291,7 @@ public class LegacySocketHandler {
   private void addDevice(JsonRequest request) throws IOException, InvalidKeyException, AssertionError, URISyntaxException, NoSuchAccountException, InvalidInputException,
                                                      SQLException, ServerNotFoundException, InvalidProxyException {
     Manager m = Manager.get(request.username);
-    m.addDeviceLink(new URI(request.uri));
+    LinkedDevices.add(m.getAccount(), new URI(request.uri));
     reply("device_added", new JsonStatusMessage(4, "Successfully linked device"), request.id);
   }
 

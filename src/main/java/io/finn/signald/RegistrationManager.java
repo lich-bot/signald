@@ -93,11 +93,17 @@ public class RegistrationManager {
     Database.Get().PendingAccountDataTable.set(e164, IPendingAccountDataTable.Key.PNI_IDENTITY_KEY_PAIR, KeyUtil.generateIdentityKeyPair().serialize());
     Database.Get().PendingAccountDataTable.set(e164, IPendingAccountDataTable.Key.SERVER_UUID, server.toString());
 
-    if (captcha.isPresent()) {
-      numberVerification.submitCaptcha(captcha.get());
+    RegistrationSessionMetadataResponse result;
+    try {
+      result = numberVerification.requestVerificationCode(voiceVerification);
+    } catch (CaptchaRequiredException e) {
+      if (captcha.isPresent()) {
+        numberVerification.submitCaptcha(captcha.get());
+        result = numberVerification.requestVerificationCode(voiceVerification);
+      } else {
+        throw e;
+      }
     }
-
-    RegistrationSessionMetadataResponse result = numberVerification.requestVerificationCode(voiceVerification);
 
     return result.getBody();
   }

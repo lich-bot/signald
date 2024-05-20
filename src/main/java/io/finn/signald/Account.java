@@ -16,6 +16,7 @@ import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.util.KeyUtil;
 import io.sentry.Sentry;
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
@@ -24,7 +25,6 @@ import java.util.function.Consumer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
-import org.signal.core.util.Base64;
 import org.signal.libsignal.protocol.IdentityKeyPair;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.protocol.ServiceId;
@@ -357,10 +357,12 @@ public class Account {
 
   public void setMasterKey(MasterKey masterKey) throws SQLException { Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.MASTER_KEY, masterKey.serialize()); }
 
-  public MasterKey getMasterKey() throws SQLException {
+  public MasterKey getOrCreateMasterKey() throws SQLException {
     byte[] serialized = Database.Get().AccountDataTable.getBytes(aci, IAccountDataTable.Key.MASTER_KEY);
     if (serialized == null) {
-      return null;
+      MasterKey masterKey = MasterKey.createNew(new SecureRandom());
+      setMasterKey(masterKey);
+      serialized = masterKey.serialize();
     }
 
     return new MasterKey(serialized);
