@@ -513,7 +513,8 @@ public class MessageReceiver implements Runnable {
           retrieveAttachment(attachment);
         } catch (IOException | InvalidMessageException | NoSuchAccountException | ServerNotFoundException | InvalidProxyException e) {
           String id = attachment.isPointer() ? attachment.asPointer().getRemoteId().toString() : "";
-          logger.warn("Failed to retrieve attachment ({}): {}", id, e.getMessage());
+          logger.warn("Failed to retrieve attachment ({}): {}", id);
+          logger.catching(e);
         }
       }
     }

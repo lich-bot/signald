@@ -109,7 +109,17 @@ public class FileUtil {
                                              System.currentTimeMillis(), Optional.empty(), Optional.empty(), null, null, Optional.empty());
   }
 
-  public static File attachmentFile(SignalServiceAttachmentRemoteId attachmentId) { return new File(attachmentsPath, attachmentId.toString()); }
+  public static File attachmentFile(SignalServiceAttachmentRemoteId attachmentId) {
+    File file = new File(attachmentsPath, attachmentId.toString());
+    ensureDir(file);
+    return file;
+  }
 
-  public static File attachmentFile(SignalServiceAttachmentRemoteId attachmentId, String suffix) { return new File(attachmentsPath, attachmentId.toString() + "." + suffix); }
+  public static File attachmentFile(SignalServiceAttachmentRemoteId attachmentId, String suffix) {
+    File file = new File(attachmentsPath, attachmentId.toString() + "." + suffix);
+    ensureDir(file);
+    return file;
+  }
+
+  public static void ensureDir(File file) { file.getParentFile().mkdirs(); }
 }
