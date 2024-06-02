@@ -11,8 +11,10 @@ import static io.finn.signald.ServiceConfig.PREKEY_MAXIMUM_ID;
 
 import io.finn.signald.db.*;
 import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoProfileKeyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
+import io.finn.signald.jobs.RefreshProfileJob;
 import io.finn.signald.util.KeyUtil;
 import io.sentry.Sentry;
 import java.io.IOException;
@@ -29,6 +31,8 @@ import org.signal.libsignal.protocol.IdentityKeyPair;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.protocol.ServiceId;
 import org.signal.libsignal.protocol.state.KyberPreKeyRecord;
+import org.signal.libsignal.zkgroup.InvalidInputException;
+import org.signal.libsignal.zkgroup.profiles.ExpiringProfileKeyCredential;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.account.AccountAttributes;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
@@ -366,5 +370,21 @@ public class Account {
     }
 
     return new MasterKey(serialized);
+  }
+
+  public ExpiringProfileKeyCredential getExpiringProfileKeyCredential(Recipient recipient)
+      throws SQLException, InvalidInputException, NoSuchAccountException, ServerNotFoundException, IOException, InvalidKeyException, InvalidProxyException, NoProfileKeyException {
+    ExpiringProfileKeyCredential existing = getDB().ProfileKeysTable.getExpiringProfileKeyCredential(recipient);
+    if (existing == null) {
+      // no existing profile key for this user, refresh
+      new RefreshProfileJob(this, recipient).run();
+      existing = getDB().ProfileKeysTable.getExpiringProfileKeyCredential(recipient);
+    }
+
+    if (existing == null) {
+      throw new NoProfileKeyException(recipient);
+    }
+
+    return existing;
   }
 }

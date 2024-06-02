@@ -20,11 +20,14 @@ import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.IGroupsTable;
 import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoProfileKeyException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.util.GroupsUtil;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Optional;
+import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
 import org.signal.libsignal.zkgroup.groups.GroupSecretParams;
@@ -51,7 +54,7 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
   @Override
   public JsonGroupJoinInfo run(Request request)
       throws InvalidRequestError, InvalidInviteURIError, InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, OwnProfileKeyDoesNotExistError,
-             GroupVerificationError, GroupNotActiveError, UnknownGroupError, InvalidGroupStateError, AuthorizationFailedError, SQLError {
+             GroupVerificationError, GroupNotActiveError, UnknownGroupError, InvalidGroupStateError, AuthorizationFailedError, SQLError, NoProfileKeyError {
     Account a = Common.getAccount(account);
 
     GroupInviteLinkUrl groupInviteLinkUrl;
@@ -67,9 +70,17 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
 
     ExpiringProfileKeyCredential expiringProfileKeyCredential;
     try {
-      expiringProfileKeyCredential = a.getDB().ProfileKeysTable.getExpiringProfileKeyCredential(a.getSelf());
-    } catch (IOException | SQLException | InvalidInputException e) {
+      expiringProfileKeyCredential = a.getExpiringProfileKeyCredential(a.getSelf());
+    } catch (IOException | SQLException | InvalidInputException | InvalidKeyException e) {
       throw new InternalError("error getting own profile key credential", e);
+    } catch (NoSuchAccountException e) {
+      throw new NoSuchAccountError(e);
+    } catch (NoProfileKeyException e) {
+      throw new NoProfileKeyError(e);
+    } catch (ServerNotFoundException e) {
+      throw new ServerNotFoundError(e);
+    } catch (InvalidProxyException e) {
+      throw new InvalidProxyError(e);
     }
 
     if (expiringProfileKeyCredential == null) {

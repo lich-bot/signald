@@ -18,6 +18,10 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.Recipient;
+import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoProfileKeyException;
+import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -25,6 +29,7 @@ import java.sql.SQLException;
 import java.util.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
 import org.signal.libsignal.zkgroup.profiles.ExpiringProfileKeyCredential;
@@ -70,8 +75,9 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
   @Doc("ENABLED to only allow admins to post messages, DISABLED to allow anyone to post") @ExactlyOneOfRequired(GROUP_MODIFICATION) public String announcements;
 
   @Override
-  public GroupInfo run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError,
-                                               InvalidRequestError, AuthorizationFailedError, UnregisteredUserError, SQLError, GroupPatchNotAcceptedError, UnsupportedGroupError {
+  public GroupInfo run(Request request)
+      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError, InvalidRequestError, AuthorizationFailedError,
+             UnregisteredUserError, SQLError, GroupPatchNotAcceptedError, UnsupportedGroupError, NoProfileKeyError {
     Account a = Common.getAccount(account);
     var recipientsTable = a.getDB().RecipientsTable;
 
@@ -114,7 +120,20 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
         Set<GroupCandidate> candidates = new HashSet<>();
         for (JsonAddress member : addMembers) {
           Recipient recipient = recipientsTable.get(member);
-          ExpiringProfileKeyCredential expiringProfileKeyCredential = a.getDB().ProfileKeysTable.getExpiringProfileKeyCredential(recipient);
+          ExpiringProfileKeyCredential expiringProfileKeyCredential;
+          try {
+            expiringProfileKeyCredential = a.getExpiringProfileKeyCredential(recipient);
+          } catch (IOException | SQLException | InvalidInputException | InvalidKeyException e) {
+            throw new InternalError("error getting own profile key credential", e);
+          } catch (NoSuchAccountException e) {
+            throw new NoSuchAccountError(e);
+          } catch (NoProfileKeyException e) {
+            throw new NoProfileKeyError(e);
+          } catch (ServerNotFoundException e) {
+            throw new ServerNotFoundError(e);
+          } catch (InvalidProxyException e) {
+            throw new InvalidProxyError(e);
+          }
           recipients.add(recipientsTable.get(recipient.getAddress()));
           candidates.add(new GroupCandidate(recipient.getServiceId(), Optional.ofNullable(expiringProfileKeyCredential)));
         }
@@ -176,7 +195,7 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
       } else {
         throw new InvalidRequestError("no change requested");
       }
-    } catch (IOException | SQLException | InvalidInputException e) {
+    } catch (IOException | SQLException e) {
       throw new InternalError("error updating group: ", e);
     }
 

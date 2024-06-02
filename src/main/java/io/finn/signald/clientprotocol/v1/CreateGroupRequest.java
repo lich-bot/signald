@@ -21,6 +21,7 @@ import io.finn.signald.db.Database;
 import io.finn.signald.db.IGroupsTable;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoProfileKeyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.File;
@@ -57,7 +58,7 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
   @Override
   public JsonGroupV2Info run(Request request)
       throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, OwnProfileKeyDoesNotExistError, NoKnownUUIDError, InvalidRequestError,
-             GroupVerificationError, InvalidGroupStateError, UnknownGroupError, UnregisteredUserError, AuthorizationFailedError, SQLError {
+             GroupVerificationError, InvalidGroupStateError, UnknownGroupError, UnregisteredUserError, AuthorizationFailedError, SQLError, NoProfileKeyError {
     Account a = Common.getAccount(account);
     List<Recipient> recipients = new ArrayList<>();
 
@@ -76,12 +77,20 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
     for (JsonAddress member : members) {
       try {
         Recipient recipient = recipientsTable.get(member);
-        ExpiringProfileKeyCredential expiringProfileKeyCredential = a.getDB().ProfileKeysTable.getExpiringProfileKeyCredential(recipient);
+        ExpiringProfileKeyCredential expiringProfileKeyCredential = a.getExpiringProfileKeyCredential(recipient);
         recipients.add(recipientsTable.get(recipient.getAddress()));
         ServiceId uuid = recipient.getServiceId();
         candidates.add(new GroupCandidate(uuid, Optional.ofNullable(expiringProfileKeyCredential)));
-      } catch (InvalidInputException | SQLException | IOException e) {
+      } catch (InvalidInputException | SQLException | IOException | InvalidKeyException e) {
         throw new InternalError("error adding member to group", e);
+      } catch (NoSuchAccountException e) {
+        throw new NoSuchAccountError(e);
+      } catch (NoProfileKeyException e) {
+        throw new NoProfileKeyError(e);
+      } catch (ServerNotFoundException e) {
+        throw new ServerNotFoundError(e);
+      } catch (InvalidProxyException e) {
+        throw new InvalidProxyError(e);
       }
     }
 
@@ -116,6 +125,8 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
       throw new ServerNotFoundError(e);
     } catch (InvalidProxyException e) {
       throw new InvalidProxyError(e);
+    } catch (NoProfileKeyException e) {
+      throw new NoProfileKeyError(e);
     }
 
     SignalServiceGroupV2 signalServiceGroupV2 = SignalServiceGroupV2.newBuilder(group.getMasterKey()).withRevision(group.getRevision()).build();
