@@ -24,4 +24,8 @@ public class BodyRangeMessage {
       style = msg.style.toString();
     }
   }
+
+ public BodyRange toBodyRange() {
+     return new BodyRange().newBuilder().length(length).start(start).mentionAci(style).build();
+  }
 }
