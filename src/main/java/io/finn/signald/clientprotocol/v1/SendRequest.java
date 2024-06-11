@@ -43,6 +43,7 @@ import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServicePreview;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 import org.whispersystems.signalservice.api.push.exceptions.NonSuccessfulResponseCodeException;
+import org.whispersystems.signalservice.internal.push.BodyRange;
 
 @ProtocolType("send")
 public class SendRequest implements RequestType<SendResponse> {
@@ -54,6 +55,7 @@ public class SendRequest implements RequestType<SendResponse> {
   @ExampleValue(ExampleValue.GROUP_ID) @ExactlyOneOfRequired(RECIPIENT) public String recipientGroupId;
   @ExampleValue(ExampleValue.MESSAGE_BODY) @AtLeastOneOfRequired({"attachments"}) public String messageBody;
   @AtLeastOneOfRequired({"messageBody"}) public List<JsonAttachment> attachments;
+  @AtLeastOneOfRequired({"messageBody"}) public List<BodyRange> bodyRanges;
   public JsonQuote quote;
   public Long timestamp;
   public List<JsonMention> mentions;
@@ -80,6 +82,10 @@ public class SendRequest implements RequestType<SendResponse> {
 
     if (messageBody != null) {
       messageBuilder = messageBuilder.withBody(messageBody);
+    }
+
+    if (bodyRanges != null) {
+      messageBuilder = messageBuilder.withBodyRanges(bodyRanges);
     }
 
     if (attachments != null) {
