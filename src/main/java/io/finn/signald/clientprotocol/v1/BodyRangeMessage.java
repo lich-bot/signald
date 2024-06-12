@@ -16,6 +16,8 @@ public class BodyRangeMessage {
   @JsonProperty("mention_aci") public String mentionAci;
   public String style;
 
+  public BodyRangeMessage() {}
+
   public BodyRangeMessage(BodyRange msg) {
     start = msg.start;
     length = msg.length;
@@ -25,7 +27,8 @@ public class BodyRangeMessage {
     }
   }
 
- public BodyRange toBodyRange() {
-     return new BodyRange().newBuilder().length(length).start(start).mentionAci(style).build();
+  public BodyRange toBodyRange() {
+    BodyRange.Style libsignalStyle = BodyRange.Style.valueOf(this.style);
+    return new BodyRange.Builder().length(length).start(start).mentionAci(mentionAci).style(libsignalStyle).build();
   }
 }

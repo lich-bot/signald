@@ -55,7 +55,7 @@ public class SendRequest implements RequestType<SendResponse> {
   @ExampleValue(ExampleValue.GROUP_ID) @ExactlyOneOfRequired(RECIPIENT) public String recipientGroupId;
   @ExampleValue(ExampleValue.MESSAGE_BODY) @AtLeastOneOfRequired({"attachments"}) public String messageBody;
   @AtLeastOneOfRequired({"messageBody"}) public List<JsonAttachment> attachments;
-  @AtLeastOneOfRequired({"messageBody"}) public List<BodyRangeMessage> listBodyRangeMessage;
+  @JsonProperty("body_ranges") public List<BodyRangeMessage> bodyRanges;
   public JsonQuote quote;
   public Long timestamp;
   public List<JsonMention> mentions;
@@ -84,9 +84,9 @@ public class SendRequest implements RequestType<SendResponse> {
       messageBuilder = messageBuilder.withBody(messageBody);
     }
 
-    if (listBodyRangeMessage != null) {
+    if (bodyRanges != null) {
       List<BodyRange> br = new ArrayList<>();
-      for (BodyRangeMessage brm : listBodyRangeMessage) {
+      for (BodyRangeMessage brm : bodyRanges) {
         br.add(brm.toBodyRange());
       }
       messageBuilder = messageBuilder.withBodyRanges(br);
