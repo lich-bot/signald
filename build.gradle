@@ -95,13 +95,13 @@ dependencies {
     implementation 'org.apache.logging.log4j:log4j-core:2.23.1'
     implementation 'info.picocli:picocli:4.7.6'
     implementation 'org.xerial:sqlite-jdbc:3.46.0.0'
-    implementation 'org.flywaydb:flyway-core:10.13.0'
-    implementation 'com.google.protobuf:protobuf-javalite:4.27.1'
+    implementation 'org.flywaydb:flyway-core:10.15.2'
+    implementation 'com.google.protobuf:protobuf-javalite:4.27.2'
     implementation 'io.prometheus:simpleclient_hotspot:0.16.0'
     implementation 'io.prometheus:simpleclient_httpserver:0.16.0'
     implementation 'com.squareup.okhttp3:logging-interceptor:4.12.0'
-    implementation 'io.sentry:sentry:7.10.0'
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    implementation 'io.sentry:sentry:7.11.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.3'
 }
 
 
