@@ -135,9 +135,12 @@ public class SubscribeRequest implements RequestType<Empty> {
 
     public void broadcast(ClientMessageWrapper w) throws IOException {
       lock.lock();
-      PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-      out.println(mapper.writeValueAsString(w));
-      lock.unlock();
+      try {
+        PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+        out.println(mapper.writeValueAsString(w));
+      } finally {
+        lock.unlock();
+      }
     }
 
     @Override
