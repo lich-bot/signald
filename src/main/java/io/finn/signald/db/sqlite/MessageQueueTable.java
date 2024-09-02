@@ -14,6 +14,7 @@ import java.sql.SQLException;
 import java.util.Optional;
 import java.util.UUID;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
+import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
@@ -81,8 +82,10 @@ public class MessageQueueTable implements IMessageQueueTable {
         String senderE164 = rows.getString(SOURCE_E164);
         String senderUUIDString = rows.getString(SOURCE_UUID);
         if ((senderE164 != null && senderE164.length() > 0) || (senderUUIDString != null && senderUUIDString.length() > 0)) {
-          ACI senderACI = (senderUUIDString != null && senderUUIDString.length() > 0) ? ACI.from(UUID.fromString(senderUUIDString)) : null;
-          sender = Optional.of(new SignalServiceAddress(senderACI, senderE164));
+          //          ACI senderACI = (senderUUIDString != null && senderUUIDString.length() > 0) ? ACI.from(UUID.fromString(senderUUIDString)) : null;
+          //          sender = Optional.of(new SignalServiceAddress(senderACI, senderE164));
+          //          ServiceId.parseOrNull(senderUUIDString);
+          sender = SignalServiceAddress.fromRaw(senderUUIDString, senderE164);
         }
         int senderDevice = rows.getInt(SOURCE_DEVICE);
         long timestamp = rows.getLong(TIMESTAMP);

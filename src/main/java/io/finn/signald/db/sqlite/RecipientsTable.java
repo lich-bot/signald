@@ -8,6 +8,7 @@
 package io.finn.signald.db.sqlite;
 
 import io.finn.signald.Account;
+import io.finn.signald.Util;
 import io.finn.signald.db.Database;
 import io.finn.signald.db.IRecipientsTable;
 import io.finn.signald.db.Recipient;
@@ -60,8 +61,12 @@ public class RecipientsTable implements IRecipientsTable {
           String storedUUID = rows.getString(UUID);
           boolean registered = rows.getBoolean(REGISTERED);
           boolean needsPniSignature = rows.getBoolean(NEEDS_PNI_SIGNATURE);
-          SignalServiceAddress a = storedUUID == null ? null : new SignalServiceAddress(ACI.from(java.util.UUID.fromString(storedUUID)), storedE164);
-          results.add(new Recipient(account.getUUID(), rowId, a, registered, needsPniSignature));
+          Optional<SignalServiceAddress> a = SignalServiceAddress.fromRaw(storedUUID, storedE164);
+          if (a.isEmpty()) {
+            logger.warn("failed to create SignalServiceAddress from recipient {} (uuid={} e164={}", rowId, Util.redact(storedUUID), Util.redact(storedE164));
+            continue;
+          }
+          results.add(new Recipient(account.getUUID(), rowId, a.get(), registered, needsPniSignature));
         }
       }
     }
