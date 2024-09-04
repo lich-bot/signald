@@ -209,7 +209,7 @@ container manifest:
 
 unit tests x86:
   <<: *testserver
-  image: openjdk:17-jdk
+  image: docker.io/library/eclipse-temurin:17-jdk
   stage: test
   needs: []
   before_script:
