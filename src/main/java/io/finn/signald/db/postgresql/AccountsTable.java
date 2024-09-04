@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
 
@@ -37,7 +37,7 @@ public class AccountsTable implements IAccountsTable {
                               // ON CONFLICT
                               UUID, E164, SERVER);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, aci.uuid());
+      statement.setObject(1, aci.getRawUuid());
       statement.setString(2, e164);
       statement.setObject(3, server);
       Database.executeUpdate(TABLE_NAME + "_add", statement);
@@ -49,7 +49,7 @@ public class AccountsTable implements IAccountsTable {
   public void DeleteAccount(ACI aci, String legacyUsername) throws SQLException {
     var query = String.format("DELETE FROM %s WHERE %s=?", TABLE_NAME, UUID);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, aci.uuid());
+      statement.setObject(1, aci.getRawUuid());
       Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
     }
   }
@@ -61,7 +61,7 @@ public class AccountsTable implements IAccountsTable {
     }
     var query = String.format("UPDATE %s SET %s=? WHERE %s=?", TABLE_NAME, UUID, E164);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, address.getACI().uuid());
+      statement.setObject(1, address.getACI().getRawUuid());
       statement.setString(2, address.number);
       Database.executeUpdate(TABLE_NAME + "_set_uuid", statement);
     }
@@ -84,7 +84,7 @@ public class AccountsTable implements IAccountsTable {
   public String getE164(ACI aci) throws NoSuchAccountException, SQLException {
     var query = String.format("SELECT %s FROM %s WHERE %s=?", E164, TABLE_NAME, UUID);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, aci.uuid());
+      statement.setObject(1, aci.getRawUuid());
       try (var rows = Database.executeQuery(TABLE_NAME + "_get_e164", statement)) {
         if (!rows.next()) {
           throw new NoSuchAccountException(aci.toString());
@@ -98,7 +98,7 @@ public class AccountsTable implements IAccountsTable {
   public IServersTable.AbstractServer getServer(ACI aci) throws SQLException, IOException, ServerNotFoundException, InvalidProxyException {
     var query = String.format("SELECT %s FROM %s WHERE %s=?", SERVER, TABLE_NAME, UUID);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, aci.uuid());
+      statement.setObject(1, aci.getRawUuid());
       try (var rows = Database.executeQuery(TABLE_NAME + "_get_server", statement)) {
         if (!rows.next()) {
           throw new AssertionError("account not found");
@@ -118,7 +118,7 @@ public class AccountsTable implements IAccountsTable {
     var query = String.format("UPDATE %s SET %s=? WHERE %s=?", TABLE_NAME, SERVER, UUID);
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setString(1, server);
-      statement.setObject(2, aci.uuid());
+      statement.setObject(2, aci.getRawUuid());
       Database.executeUpdate(TABLE_NAME + "_set_server", statement);
     }
   }
@@ -127,7 +127,7 @@ public class AccountsTable implements IAccountsTable {
   public DynamicCredentialsProvider getCredentialsProvider(ACI aci) throws SQLException {
     var query = String.format("SELECT %s FROM %s WHERE %s=?", E164, TABLE_NAME, UUID);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, aci.uuid());
+      statement.setObject(1, aci.getRawUuid());
       Account account = new Account(aci);
       try (var rows = Database.executeQuery(TABLE_NAME + "_get_credentials_provider", statement)) {
         if (!rows.next()) {
@@ -143,7 +143,7 @@ public class AccountsTable implements IAccountsTable {
   public boolean exists(ACI aci) throws SQLException {
     var query = String.format("SELECT 1 FROM %s WHERE %s=?", TABLE_NAME, UUID);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, aci.uuid());
+      statement.setObject(1, aci.getRawUuid());
       try (var rows = Database.executeQuery(TABLE_NAME + "_check_exists", statement)) {
         if (!rows.next()) {
           return false;

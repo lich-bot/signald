@@ -24,7 +24,7 @@ import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.zkgroup.InvalidInputException;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
 
 public interface IAccountsTable {
@@ -47,7 +47,7 @@ public interface IAccountsTable {
 
   // Default implementations
   default boolean exists(UUID uuid) throws SQLException { return exists(ACI.from(uuid)); }
-  default UUID getUUID(String e164) throws NoSuchAccountException, SQLException { return getACI(e164).uuid(); }
+  default UUID getUUID(String e164) throws NoSuchAccountException, SQLException { return getACI(e164).getRawUuid(); }
   default IServersTable.AbstractServer getServer(java.util.UUID uuid) throws SQLException, IOException, ServerNotFoundException, InvalidProxyException {
     return getServer(ACI.from(uuid));
   }
@@ -84,11 +84,6 @@ public interface IAccountsTable {
       if (accountData.legacyContactStore != null) {
         accountData.legacyContactStore.migrateToDB(account);
         accountData.legacyContactStore = null;
-      }
-
-      if (accountData.legacyProfileCredentialStore != null) {
-        accountData.legacyProfileCredentialStore.migrateToDB(account);
-        accountData.legacyProfileCredentialStore = null;
       }
 
       accountData.migrateToDB(account);

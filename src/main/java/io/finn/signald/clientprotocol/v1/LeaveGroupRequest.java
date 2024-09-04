@@ -31,6 +31,7 @@ import org.signal.storageservice.protos.groups.local.DecryptedPendingMember;
 import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupUtil;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
+import org.whispersystems.signalservice.api.push.ServiceId;
 
 @ProtocolType("leave_group")
 public class LeaveGroupRequest implements RequestType<GroupInfo> {
@@ -44,17 +45,10 @@ public class LeaveGroupRequest implements RequestType<GroupInfo> {
     Account a = Common.getAccount(account);
     var group = Common.getGroup(a, groupID);
 
-    List<Recipient> recipients;
-    try {
-      recipients = group.getMembers();
-    } catch (IOException | SQLException e) {
-      throw new InternalError("error getting recipient list", e);
-    }
-
     GroupsV2Operations.GroupOperations groupOperations = Common.getGroupOperations(a, group);
 
-    List<DecryptedPendingMember> pendingMemberList = group.getDecryptedGroup().getPendingMembersList();
-    Optional<DecryptedPendingMember> selfPendingMember = DecryptedGroupUtil.findPendingByUuid(pendingMemberList, a.getUUID());
+    List<DecryptedPendingMember> pendingMemberList = group.getDecryptedGroup().pendingMembers;
+    Optional<DecryptedPendingMember> selfPendingMember = DecryptedGroupUtil.findPendingByServiceId(pendingMemberList, a.getACI());
     GroupChange.Actions.Builder change;
     if (selfPendingMember.isPresent()) {
       final Set<UuidCiphertext> uuidCipherTexts;
@@ -65,9 +59,9 @@ public class LeaveGroupRequest implements RequestType<GroupInfo> {
       }
       change = groupOperations.createRemoveInvitationChange(uuidCipherTexts);
     } else {
-      Set<UUID> uuidsToRemove = new HashSet<>();
-      uuidsToRemove.add(a.getUUID());
-      change = groupOperations.createRemoveMembersChange(uuidsToRemove, false, List.of());
+      Set<ServiceId.ACI> acisToRemove = new HashSet<>();
+      acisToRemove.add(a.getACI());
+      change = groupOperations.createRemoveMembersChange(acisToRemove, false, List.of());
     }
 
     Pair<SignalServiceDataMessage.Builder, IGroupsTable.IGroup> updateOutput;

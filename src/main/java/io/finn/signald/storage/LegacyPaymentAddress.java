@@ -9,15 +9,15 @@ package io.finn.signald.storage;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.IOException;
-import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
-import org.whispersystems.util.Base64;
+import org.signal.core.util.Base64;
+import org.whispersystems.signalservice.internal.push.PaymentAddress;
 @Deprecated
 public class LegacyPaymentAddress {
   @JsonProperty private String address;
 
   private LegacyPaymentAddress() {}
 
-  public LegacyPaymentAddress(SignalServiceProtos.PaymentAddress a) { address = Base64.encodeBytes(a.toByteArray()); }
+  public LegacyPaymentAddress(PaymentAddress a) { address = Base64.encodeWithPadding(a.encode()); }
 
-  public SignalServiceProtos.PaymentAddress get() throws IOException { return SignalServiceProtos.PaymentAddress.parseFrom(Base64.decode(address)); }
+  public PaymentAddress get() throws IOException { return PaymentAddress.ADAPTER.decode(Base64.decode(address)); }
 }

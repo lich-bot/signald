@@ -11,8 +11,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidBase64Error;
 import java.io.IOException;
+import org.signal.core.util.Base64;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
-import org.whispersystems.util.Base64;
 
 @Doc("details about a MobileCoin payment")
 public class Payment {
@@ -25,7 +25,7 @@ public class Payment {
   Payment() {}
 
   public Payment(SignalServiceDataMessage.PaymentNotification p) {
-    receipt = Base64.encodeBytes(p.getReceipt());
+    receipt = Base64.encodeWithPadding(p.getReceipt());
     note = p.getNote();
   }
 

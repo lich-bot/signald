@@ -27,13 +27,13 @@ public class GroupMember {
   }
 
   public GroupMember(DecryptedMember d) {
-    uuid = UuidUtil.fromByteStringOrUnknown(d.getUuid()).toString();
-    role = d.getRole().name();
-    joinedAtRevision = d.getJoinedAtRevision();
+    uuid = UuidUtil.fromByteStringOrUnknown(d.aciBytes).toString();
+    role = d.role.name();
+    joinedAtRevision = d.joinedAtRevision;
   }
 
   public GroupMember(DecryptedPendingMember d) {
-    uuid = UuidUtil.fromByteStringOrUnknown(d.getUuid()).toString();
-    role = d.getRole().name();
+    uuid = UuidUtil.fromByteStringOrUnknown(d.serviceIdBytes).toString();
+    role = d.role.name();
   }
 }

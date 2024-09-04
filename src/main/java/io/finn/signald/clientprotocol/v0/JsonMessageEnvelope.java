@@ -27,8 +27,8 @@ import java.util.TimeZone;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-import org.whispersystems.signalservice.api.push.ACI;
-import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
+import org.whispersystems.signalservice.internal.push.Envelope;
 
 @Deprecated(1641027661)
 public class JsonMessageEnvelope {
@@ -61,7 +61,7 @@ public class JsonMessageEnvelope {
 
     Manager m = Manager.get(aci);
     if (!envelope.isUnidentifiedSender()) {
-      source = new JsonAddress(Database.Get(m.getACI()).RecipientsTable.get(envelope.getSourceAddress()).getAddress());
+      source = new JsonAddress(Database.Get(m.getACI()).RecipientsTable.get(envelope.getSourceServiceId().get()).getAddress());
     } else if (c != null) {
       source = new JsonAddress(Database.Get(m.getACI()).RecipientsTable.get(c.getSender()).getAddress());
     }
@@ -70,7 +70,7 @@ public class JsonMessageEnvelope {
       sourceDevice = envelope.getSourceDevice();
     }
 
-    type = SignalServiceProtos.Envelope.Type.forNumber(envelope.getType()).toString();
+    type = Envelope.Type.fromValue(envelope.getType()).toString();
     timestamp = envelope.getTimestamp();
     timestampISO = formatTimestampISO(envelope.getTimestamp());
     serverTimestamp = envelope.getServerReceivedTimestamp();

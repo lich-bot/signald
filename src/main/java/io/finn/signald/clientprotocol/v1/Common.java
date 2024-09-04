@@ -7,7 +7,6 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import io.finn.signald.*;
 import io.finn.signald.Account;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
@@ -33,6 +32,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.metadata.certificate.InvalidCertificateException;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.protocol.InvalidRegistrationIdException;
@@ -45,11 +45,10 @@ import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.*;
 import org.whispersystems.signalservice.internal.push.exceptions.GroupPatchNotAcceptedException;
-import org.whispersystems.util.Base64;
 
 /* Common is a collection of wrapper functions that call common functions
  * and convert their exceptions to documented v1 exceptions
@@ -110,6 +109,7 @@ public class Common {
   }
 
   static Recipient getRecipient(ACI aci, SignalServiceAddress address) throws InternalError { return getRecipient(Database.Get(aci).RecipientsTable, address); }
+
   static Recipient getRecipient(ACI aci, JsonAddress address) throws InternalError, UnregisteredUserError, AuthorizationFailedError {
     return getRecipient(Database.Get(aci).RecipientsTable, address);
   }
@@ -248,7 +248,7 @@ public class Common {
   }
 
   public static io.finn.signald.Account getAccount(String identifier) throws InternalError, NoSuchAccountError, SQLError {
-    return getAccount(getACIFromIdentifier(identifier).uuid());
+    return getAccount(getACIFromIdentifier(identifier).getRawUuid());
   }
 
   public static io.finn.signald.Account getAccount(UUID accountUUID) { return new Account(ACI.from(accountUUID)); }
@@ -278,7 +278,7 @@ public class Common {
     Optional<IGroupsTable.IGroup> g;
     try {
       g = Database.Get(aci).GroupsTable.get(groupIdentifier);
-    } catch (SQLException | InvalidProtocolBufferException | InvalidInputException e) {
+    } catch (SQLException | InvalidInputException | IOException e) {
       throw new InternalError("error getting group", e);
     }
     if (g.isEmpty()) {
@@ -306,7 +306,7 @@ public class Common {
     Optional<IGroupsTable.IGroup> g;
     try {
       g = Database.Get(account.getACI()).GroupsTable.get(groupIdentifier);
-    } catch (SQLException | InvalidProtocolBufferException | InvalidInputException e) {
+    } catch (SQLException | InvalidInputException | IOException e) {
       throw new InternalError("error getting group", e);
     }
     if (g.isEmpty()) {

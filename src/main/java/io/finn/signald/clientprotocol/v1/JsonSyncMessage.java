@@ -13,7 +13,7 @@ import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import java.util.ArrayList;
 import java.util.List;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 public class JsonSyncMessage {
   public JsonSentTranscriptMessage sent;
@@ -51,7 +51,7 @@ public class JsonSyncMessage {
     }
 
     if (syncMessage.getRequest().isPresent()) {
-      request = syncMessage.getRequest().get().getRequest().getType().name();
+      request = syncMessage.getRequest().get().getRequest().type.name();
     }
 
     if (syncMessage.getRead().isPresent()) {

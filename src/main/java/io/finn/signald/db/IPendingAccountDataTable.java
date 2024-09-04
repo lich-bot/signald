@@ -15,7 +15,18 @@ public interface IPendingAccountDataTable {
   String KEY = "key";
   String VALUE = "value";
 
-  enum Key { ACI_IDENTITY_KEY_PAIR, PNI_IDENTITY_KEY_PAIR, LOCAL_REGISTRATION_ID, LOCAL_PNI_REGISTRATION_ID, SERVER_UUID, PASSWORD }
+  enum Key {
+    ACI_IDENTITY_KEY_PAIR,
+    PNI_IDENTITY_KEY_PAIR,
+    ACI_NEXT_SIGNED_PRE_KEY_ID,
+    PNI_NEXT_SIGNED_PRE_KEY_ID,
+    ACI_NEXT_KYBER_PRE_KEY_ID,
+    PNI_NEXT_KYBER_PRE_KEY_ID,
+    LOCAL_REGISTRATION_ID,
+    LOCAL_PNI_REGISTRATION_ID,
+    SERVER_UUID,
+    PASSWORD
+  }
 
   byte[] getBytes(String username, IPendingAccountDataTable.Key key) throws SQLException;
   default String getString(String username, IPendingAccountDataTable.Key key) throws SQLException {

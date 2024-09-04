@@ -28,7 +28,7 @@ import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.storage.*;
-import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
+import org.whispersystems.signalservice.internal.push.SyncMessage;
 import org.whispersystems.signalservice.internal.storage.protos.ManifestRecord;
 
 public class SyncStorageDataJob implements Job {
@@ -47,7 +47,7 @@ public class SyncStorageDataJob implements Job {
       logger.debug("skipping storage sync because storage keys not available");
       if (account.getDeviceId() != SignalServiceAddress.DEFAULT_DEVICE_ID) {
         logger.debug("queuing job to request storage keys from primary device");
-        BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.KEYS));
+        BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SyncMessage.Request.Type.KEYS));
       }
       return;
     }
@@ -82,18 +82,21 @@ public class SyncStorageDataJob implements Job {
     List<SignalStorageRecord> records = getSignalStorageRecords(manifest.getStorageIds());
     logger.debug("reading all {} records", records.size());
     for (SignalStorageRecord record : records) {
-      if (record.isUnknown() || record.getType() == ManifestRecord.Identifier.Type.ACCOUNT_VALUE) {
+      if (record.isUnknown() || record.getType() == ManifestRecord.Identifier.Type.ACCOUNT.getValue()) {
         continue;
       }
 
-      if (record.getType() == ManifestRecord.Identifier.Type.GROUPV2_VALUE) {
+      switch (ManifestRecord.Identifier.Type.fromValue(record.getType())) {
+      case GROUPV2:
         logger.debug("reading groupv2 record");
         readGroupV2Record(record);
-      } else if (record.getType() == ManifestRecord.Identifier.Type.CONTACT_VALUE) {
+        break;
+      case CONTACT:
         logger.debug("reading contact record");
         readContactRecord(record);
-      } else {
-        logger.debug("ignoring record of unknown type {}", ManifestRecord.Identifier.Type.forNumber(record.getType()).name());
+        break;
+      default:
+        logger.debug("ignoring record of unknown type {}", ManifestRecord.Identifier.Type.fromValue(record.getType()).name());
       }
     }
     logger.debug("Done reading data from remote storage");
@@ -160,7 +163,10 @@ public class SyncStorageDataJob implements Job {
     }
 
     SignalContactRecord contactRecord = record.getContact().get();
-    ServiceId serviceId = contactRecord.getServiceId();
+    if (contactRecord.getServiceId().isEmpty()) {
+      return;
+    }
+    ServiceId serviceId = contactRecord.getServiceId().get();
 
     Recipient recipient;
     try {

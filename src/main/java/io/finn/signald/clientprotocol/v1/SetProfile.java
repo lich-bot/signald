@@ -8,7 +8,6 @@
 package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.protobuf.ByteString;
 import io.finn.signald.Account;
 import io.finn.signald.Empty;
 import io.finn.signald.annotations.Doc;
@@ -32,14 +31,15 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import okio.ByteString;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.protocol.IdentityKeyPair;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.profiles.AvatarUploadParams;
 import org.whispersystems.signalservice.api.util.StreamDetails;
-import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
-import org.whispersystems.util.Base64;
+import org.whispersystems.signalservice.internal.push.PaymentAddress;
 
 @ProtocolType("set_profile")
 public class SetProfile implements RequestType<Empty> {
@@ -103,7 +103,7 @@ public class SetProfile implements RequestType<Empty> {
       emoji = existing == null ? "" : existing.getEmoji();
     }
 
-    Optional<SignalServiceProtos.PaymentAddress> paymentAddress;
+    Optional<PaymentAddress> paymentAddress;
     if (existing != null) {
       paymentAddress = Optional.ofNullable(existing.getPaymentAddress());
     } else {
@@ -118,12 +118,9 @@ public class SetProfile implements RequestType<Empty> {
         throw new InvalidBase64Error();
       }
       IdentityKeyPair identityKeyPair = a.getProtocolStore().getIdentityKeyPair();
-      SignalServiceProtos.PaymentAddress signedAddress = signPaymentsAddress(decodedAddress, identityKeyPair);
+      PaymentAddress signedAddress = signPaymentsAddress(decodedAddress, identityKeyPair);
 
-      SignalServiceProtos.PaymentAddress.Builder paymentAddressBuilder = SignalServiceProtos.PaymentAddress.newBuilder();
-      paymentAddressBuilder.setMobileCoinAddress(signedAddress.getMobileCoinAddress());
-
-      paymentAddress = Optional.of(paymentAddressBuilder.build());
+      paymentAddress = Optional.of(new PaymentAddress.Builder().mobileCoinAddress(signedAddress.mobileCoinAddress).build());
     }
 
     if (visibleBadgeIds == null) {
@@ -157,12 +154,10 @@ public class SetProfile implements RequestType<Empty> {
     return new Empty();
   }
 
-  static SignalServiceProtos.PaymentAddress signPaymentsAddress(byte[] publicAddressBytes, IdentityKeyPair identityKeyPair) {
-    byte[] signature = identityKeyPair.getPrivateKey().calculateSignature(publicAddressBytes);
-
-    return SignalServiceProtos.PaymentAddress.newBuilder()
-        .setMobileCoinAddress(
-            SignalServiceProtos.PaymentAddress.MobileCoinAddress.newBuilder().setAddress(ByteString.copyFrom(publicAddressBytes)).setSignature(ByteString.copyFrom(signature)))
-        .build();
+  static PaymentAddress signPaymentsAddress(byte[] publicAddressBytes, IdentityKeyPair identityKeyPair) {
+    ByteString signature = ByteString.of(identityKeyPair.getPrivateKey().calculateSignature(publicAddressBytes));
+    ByteString address = ByteString.of(publicAddressBytes);
+    PaymentAddress.MobileCoinAddress mobilecoinPaymentAddress = new PaymentAddress.MobileCoinAddress.Builder().address(address).signature(signature).build();
+    return new PaymentAddress.Builder().mobileCoinAddress(mobilecoinPaymentAddress).build();
   }
 }

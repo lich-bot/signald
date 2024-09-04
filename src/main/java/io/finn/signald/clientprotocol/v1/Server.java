@@ -18,7 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import org.whispersystems.util.Base64;
+import org.signal.core.util.Base64;
 
 @Doc("a Signal server")
 public class Server {
@@ -37,6 +37,8 @@ public class Server {
   @JsonProperty("key_backup_mrenclave") String keyBackupMrenclave;
   @JsonProperty("cds_mrenclave") String cdsMrenclave;
   @Doc("base64 encoded trust store, password must be 'whisper'") @JsonProperty("ias_ca") String iasCa;
+  @JsonProperty("cdsi_url") String cdsiUrl;
+  @JsonProperty("svr2_url") String svr2Url;
 
   public Server() {}
 
@@ -46,14 +48,16 @@ public class Server {
     contactDiscoveryURL = server.getContactDiscoveryURL();
     keyBackupURL = server.getKeyBackupURL();
     storageURL = server.getStorageURL();
-    zkParams = Base64.encodeBytes(server.getZkParams());
+    zkParams = server.getZkParams() == null ? null : Base64.encodeWithPadding(server.getZkParams());
     proxy = server.getProxy();
-    ca = Base64.encodeBytes(server.getCa());
+    ca = server.getCa() == null ? null : Base64.encodeWithPadding(server.getCa());
     keyBackupServiceName = server.getKeyBackupServiceName();
-    keyBackupServiceId = Base64.encodeBytes(server.getKeyBackupServiceId());
+    keyBackupServiceId = server.getKeyBackupServiceId() == null ? null : Base64.encodeWithPadding(server.getKeyBackupServiceId());
     keyBackupMrenclave = server.getKeyBackupMrenclave();
     cdsMrenclave = server.getCdsMrenclave();
-    iasCa = Base64.encodeBytes(server.getIasCa());
+    iasCa = server.getIasCa() == null ? null : Base64.encodeWithPadding(server.getIasCa());
+    cdsiUrl = server.cdsiUrl;
+    svr2Url = server.svr2Url;
   }
 
   @JsonIgnore
@@ -66,10 +70,10 @@ public class Server {
     byte[] decodedZkParams = Base64.decode(zkParams);
     byte[] decodedUnidentifiedSenderRoot = Base64.decode(unidentifiedSenderRoot);
     byte[] decodedCa = Base64.decode(ca);
-    byte[] decodedKeyBackupServiceId = Base64.decode(keyBackupServiceId);
+    byte[] decodedKeyBackupServiceId = keyBackupServiceId == null ? null : Base64.decode(keyBackupServiceId);
     byte[] decodedIasCa = iasCa == null ? null : Base64.decode(iasCa);
 
     return Database.NewServer(uuid, serviceURL, cdns, contactDiscoveryURL, keyBackupURL, storageURL, decodedZkParams, decodedUnidentifiedSenderRoot, proxy, decodedCa,
-                              keyBackupServiceName, decodedKeyBackupServiceId, keyBackupMrenclave, cdsMrenclave, decodedIasCa);
+                              keyBackupServiceName, decodedKeyBackupServiceId, keyBackupMrenclave, cdsMrenclave, decodedIasCa, cdsiUrl, svr2Url);
   }
 }

@@ -7,13 +7,18 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import io.finn.signald.Account;
 import io.finn.signald.Empty;
+import io.finn.signald.LinkedDevices;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -33,15 +38,21 @@ public class AddLinkedDeviceRequest implements RequestType<Empty> {
   @Override
   public Empty run(Request request)
       throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InvalidRequestError, InternalError, AuthorizationFailedError, SQLError, NetworkError {
-    Manager m = Common.getManager(account);
+    Account a = Common.getAccount(account);
     try {
-      m.addDeviceLink(new URI(uri));
+      LinkedDevices.add(a, new URI(uri));
     } catch (UnknownHostException e) {
       throw new NetworkError(e);
     } catch (IOException | InvalidKeyException | SQLException e) {
       throw new InternalError("error adding device", e);
-    } catch (InvalidInputException | URISyntaxException e) {
+    } catch (URISyntaxException e) {
       throw new InvalidRequestError(e.getMessage());
+    } catch (NoSuchAccountException e) {
+      throw new NoSuchAccountError(e);
+    } catch (ServerNotFoundException e) {
+      throw new ServerNotFoundError(e);
+    } catch (InvalidProxyException e) {
+      throw new InvalidProxyError(e);
     }
     return new Empty();
   }

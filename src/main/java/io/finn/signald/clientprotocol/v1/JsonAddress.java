@@ -16,8 +16,8 @@ import java.util.Objects;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.ServiceId;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 
@@ -33,7 +33,7 @@ public class JsonAddress {
   public JsonAddress() {}
 
   public JsonAddress(String n, ACI aci) {
-    UUID uuid = aci == null ? null : aci.uuid();
+    UUID uuid = aci == null ? null : aci.getRawUuid();
     if (!n.startsWith("+") && UuidUtil.isUuid(n)) {
       logger.warn("Number field has a valid UUID in it! Converting to UUID field (this is to fix a data migration "
                   + "issue in signald, do not rely on this behavior when using the socket API)");

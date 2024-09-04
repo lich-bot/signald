@@ -19,10 +19,11 @@ import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import io.finn.signald.db.Database;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import java.sql.SQLException;
+import org.whispersystems.signalservice.api.crypto.SignalServiceCipherResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-import org.whispersystems.signalservice.api.push.ACI;
-import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
+import org.whispersystems.signalservice.internal.push.Envelope;
 
 public class IncomingMessage {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) public String account;
@@ -43,6 +44,7 @@ public class IncomingMessage {
   @JsonProperty("story_message") public StoryMessage storyMessage;
   @JsonProperty("server_guid") public String serverGuid;
   @JsonProperty("decryption_error_message") public DecryptionErrorMessage decryptionErrorMessage;
+  @JsonProperty("edit_message") public EditMessage editMessage;
 
   public IncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content, ACI aci)
       throws NoSuchAccountError, InternalError, ServerNotFoundError, InvalidProxyError, AuthorizationFailedError, SQLException, NetworkError {
@@ -57,7 +59,10 @@ public class IncomingMessage {
     }
 
     if (!envelope.isUnidentifiedSender()) {
-      source = new JsonAddress(Common.getRecipient(aci, envelope.getSourceAddress()));
+      if (envelope.getSourceServiceId().isPresent()) {
+        source = new JsonAddress(Common.getRecipient(aci, envelope.getSourceServiceId().get()));
+      }
+
       if (envelope.hasSourceDevice()) {
         sourceDevice = envelope.getSourceDevice();
       }
@@ -66,7 +71,9 @@ public class IncomingMessage {
       sourceDevice = content.getSenderDevice();
     }
 
-    type = SignalServiceProtos.Envelope.Type.forNumber(envelope.getType()).toString();
+    if (envelope.getType() != null) {
+      type = Envelope.Type.fromValue(envelope.getType()).toString();
+    }
     timestamp = envelope.getTimestamp();
     serverReceivedTimestamp = envelope.getServerReceivedTimestamp();
     serverDeliveredTimestamp = envelope.getServerDeliveredTimestamp();
@@ -99,6 +106,10 @@ public class IncomingMessage {
 
       if (content.getDecryptionErrorMessage().isPresent()) {
         decryptionErrorMessage = new DecryptionErrorMessage(content.getDecryptionErrorMessage().get());
+      }
+
+      if (content.getEditMessage().isPresent()) {
+        editMessage = new EditMessage(content.getEditMessage().get(), aci);
       }
     }
     unidentifiedSender = envelope.isUnidentifiedSender();

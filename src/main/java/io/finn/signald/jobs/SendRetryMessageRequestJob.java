@@ -20,7 +20,7 @@ import org.signal.libsignal.protocol.message.DecryptionErrorMessage;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccessPair;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
+import org.whispersystems.signalservice.internal.push.Envelope;
 
 public class SendRetryMessageRequestJob implements Job {
   private static final Logger logger = LogManager.getLogger();
@@ -64,15 +64,11 @@ public class SendRetryMessageRequestJob implements Job {
   }
 
   private static int envelopeTypeToCiphertextMessageType(int envelopeType) {
-    switch (envelopeType) {
-    case SignalServiceProtos.Envelope.Type.PREKEY_BUNDLE_VALUE:
-      return CiphertextMessage.PREKEY_TYPE;
-    case SignalServiceProtos.Envelope.Type.UNIDENTIFIED_SENDER_VALUE:
-      return CiphertextMessage.SENDERKEY_TYPE;
-    case SignalServiceProtos.Envelope.Type.PLAINTEXT_CONTENT_VALUE:
-      return CiphertextMessage.PLAINTEXT_CONTENT_TYPE;
-    default:
-      return CiphertextMessage.WHISPER_TYPE;
-    }
+    return switch (Envelope.Type.fromValue(envelopeType)) {
+      case PREKEY_BUNDLE -> CiphertextMessage.PREKEY_TYPE;
+      case UNIDENTIFIED_SENDER -> CiphertextMessage.SENDERKEY_TYPE;
+      case PLAINTEXT_CONTENT -> CiphertextMessage.PLAINTEXT_CONTENT_TYPE;
+      default -> CiphertextMessage.WHISPER_TYPE;
+    };
   }
 }

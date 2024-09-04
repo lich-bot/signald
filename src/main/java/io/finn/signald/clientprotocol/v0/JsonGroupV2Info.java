@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.groups.GroupMasterKey;
 import org.signal.storageservice.protos.groups.AccessControl;
@@ -26,7 +27,6 @@ import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupUtil;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.UuidUtil;
-import org.whispersystems.util.Base64;
 
 @Deprecated(1641027661)
 public class JsonGroupV2Info {
@@ -58,28 +58,28 @@ public class JsonGroupV2Info {
   }
 
   public JsonGroupV2Info(SignalServiceGroupV2 signalServiceGroupV2, DecryptedGroup decryptedGroup) {
-    masterKey = Base64.encodeBytes(signalServiceGroupV2.getMasterKey().serialize());
-    id = Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(signalServiceGroupV2.getMasterKey()).serialize());
+    masterKey = Base64.encodeWithPadding(signalServiceGroupV2.getMasterKey().serialize());
+    id = Base64.encodeWithPadding(GroupsUtil.GetIdentifierFromMasterKey(signalServiceGroupV2.getMasterKey()).serialize());
     revision = signalServiceGroupV2.getRevision();
 
     if (decryptedGroup != null) {
-      title = decryptedGroup.getTitle();
-      description = decryptedGroup.getDescription();
-      timer = decryptedGroup.getDisappearingMessagesTimer().getDuration();
+      title = decryptedGroup.title;
+      description = decryptedGroup.description;
+      timer = decryptedGroup.disappearingMessagesTimer.duration;
       members = new ArrayList<>();
-      members = decryptedGroup.getMembersList().stream().map(e -> new JsonAddress(DecryptedGroupUtil.toUuid(e))).collect(Collectors.toList());
-      pendingMembers = decryptedGroup.getPendingMembersList().stream().map(e -> new JsonAddress(DecryptedGroupUtil.toUuid(e))).collect(Collectors.toList());
-      requestingMembers = decryptedGroup.getRequestingMembersList().stream().map(e -> new JsonAddress(UuidUtil.fromByteStringOrUnknown(e.getUuid()))).collect(Collectors.toList());
+      members = DecryptedGroupUtil.toAciList(decryptedGroup.members).stream().map(JsonAddress::new).collect(Collectors.toList());
+      pendingMembers = DecryptedGroupUtil.pendingToServiceIdList(decryptedGroup.pendingMembers).stream().map(JsonAddress::new).collect(Collectors.toList());
+      requestingMembers = decryptedGroup.requestingMembers.stream().map(e -> new JsonAddress(UuidUtil.fromByteString(e.aciBytes))).collect(Collectors.toList());
 
-      AccessControl.AccessRequired access = decryptedGroup.getAccessControl().getAddFromInviteLink();
+      AccessControl.AccessRequired access = decryptedGroup.accessControl.addFromInviteLink;
       if (access == AccessControl.AccessRequired.ANY || access == AccessControl.AccessRequired.ADMINISTRATOR) {
         inviteLink = GroupInviteLinkUrl.forGroup(signalServiceGroupV2.getMasterKey(), decryptedGroup).getUrl();
       }
 
-      accessControl = new GroupAccessControl(decryptedGroup.getAccessControl());
+      accessControl = new GroupAccessControl(decryptedGroup.accessControl);
 
-      memberDetail = decryptedGroup.getMembersList().stream().map(GroupMember::new).collect(Collectors.toList());
-      pendingMemberDetail = decryptedGroup.getPendingMembersList().stream().map(GroupMember::new).collect(Collectors.toList());
+      memberDetail = decryptedGroup.members.stream().map(GroupMember::new).collect(Collectors.toList());
+      pendingMemberDetail = decryptedGroup.pendingMembers.stream().map(GroupMember::new).collect(Collectors.toList());
     }
   }
 

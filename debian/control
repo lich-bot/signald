@@ -5,8 +5,8 @@ Maintainer: Finn Herzfeld <signald@janky.solutions>
 Build-Depends:
  debhelper (>= 9),
  javahelper,
- default-jre-headless,
- default-jdk-headless,
+ default-jre-headless (>= 1.17),
+ default-jdk-headless (>= 1.17),
 Standards-Version: 3.9.8
 Homepage: https://signald.org
 Vcs-Git: https://gitlab.com/signald/signald.git

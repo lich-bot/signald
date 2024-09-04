@@ -17,7 +17,7 @@ import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.protocol.InvalidKeyIdException;
 import org.signal.libsignal.protocol.InvalidMessageException;
 import org.signal.libsignal.protocol.state.SignedPreKeyRecord;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 public class SignedPreKeysTable implements ISignedPreKeysTable {
   private final static Logger logger = LogManager.getLogger();
@@ -33,7 +33,7 @@ public class SignedPreKeysTable implements ISignedPreKeysTable {
     try {
       var query = String.format("SELECT %s FROM %s WHERE %s=? AND %s=?", RECORD, TABLE_NAME, ACCOUNT_UUID, ID);
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setObject(1, aci.uuid());
+        statement.setObject(1, aci.getRawUuid());
         statement.setInt(2, signedPreKeyId);
         try (var rows = Database.executeQuery(TABLE_NAME + "_load_signed_prekey", statement)) {
           if (!rows.next()) {
@@ -53,7 +53,7 @@ public class SignedPreKeysTable implements ISignedPreKeysTable {
     try {
       var query = String.format("SELECT %s FROM %s WHERE %s=?", RECORD, TABLE_NAME, ACCOUNT_UUID);
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setObject(1, aci.uuid());
+        statement.setObject(1, aci.getRawUuid());
         try (var rows = Database.executeQuery(TABLE_NAME + "_load_all_signed_prekeys", statement)) {
           List<SignedPreKeyRecord> results = new ArrayList<>();
           while (rows.next()) {
@@ -79,7 +79,7 @@ public class SignedPreKeysTable implements ISignedPreKeysTable {
                                 // DO UPDATE SET
                                 RECORD, RECORD);
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setObject(1, aci.uuid());
+        statement.setObject(1, aci.getRawUuid());
         statement.setInt(2, signedPreKeyId);
         statement.setBytes(3, record.serialize());
         Database.executeUpdate(TABLE_NAME + "_store_signed_prekey", statement);
@@ -95,7 +95,7 @@ public class SignedPreKeysTable implements ISignedPreKeysTable {
     try {
       var query = String.format("SELECT %s FROM %s WHERE %s=? AND %s=?", RECORD, TABLE_NAME, ACCOUNT_UUID, ID);
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setObject(1, aci.uuid());
+        statement.setObject(1, aci.getRawUuid());
         statement.setInt(2, signedPreKeyId);
         try (var rows = Database.executeQuery(TABLE_NAME + "_contains_signed_prekey", statement)) {
           return rows.next();
@@ -112,7 +112,7 @@ public class SignedPreKeysTable implements ISignedPreKeysTable {
     try {
       var query = String.format("DELETE FROM %s WHERE %s=? AND %s=?", TABLE_NAME, ACCOUNT_UUID, ID);
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setObject(1, aci.uuid());
+        statement.setObject(1, aci.getRawUuid());
         statement.setInt(2, signedPreKeyId);
         Database.executeUpdate(TABLE_NAME + "_remove_signed_prekey", statement);
       }

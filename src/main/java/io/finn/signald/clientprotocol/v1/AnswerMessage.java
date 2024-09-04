@@ -7,7 +7,7 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import org.whispersystems.util.Base64;
+import org.signal.core.util.Base64;
 
 public class AnswerMessage {
   public final long id;
@@ -17,6 +17,6 @@ public class AnswerMessage {
   public AnswerMessage(org.whispersystems.signalservice.api.messages.calls.AnswerMessage message) {
     id = message.getId();
     sdp = message.getSdp();
-    opaque = Base64.encodeBytes(message.getOpaque());
+    opaque = Base64.encodeWithPadding(message.getOpaque());
   }
 }

@@ -18,8 +18,8 @@ import java.util.HashMap;
 import java.util.Map;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
-import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.ServiceId;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 @Deprecated(1641027661)
 public class JsonSentTranscriptMessage {

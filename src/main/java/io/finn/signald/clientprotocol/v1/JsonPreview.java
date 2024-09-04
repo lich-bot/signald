@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.util.Optional;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServicePreview;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 @Doc("metadata about one of the links in a message")
 public class JsonPreview {

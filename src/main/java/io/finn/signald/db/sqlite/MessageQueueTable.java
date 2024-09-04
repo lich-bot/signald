@@ -13,10 +13,9 @@ import io.finn.signald.db.StoredEnvelope;
 import java.sql.SQLException;
 import java.util.Optional;
 import java.util.UUID;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class MessageQueueTable implements IMessageQueueTable {
@@ -28,27 +27,25 @@ public class MessageQueueTable implements IMessageQueueTable {
 
   @Override
   public long storeEnvelope(SignalServiceEnvelope envelope) throws SQLException {
-    var query = "INSERT INTO " + TABLE_NAME + " (" + ACCOUNT + ", " + VERSION + ", " + TYPE + ", " + SOURCE_E164 + ", " + SOURCE_UUID + ", " + SOURCE_DEVICE + ", " + TIMESTAMP +
-                ", " + CONTENT + ", " + SERVER_RECEIVED_TIMESTAMP + ", " + SERVER_DELIVERED_TIMESTAMP + ", " + SERVER_UUID + ", " + DESTINATION_UUID + ", " + URGENT + ", " +
-                UPDATED_PNI + ", " + STORY + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+    var query = "INSERT INTO " + TABLE_NAME + " (" + ACCOUNT + ", " + VERSION + ", " + TYPE + ", " + SOURCE_UUID + ", " + SOURCE_DEVICE + ", " + TIMESTAMP + ", " + CONTENT + ", " +
+                SERVER_RECEIVED_TIMESTAMP + ", " + SERVER_DELIVERED_TIMESTAMP + ", " + SERVER_UUID + ", " + DESTINATION_UUID + ", " + URGENT + ", " + UPDATED_PNI + ", " + STORY +
+                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
     try (var statement = Database.getConn().prepareStatement(query)) {
       int i = 1;
       statement.setString(i++, aci.toString());
       statement.setInt(i++, 2); // Version is hard-coded to 2
       statement.setInt(i++, envelope.getType());
-      statement.setString(i++, envelope.getSourceIdentifier());
-      if (envelope.getSourceUuid().isPresent()) {
-        statement.setString(i++, envelope.getSourceUuid().get());
-      }
+      statement.setString(i++, envelope.getSourceServiceId().orElse(null));
       statement.setInt(i++, envelope.getSourceDevice());
       statement.setLong(i++, envelope.getTimestamp());
       if (envelope.hasContent()) {
-        statement.setBytes(i++, envelope.getContent());
+        statement.setBytes(i, envelope.getContent());
       }
+      i++;
       statement.setLong(i++, envelope.getServerReceivedTimestamp());
       statement.setLong(i++, envelope.getServerDeliveredTimestamp());
       statement.setString(i++, envelope.getServerGuid());
-      statement.setString(i++, envelope.getDestinationUuid());
+      statement.setString(i++, envelope.getDestinationServiceId());
       statement.setBoolean(i++, envelope.isUrgent());
       statement.setString(i++, envelope.getUpdatedPni());
       statement.setBoolean(i++, envelope.isStory());
@@ -85,8 +82,10 @@ public class MessageQueueTable implements IMessageQueueTable {
         String senderE164 = rows.getString(SOURCE_E164);
         String senderUUIDString = rows.getString(SOURCE_UUID);
         if ((senderE164 != null && senderE164.length() > 0) || (senderUUIDString != null && senderUUIDString.length() > 0)) {
-          ACI senderACI = (senderUUIDString != null && senderUUIDString.length() > 0) ? ACI.from(UUID.fromString(senderUUIDString)) : null;
-          sender = Optional.of(new SignalServiceAddress(senderACI, senderE164));
+          //          ACI senderACI = (senderUUIDString != null && senderUUIDString.length() > 0) ? ACI.from(UUID.fromString(senderUUIDString)) : null;
+          //          sender = Optional.of(new SignalServiceAddress(senderACI, senderE164));
+          //          ServiceId.parseOrNull(senderUUIDString);
+          sender = SignalServiceAddress.fromRaw(senderUUIDString, senderE164);
         }
         int senderDevice = rows.getInt(SOURCE_DEVICE);
         long timestamp = rows.getLong(TIMESTAMP);
@@ -99,7 +98,7 @@ public class MessageQueueTable implements IMessageQueueTable {
         String updatedPni = rows.getString(UPDATED_PNI);
         boolean story = rows.getBoolean(STORY);
         SignalServiceEnvelope signalServiceEnvelope = new SignalServiceEnvelope(type, sender, senderDevice, timestamp, content, serverReceivedTimestamp, serverDeliveredTimestamp,
-                                                                                uuid, destinationUUID, urgent, updatedPni, story);
+                                                                                uuid, destinationUUID, urgent, story, null, updatedPni);
         return new StoredEnvelope(id, signalServiceEnvelope);
       }
     }

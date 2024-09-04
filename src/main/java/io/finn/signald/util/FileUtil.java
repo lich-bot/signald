@@ -18,7 +18,10 @@ import java.util.EnumSet;
 import java.util.Optional;
 import java.util.Set;
 import org.apache.logging.log4j.LogManager;
+import org.thoughtcrime.securesms.util.Hex;
+import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentRemoteId;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStream;
+import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 // FileUtil should be used for all disk operations. Not everything has been moved to this yet, move stuff if you find it
@@ -89,6 +92,12 @@ public class FileUtil {
     return new File(avatarsPath, "contact-" + address.getIdentifier());
   }
 
+  public static File getStickerFile(SignalServiceDataMessage.Sticker sticker) {
+    String packID = Hex.toStringCondensed(sticker.getPackId());
+    String stickerID = String.valueOf(sticker.getStickerId());
+    return new File(stickersPath + "/" + packID, stickerID);
+  }
+
   private static SignalServiceAttachmentStream createAttachment(File attachmentFile) throws IOException {
     InputStream attachmentStream = new FileInputStream(attachmentFile);
     final long attachmentSize = attachmentFile.length();
@@ -96,7 +105,21 @@ public class FileUtil {
     if (mime == null) {
       mime = "application/octet-stream";
     }
-    return new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), false, false, false, Optional.empty(), 0, 0,
+    return new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), false, false, false, false, Optional.empty(), 0, 0,
                                              System.currentTimeMillis(), Optional.empty(), Optional.empty(), null, null, Optional.empty());
   }
+
+  public static File attachmentFile(SignalServiceAttachmentRemoteId attachmentId) {
+    File file = new File(attachmentsPath, attachmentId.toString());
+    ensureDir(file);
+    return file;
+  }
+
+  public static File attachmentFile(SignalServiceAttachmentRemoteId attachmentId, String suffix) {
+    File file = new File(attachmentsPath, attachmentId.toString() + "." + suffix);
+    ensureDir(file);
+    return file;
+  }
+
+  public static void ensureDir(File file) { file.getParentFile().mkdirs(); }
 }

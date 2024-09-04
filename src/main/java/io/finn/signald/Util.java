@@ -11,13 +11,15 @@ import java.io.*;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.UUID;
+import org.signal.core.util.Base64;
+import org.signal.libsignal.protocol.SignalProtocolAddress;
 import org.whispersystems.signalservice.api.push.ServiceId;
-import org.whispersystems.util.Base64;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class Util {
   public static String getSecret(int size) {
     byte[] secret = getSecretBytes(size);
-    return Base64.encodeBytes(secret);
+    return Base64.encodeWithPadding(secret);
   }
 
   public static byte[] getSecretBytes(int size) {
@@ -34,7 +36,19 @@ public class Util {
     }
   }
 
-  public static String redact(ServiceId serviceId) { return redact(serviceId.toString()); }
+  public static String redact(SignalProtocolAddress address) { return redact(address.getName()) + "." + address.getDeviceId(); }
+
+  public static String redact(SignalServiceAddress address) { return redact(address.getServiceId()); }
+
+  public static String redact(ServiceId serviceId) {
+    String prefix = "";
+    if (serviceId instanceof ServiceId.ACI) {
+      prefix = "ACI:";
+    } else if (serviceId instanceof ServiceId.PNI) {
+      prefix = "PNI:";
+    }
+    return prefix + redact(serviceId.getRawUuid().toString());
+  }
 
   public static String redact(UUID uuid) { return redact(uuid.toString()); }
 

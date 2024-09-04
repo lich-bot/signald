@@ -23,11 +23,11 @@ import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.TrustLevel;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.protocol.IdentityKey;
 import org.signal.libsignal.protocol.IdentityKeyPair;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-import org.whispersystems.util.Base64;
 @Deprecated
 public class LegacyIdentityKeyStore {
   private static final Logger logger = LogManager.getLogger();
@@ -121,7 +121,7 @@ public class LegacyIdentityKeyStore {
   // Getters and setters for Jackson
   @JsonSetter("identityKey")
   public void setIdentityKey(String identityKey) throws IOException {
-    identityKeyPair = new IdentityKeyPair(org.whispersystems.util.Base64.decode(identityKey));
+    identityKeyPair = new IdentityKeyPair(org.signal.core.util.Base64.decode(identityKey));
   }
 
   public static class Identity {
@@ -170,7 +170,7 @@ public class LegacyIdentityKeyStore {
 
     @JsonSetter("identityKey")
     public void setIdentityKey(String identityKey) throws IOException, InvalidKeyException {
-      this.identityKey = new IdentityKey(org.whispersystems.util.Base64.decode(identityKey), 0);
+      this.identityKey = new IdentityKey(org.signal.core.util.Base64.decode(identityKey), 0);
     }
 
     @JsonGetter("identityKey")
@@ -178,7 +178,7 @@ public class LegacyIdentityKeyStore {
       if (identityKey == null) {
         return null;
       }
-      return Base64.encodeBytes(identityKey.serialize());
+      return Base64.encodeWithPadding(identityKey.serialize());
     }
 
     public void setAddedTimestamp(long added) {

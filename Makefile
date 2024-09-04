@@ -17,7 +17,7 @@ installDist distTar:
 
 integrationTest:
 	export SIGNAL_URL=https://signal-server.signald.org
-	$(GRADLE) integrationTest --info
+	$(GRADLE) test --info
 
 format:
 	find src/ -name '*.java' -exec clang-format-11 -i {} \;

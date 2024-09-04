@@ -9,8 +9,8 @@ package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.annotations.Doc;
 import java.io.IOException;
+import org.signal.core.util.Base64;
 import org.whispersystems.signalservice.api.messages.multidevice.MessageRequestResponseMessage;
-import org.whispersystems.util.Base64;
 
 @Doc("Responses to message requests from unknown users or groups")
 public class JsonMessageRequestResponseMessage {
@@ -26,7 +26,7 @@ public class JsonMessageRequestResponseMessage {
     }
 
     if (m.getGroupId().isPresent()) {
-      groupId = Base64.encodeBytes(m.getGroupId().get());
+      groupId = Base64.encodeWithPadding(m.getGroupId().get());
     }
 
     type = m.getType().toString();

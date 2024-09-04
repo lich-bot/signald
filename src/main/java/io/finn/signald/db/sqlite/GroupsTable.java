@@ -7,7 +7,6 @@
 
 package io.finn.signald.db.sqlite;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import io.finn.signald.Account;
 import io.finn.signald.ServiceConfig;
 import io.finn.signald.Util;
@@ -29,9 +28,10 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
+import okio.ByteString;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.groups.GroupIdentifier;
 import org.signal.libsignal.zkgroup.groups.GroupMasterKey;
@@ -42,11 +42,11 @@ import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupUtil;
 import org.whispersystems.signalservice.api.groupsv2.GroupChangeReconstruct;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
-import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.DistributionId;
+import org.whispersystems.signalservice.api.push.ServiceId;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.exceptions.NonSuccessfulResponseCodeException;
 import org.whispersystems.signalservice.api.util.UuidUtil;
-import org.whispersystems.util.Base64;
 
 public class GroupsTable implements IGroupsTable {
   private static String groupAvatarPath;
@@ -60,7 +60,7 @@ public class GroupsTable implements IGroupsTable {
   public GroupsTable(ACI aci) { this.aci = aci; }
 
   @Override
-  public Optional<IGroup> get(GroupIdentifier identifier) throws SQLException, InvalidInputException, InvalidProtocolBufferException {
+  public Optional<IGroup> get(GroupIdentifier identifier) throws SQLException, InvalidInputException, IOException {
     var query = "SELECT " + ROWID + ", * FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + GROUP_ID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setString(1, aci.toString());
@@ -81,7 +81,7 @@ public class GroupsTable implements IGroupsTable {
         while (rows.next()) {
           try {
             allGroups.add(new Group(rows));
-          } catch (InvalidInputException | InvalidProtocolBufferException e) {
+          } catch (InvalidInputException | IOException e) {
             logger.error("error parsing group " + rows.getString(GROUP_ID) + " from database", e);
             Sentry.captureException(e);
           }
@@ -92,14 +92,14 @@ public class GroupsTable implements IGroupsTable {
   }
 
   public void upsert(GroupMasterKey masterKey, DecryptedGroup decryptedGroup, DistributionId distributionId, int lastAvatarFetch)
-      throws SQLException, InvalidInputException, InvalidProtocolBufferException {
+      throws SQLException, InvalidInputException, IOException {
     final GroupIdentifier groupId = GroupSecretParams.deriveFromMasterKey(masterKey).getPublicParams().getGroupIdentifier();
 
     Optional<IGroup> existingGroup;
     try {
       existingGroup = get(groupId);
-    } catch (InvalidInputException | InvalidProtocolBufferException e) {
-      logger.error("error parsing group " + Base64.encodeBytes(groupId.serialize()) + " from database", e);
+    } catch (InvalidInputException | IOException e) {
+      logger.error("error parsing group " + Base64.encodeWithPadding(groupId.serialize()) + " from database", e);
       Sentry.captureException(e);
       throw e;
     }
@@ -116,7 +116,7 @@ public class GroupsTable implements IGroupsTable {
 
     if (existingGroup.isPresent()) {
       DecryptedGroupChange change = GroupChangeReconstruct.reconstructGroupChange(existingGroup.get().getDecryptedGroup(), decryptedGroup);
-      List<UUID> removed = DecryptedGroupUtil.removedMembersUuidList(change);
+      List<ServiceId> removed = DecryptedGroupUtil.removedMembersServiceIdList(change);
 
       if (removed.size() > 0) {
         logger.info(removed.size() + " members were removed from group " + existingGroup.get().getIdString() + ". Rotating the DistributionId " + distributionIdToSave);
@@ -137,17 +137,17 @@ public class GroupsTable implements IGroupsTable {
       statement.setString(i++, aci.toString());
       statement.setBytes(i++, groupId.serialize());
       statement.setBytes(i++, masterKey.serialize());
-      statement.setInt(i++, decryptedGroup.getRevision());
+      statement.setInt(i++, decryptedGroup.revision);
       statement.setString(i++, distributionIdToSave.toString());
       statement.setInt(i++, lastAvatarFetch);
-      statement.setBytes(i++, decryptedGroup.toByteArray());
+      statement.setBytes(i++, decryptedGroup.encode());
       Database.executeUpdate(TABLE_NAME + "_upsert", statement);
     }
   }
 
   @Override
   public File getGroupAvatarFile(GroupIdentifier groupId) {
-    return new File(groupAvatarPath, "group-" + Base64.encodeBytes(groupId.serialize()).replace("/", "_"));
+    return new File(groupAvatarPath, "group-" + Base64.encodeWithPadding(groupId.serialize()).replace("/", "_"));
   }
 
   @Override
@@ -174,7 +174,7 @@ public class GroupsTable implements IGroupsTable {
     private DistributionId distributionId;
     private DecryptedGroup group;
 
-    private Group(ResultSet row) throws SQLException, InvalidInputException, InvalidProtocolBufferException {
+    private Group(ResultSet row) throws SQLException, InvalidInputException, IOException {
       account = new Account(ACI.parseOrThrow(row.getString(ACCOUNT_UUID)));
       rowId = row.getInt(ROWID);
       masterKey = new GroupMasterKey(row.getBytes(MASTER_KEY));
@@ -182,7 +182,7 @@ public class GroupsTable implements IGroupsTable {
       lastAvatarFetch = row.getInt(LAST_AVATAR_FETCH);
       String distributionIdString = row.getString(DISTRIBUTION_ID);
       distributionId = distributionIdString == null ? null : DistributionId.from(distributionIdString);
-      group = DecryptedGroup.parseFrom(row.getBytes(GROUP_INFO));
+      group = DecryptedGroup.ADAPTER.decode(row.getBytes(GROUP_INFO));
     }
 
     @Override
@@ -192,7 +192,7 @@ public class GroupsTable implements IGroupsTable {
 
     @Override
     public String getIdString() {
-      return Base64.encodeBytes(getId().serialize());
+      return Base64.encodeWithPadding(getId().serialize());
     }
 
     @Override
@@ -219,11 +219,11 @@ public class GroupsTable implements IGroupsTable {
     public void setDecryptedGroup(DecryptedGroup decryptedGroup) throws SQLException {
       var query = "UPDATE " + TABLE_NAME + " SET " + REVISION + " = ?, " + GROUP_INFO + " = ? WHERE " + ROWID + " = ?";
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setInt(1, decryptedGroup.getRevision());
-        statement.setBytes(2, decryptedGroup.toByteArray());
+        statement.setInt(1, decryptedGroup.revision);
+        statement.setBytes(2, decryptedGroup.encode());
         statement.setInt(3, rowId);
         Database.executeUpdate(TABLE_NAME + "_set_decrypted_group", statement);
-        revision = decryptedGroup.getRevision();
+        revision = decryptedGroup.revision;
         this.group = decryptedGroup;
       }
     }
@@ -269,7 +269,7 @@ public class GroupsTable implements IGroupsTable {
 
       File tmpFile = FileUtil.createTempFile();
       try (InputStream input =
-               account.getSignalDependencies().getMessageReceiver().retrieveGroupsV2ProfileAvatar(group.getAvatar(), tmpFile, ServiceConfig.AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE)) {
+               account.getSignalDependencies().getMessageReceiver().retrieveGroupsV2ProfileAvatar(group.avatar, tmpFile, ServiceConfig.AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE)) {
         byte[] encryptedData = Util.readFully(input);
         byte[] decryptedData = groupOperations.decryptAvatar(encryptedData);
         OutputStream outputStream = new FileOutputStream(avatarFile);
@@ -289,8 +289,8 @@ public class GroupsTable implements IGroupsTable {
     @Override
     public List<Recipient> getMembers() throws IOException, SQLException {
       List<Recipient> recipients = new ArrayList<>();
-      for (DecryptedMember member : group.getMembersList()) {
-        var recipient = Database.Get(aci).RecipientsTable.get(UuidUtil.fromByteString(member.getUuid()));
+      for (ByteString member : DecryptedGroupUtil.membersToAciByteStringSet(group.members)) {
+        var recipient = Database.Get(aci).RecipientsTable.get(UuidUtil.fromByteString(member));
         recipients.add(recipient);
       }
       return recipients;
@@ -299,8 +299,8 @@ public class GroupsTable implements IGroupsTable {
     @Override
     public List<Recipient> getPendingMembers() throws IOException, SQLException {
       List<Recipient> recipients = new ArrayList<>();
-      for (DecryptedPendingMember member : group.getPendingMembersList()) {
-        Recipient recipient = Database.Get(aci).RecipientsTable.get(UuidUtil.fromByteString(member.getUuid()));
+      for (ServiceId member : DecryptedGroupUtil.pendingToServiceIdList(group.pendingMembers)) {
+        Recipient recipient = Database.Get(aci).RecipientsTable.get(member);
         recipients.add(recipient);
       }
       return recipients;
@@ -309,8 +309,8 @@ public class GroupsTable implements IGroupsTable {
     @Override
     public List<Recipient> getRequestingMembers() throws IOException, SQLException {
       List<Recipient> recipients = new ArrayList<>();
-      for (DecryptedRequestingMember member : group.getRequestingMembersList()) {
-        Recipient recipient = Database.Get(aci).RecipientsTable.get(UuidUtil.fromByteString(member.getUuid()));
+      for (DecryptedRequestingMember member : group.requestingMembers) {
+        Recipient recipient = Database.Get(aci).RecipientsTable.get(UuidUtil.fromByteString(member.aciBytes));
         recipients.add(recipient);
       }
       return recipients;
@@ -318,9 +318,9 @@ public class GroupsTable implements IGroupsTable {
 
     @Override
     public boolean isAdmin(Recipient recipient) {
-      for (DecryptedMember member : group.getMembersList()) {
-        if (UuidUtil.fromByteString(member.getUuid()).equals(recipient.getUUID())) {
-          return member.getRole() == Member.Role.ADMINISTRATOR;
+      for (DecryptedMember member : group.members) {
+        if (UuidUtil.fromByteString(member.aciBytes).equals(recipient.getUUID())) {
+          return member.role == Member.Role.ADMINISTRATOR;
         }
       }
       return false;

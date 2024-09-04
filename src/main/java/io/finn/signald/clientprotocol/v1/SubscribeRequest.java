@@ -47,9 +47,10 @@ import org.signal.libsignal.metadata.ProtocolNoSessionException;
 import org.signal.libsignal.protocol.DuplicateMessageException;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.protocol.UntrustedIdentityException;
+import org.whispersystems.signalservice.api.crypto.SignalServiceCipherResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 
 @ProtocolType("subscribe")
@@ -134,9 +135,12 @@ public class SubscribeRequest implements RequestType<Empty> {
 
     public void broadcast(ClientMessageWrapper w) throws IOException {
       lock.lock();
-      PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-      out.println(mapper.writeValueAsString(w));
-      lock.unlock();
+      try {
+        PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+        out.println(mapper.writeValueAsString(w));
+      } finally {
+        lock.unlock();
+      }
     }
 
     @Override

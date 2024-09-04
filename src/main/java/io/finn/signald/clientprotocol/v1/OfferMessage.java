@@ -7,7 +7,7 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import org.whispersystems.util.Base64;
+import org.signal.core.util.Base64;
 
 public class OfferMessage {
   public final long id;
@@ -19,6 +19,6 @@ public class OfferMessage {
     id = message.getId();
     sdp = message.getSdp();
     type = message.getType().getCode();
-    opaque = Base64.encodeBytes(message.getOpaque());
+    opaque = Base64.encodeWithPadding(message.getOpaque());
   }
 }

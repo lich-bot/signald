@@ -16,15 +16,13 @@ import io.finn.signald.db.TestUtil;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-import org.whispersystems.signalservice.api.push.ACI;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 class MessageQueueTableTest {
   private static final ACI ACCOUNT_ACI = ACI.from(UUID.fromString("00000000-0000-4000-0000-000000000000"));
@@ -52,21 +50,18 @@ class MessageQueueTableTest {
   void nextEnvelope_withUnidentifiedSender() throws SQLException {
     int type = TYPE_UNIDENTIFIED_SENDER;
 
-    Optional<SignalServiceAddress> sender = Optional.empty();
     int senderDevice = 0;
     long timestamp = 100L;
-    byte[] legacyMessage = {};
     byte[] content = {1};
     long serverReceivedTimestamp = 200L;
     long serverDeliveredTimestamp = 300L;
     String uuid = UUID.randomUUID().toString();
 
     boolean urgent = false;
-    String updatedPni = "idk";
     boolean story = false;
 
-    SignalServiceEnvelope originalEnvelope = new SignalServiceEnvelope(type, sender, senderDevice, timestamp, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid,
-                                                                       ACCOUNT_ACI.toString(), urgent, updatedPni, story);
+    SignalServiceEnvelope originalEnvelope =
+        new SignalServiceEnvelope(type, timestamp, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid, ACCOUNT_ACI.toString(), urgent, story, null, null);
     messageQueue.storeEnvelope(originalEnvelope);
 
     StoredEnvelope storedEnvelope = messageQueue.nextEnvelope();
@@ -79,10 +74,6 @@ class MessageQueueTableTest {
     assertEquals(serverReceivedTimestamp, envelope.getServerReceivedTimestamp());
     assertEquals(serverDeliveredTimestamp, envelope.getServerDeliveredTimestamp());
     assertEquals(uuid, envelope.getServerGuid());
-
-    // This is somewhat unexpected given a type of Optional<String>.
-    // But it's consistent with deserialized Protobuf objects.
-    assertEquals("", envelope.getSourceUuid().get());
   }
 
   @Test
@@ -106,15 +97,12 @@ class MessageQueueTableTest {
   }
 
   private SignalServiceEnvelope createUnidentifiedSenderSignalServiceEnvelope(byte[] content) {
-    Optional<SignalServiceAddress> sender = Optional.empty();
-    int senderDevice = 0;
     long timestamp = 100L;
-    byte[] legacyMessage = {};
     long serverReceivedTimestamp = 200L;
     long serverDeliveredTimestamp = 300L;
     String uuid = UUID.randomUUID().toString();
 
-    return new SignalServiceEnvelope(TYPE_UNIDENTIFIED_SENDER, sender, senderDevice, timestamp, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid,
-                                     ACCOUNT_ACI.toString(), false, "idk", false);
+    return new SignalServiceEnvelope(TYPE_UNIDENTIFIED_SENDER, timestamp, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid, ACCOUNT_ACI.toString(), false, false,
+                                     null, null);
   }
 }

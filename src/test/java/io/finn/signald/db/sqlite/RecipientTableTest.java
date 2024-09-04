@@ -21,7 +21,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class RecipientTableTest {
@@ -36,7 +36,7 @@ public class RecipientTableTest {
   @BeforeEach
   void setUp() throws IOException, SQLException {
     databaseFile = TestUtil.createAndConfigureTestSQLiteDatabase();
-    recipientsTable = Database.Get(ACI.from(SELF_ADDRESS.getServiceId().uuid())).RecipientsTable;
+    recipientsTable = Database.Get(ACI.from(SELF_ADDRESS.getServiceId().getRawUuid())).RecipientsTable;
     recipientsTable.get(SELF_ADDRESS);
     recipientsTable.get(ADDRESS_A);
   }

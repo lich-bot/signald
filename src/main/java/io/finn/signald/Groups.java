@@ -11,6 +11,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import io.finn.signald.clientprotocol.v1.JsonGroupJoinInfo;
 import io.finn.signald.db.*;
 import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoProfileKeyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
@@ -32,6 +33,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.protocol.util.Pair;
 import org.signal.libsignal.zkgroup.InvalidInputException;
@@ -49,11 +51,9 @@ import org.signal.storageservice.protos.groups.local.DecryptedGroupJoinInfo;
 import org.whispersystems.signalservice.api.groupsv2.*;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.push.exceptions.NotInGroupException;
-import org.whispersystems.util.Base64;
-import org.whispersystems.util.Base64UrlSafe;
 
 public class Groups {
   private final static Logger logger = LogManager.getLogger();
@@ -162,7 +162,7 @@ public class Groups {
                                                                                                  NoSuchAccountException, InvalidProxyException, IOException, InvalidInputException,
                                                                                                  VerificationFailedException, InvalidKeyException {
     final GroupSecretParams groupSecretParams = mostRecentGroupState.getSecretParams();
-    final String groupId = Base64.encodeBytes(groupSecretParams.getPublicParams().getGroupIdentifier().serialize());
+    final String groupId = Base64.encodeWithPadding(groupSecretParams.getPublicParams().getGroupIdentifier().serialize());
 
     if (previousGroupState.isPresent()) {
       if (previousGroupState.get().getRevision() >= mostRecentGroupState.getRevision()) {
@@ -173,7 +173,7 @@ public class Groups {
       Optional<DecryptedGroupChange> signedGroupChange;
       if (signedGroupChangeBytes != null) {
         try {
-          signedGroupChange = decryptChange(mostRecentGroupState, GroupChange.parseFrom(signedGroupChangeBytes), true);
+          signedGroupChange = decryptChange(mostRecentGroupState, GroupChange.ADAPTER.decode(signedGroupChangeBytes), true);
         } catch (VerificationFailedException e) {
           logger.error("failed to verify incoming P2P group change for " + groupId);
           Sentry.captureException(e);
@@ -187,8 +187,8 @@ public class Groups {
         signedGroupChange = Optional.empty();
       }
 
-      if (signedGroupChange.isPresent() && previousGroupState.get().getRevision() + 1 == signedGroupChange.get().getRevision() &&
-          mostRecentGroupState.getRevision() == signedGroupChange.get().getRevision()) {
+      if (signedGroupChange.isPresent() && previousGroupState.get().getRevision() + 1 == signedGroupChange.get().revision &&
+          mostRecentGroupState.getRevision() == signedGroupChange.get().revision) {
         // unlike the Android app, we've already updated to the latest server revision, so we don't have to apply anything
         logger.info("Getting profile keys from P2P group change for " + groupId);
         final ProfileKeySet profileKeys = new ProfileKeySet(account.getDB().RecipientsTable);
@@ -202,7 +202,7 @@ public class Groups {
     }
 
     final GroupHistoryPage firstGroupHistoryPage;
-    if (!GroupProtoUtil.isMember(account.getUUID(), mostRecentGroupState.getDecryptedGroup().getMembersList())) {
+    if (!GroupProtoUtil.isMember(account.getUUID(), mostRecentGroupState.getDecryptedGroup().members)) {
       logger.info("Not a member, use latest only for " + groupId);
       firstGroupHistoryPage = new GroupHistoryPage(
           Collections.singletonList(new DecryptedGroupHistoryEntry(Optional.of(mostRecentGroupState.getDecryptedGroup()), Optional.empty())), GroupHistoryPage.PagingData.NONE);
@@ -331,12 +331,12 @@ public class Groups {
     if (encoding == null || encoding.length() == 0) {
       return null;
     }
-    byte[] bytes = Base64UrlSafe.decodePaddingAgnostic(encoding);
-    GroupInviteLink groupInviteLink = GroupInviteLink.parseFrom(bytes);
-    GroupInviteLink.GroupInviteLinkContentsV1 groupInviteLinkContentsV1 = groupInviteLink.getV1Contents();
-    GroupMasterKey groupMasterKey = new GroupMasterKey(groupInviteLinkContentsV1.getGroupMasterKey().toByteArray());
+    byte[] bytes = Base64.decode(encoding);
+    GroupInviteLink groupInviteLink = GroupInviteLink.ADAPTER.decode(bytes);
+    GroupInviteLink.GroupInviteLinkContentsV1 groupInviteLinkContentsV1 = groupInviteLink.v1Contents;
+    GroupMasterKey groupMasterKey = new GroupMasterKey(groupInviteLinkContentsV1.groupMasterKey.toByteArray());
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(groupMasterKey);
-    DecryptedGroupJoinInfo decryptedGroupJoinInfo = getGroupJoinInfo(groupSecretParams, groupInviteLinkContentsV1.getInviteLinkPassword().toByteArray());
+    DecryptedGroupJoinInfo decryptedGroupJoinInfo = getGroupJoinInfo(groupSecretParams, groupInviteLinkContentsV1.inviteLinkPassword.toByteArray());
     return new JsonGroupJoinInfo(decryptedGroupJoinInfo, groupMasterKey);
   }
 
@@ -347,7 +347,7 @@ public class Groups {
 
   public IGroupsTable.IGroup createGroup(String title, File avatar, Set<GroupCandidate> candidates, Member.Role memberRole, int timer)
       throws IOException, VerificationFailedException, InvalidGroupStateException, InvalidInputException, SQLException, NoSuchAccountException, ServerNotFoundException,
-             InvalidKeyException, InvalidProxyException {
+             InvalidKeyException, InvalidProxyException, NoProfileKeyException {
     GroupSecretParams groupSecretParams = GroupSecretParams.generate();
 
     Optional<byte[]> avatarBytes = Optional.empty();
@@ -355,9 +355,8 @@ public class Groups {
       avatarBytes = Optional.of(Files.readAllBytes(avatar.toPath()));
     }
 
-    IProfileKeysTable profileKeysTable = account.getDB().ProfileKeysTable;
-    ExpiringProfileKeyCredential selfExpiringProfileKeyCredential = profileKeysTable.getExpiringProfileKeyCredential(account.getSelf());
-    GroupCandidate groupCandidateSelf = new GroupCandidate(account.getUUID(), Optional.of(selfExpiringProfileKeyCredential));
+    ExpiringProfileKeyCredential selfExpiringProfileKeyCredential = account.getExpiringProfileKeyCredential(account.getSelf());
+    GroupCandidate groupCandidateSelf = new GroupCandidate(account.getACI(), Optional.of(selfExpiringProfileKeyCredential));
 
     GroupsV2Operations.NewGroup newGroup = groupsV2Operations.createNewGroup(groupSecretParams, title, avatarBytes, groupCandidateSelf, candidates, memberRole, timer);
     groupsV2Api.putNewGroup(newGroup, getAuthorizationForToday(groupSecretParams));
@@ -374,11 +373,11 @@ public class Groups {
 
   public Pair<SignalServiceDataMessage.Builder, IGroupsTable.IGroup> updateGroup(IGroupsTable.IGroup group, GroupChange.Actions.Builder change)
       throws SQLException, VerificationFailedException, InvalidInputException, IOException {
-    change.setSourceUuid(account.getACI().toByteString());
+    change.sourceServiceId(account.getACI().toByteString());
     Pair<DecryptedGroup, GroupChange> groupChangePair = commitChange(group, change);
 
     GroupMasterKey masterKey = group.getMasterKey();
-    byte[] signedChange = groupChangePair.second().toByteArray();
+    byte[] signedChange = groupChangePair.second().encode();
 
     SignalServiceGroupV2.Builder groupBuilder = SignalServiceGroupV2.newBuilder(masterKey).withRevision(group.getRevision()).withSignedGroupChange(signedChange);
     SignalServiceDataMessage.Builder updateMessage = SignalServiceDataMessage.newBuilder().asGroupMessage(groupBuilder.build());
@@ -390,8 +389,8 @@ public class Groups {
     final GroupSecretParams groupSecretParams = group.getSecretParams();
     final GroupsV2Operations.GroupOperations groupOperations = groupsV2Operations.forGroup(groupSecretParams);
     final DecryptedGroup previousGroupState = group.getDecryptedGroup();
-    final int nextRevision = previousGroupState.getRevision() + 1;
-    final GroupChange.Actions changeActions = change.setRevision(nextRevision).build();
+    final int nextRevision = previousGroupState.revision + 1;
+    final GroupChange.Actions changeActions = change.revision(nextRevision).build();
     int today = (int)TimeUnit.DAYS.toSeconds(TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis()));
     AuthCredentialWithPniResponse authCredential = credentials.getCredential(groupsV2Api, today);
     GroupsV2AuthorizationString authString = groupsV2Api.getGroupsV2AuthorizationString(account.getACI(), account.getPNI(), today, groupSecretParams, authCredential);
@@ -406,9 +405,9 @@ public class Groups {
       if (changeFromServerOptional.isPresent()) {
         decryptedChange = changeFromServerOptional.get();
       } else {
-        logger.warn("Unable to apply server's change for group {} (server change epoch {}); falling back to local change", Base64.encodeBytes(group.getId().serialize()),
-                    signedGroupChange.getChangeEpoch());
-        decryptedChange = groupOperations.decryptChange(changeActions, account.getUUID());
+        logger.warn("Unable to apply server's change for group {} (server change epoch {}); falling back to local change", Base64.encodeWithPadding(group.getId().serialize()),
+                    signedGroupChange.changeEpoch);
+        decryptedChange = groupOperations.decryptChange(changeActions, account.getACI());
       }
 
       decryptedGroupState = DecryptedGroupUtil.apply(previousGroupState, decryptedChange);
@@ -438,7 +437,7 @@ public class Groups {
   }
 
   public Optional<DecryptedGroupChange> decryptChange(IGroupsTable.IGroup group, GroupChange groupChange, boolean verifySignature)
-      throws InvalidGroupStateException, InvalidProtocolBufferException, VerificationFailedException {
+      throws InvalidGroupStateException, IOException, VerificationFailedException {
     final GroupsV2Operations.GroupOperations groupOperations = groupsV2Operations.forGroup(group.getSecretParams());
     return groupOperations.decryptChange(groupChange, verifySignature);
   }

@@ -27,9 +27,9 @@ import java.util.List;
 import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.auth.AuthCredentialResponse;
-import org.whispersystems.util.Base64;
 @Deprecated
 public class LegacyGroupsV2Storage {
   private static final Logger logger = LogManager.getLogger();
@@ -41,7 +41,7 @@ public class LegacyGroupsV2Storage {
     groups = new ArrayList<>();
   }
 
-  public boolean migrateToDB(Account account) throws SQLException, InvalidInputException, InvalidProtocolBufferException {
+  public boolean migrateToDB(Account account) throws SQLException, InvalidInputException, IOException {
     boolean needsSave = false;
 
     // credentials format changed, don't migrate credentials (will be automatically re-fetched when first needed)
@@ -76,7 +76,7 @@ public class LegacyGroupsV2Storage {
     public static class JsonAuthCredentialSerializer extends JsonSerializer<JsonAuthCredential> {
       @Override
       public void serialize(final JsonAuthCredential value, final JsonGenerator jgen, final SerializerProvider provider) throws IOException {
-        jgen.writeString(Base64.encodeBytes(value.credential.serialize()));
+        jgen.writeString(Base64.encodeWithPadding(value.credential.serialize()));
       }
     }
 

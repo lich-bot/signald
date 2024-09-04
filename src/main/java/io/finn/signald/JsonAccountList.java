@@ -13,7 +13,7 @@ import io.finn.signald.db.Database;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 @Deprecated(1641027661)
 public class JsonAccountList {

@@ -21,10 +21,10 @@ import java.util.Iterator;
 import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.protocol.InvalidKeyIdException;
 import org.signal.libsignal.protocol.InvalidMessageException;
 import org.signal.libsignal.protocol.state.PreKeyRecord;
-import org.whispersystems.util.Base64;
 @Deprecated
 @JsonDeserialize(using = LegacyPreKeyStore.JsonPreKeyStoreDeserializer.class)
 @JsonSerialize(using = LegacyPreKeyStore.JsonPreKeyStoreSerializer.class)
@@ -103,7 +103,7 @@ public class LegacyPreKeyStore implements org.signal.libsignal.protocol.state.Pr
       for (Map.Entry<Integer, byte[]> preKey : jsonPreKeyStore.store.entrySet()) {
         json.writeStartObject();
         json.writeNumberField("id", preKey.getKey());
-        json.writeStringField("record", Base64.encodeBytes(preKey.getValue()));
+        json.writeStringField("record", Base64.encodeWithPadding(preKey.getValue()));
         json.writeEndObject();
       }
       json.writeEndArray();

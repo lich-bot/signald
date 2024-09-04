@@ -18,8 +18,8 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.protocol.SignalProtocolAddress;
-import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.DistributionId;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 public class SenderKeySharedTable implements ISenderKeySharedTable {
   private static final Logger logger = LogManager.getLogger();
@@ -36,7 +36,7 @@ public class SenderKeySharedTable implements ISenderKeySharedTable {
     try {
       var query = String.format("SELECT %s, %s FROM %s WHERE %s=? AND %s=?", ADDRESS, DEVICE, TABLE_NAME, ACCOUNT_UUID, DISTRIBUTION_ID);
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setObject(1, aci.uuid());
+        statement.setObject(1, aci.getRawUuid());
         statement.setObject(2, distributionId.asUuid());
 
         try (var rows = Database.executeQuery(TABLE_NAME + "_get_sender_key_shared_with", statement)) {
@@ -64,7 +64,7 @@ public class SenderKeySharedTable implements ISenderKeySharedTable {
                                 DISTRIBUTION_ID, DISTRIBUTION_ID);
       try (var statement = Database.getConn().prepareStatement(query)) {
         for (SignalProtocolAddress address : addresses) {
-          statement.setObject(1, aci.uuid());
+          statement.setObject(1, aci.getRawUuid());
           statement.setString(2, address.getName());
           statement.setInt(3, address.getDeviceId());
           statement.setObject(4, distributionId.asUuid());
@@ -83,7 +83,7 @@ public class SenderKeySharedTable implements ISenderKeySharedTable {
       var query = String.format("DELETE FROM %s WHERE %s=? AND %s=? AND %s=? AND %s=?", TABLE_NAME, ACCOUNT_UUID, ADDRESS, DEVICE, DISTRIBUTION_ID);
       try (var statement = Database.getConn().prepareStatement(query)) {
         for (SignalProtocolAddress address : addresses) {
-          statement.setObject(1, aci.uuid());
+          statement.setObject(1, aci.getRawUuid());
           statement.setString(2, address.getName());
           statement.setInt(3, address.getDeviceId());
           statement.setObject(4, distributionId.asUuid());
@@ -102,7 +102,7 @@ public class SenderKeySharedTable implements ISenderKeySharedTable {
       var query = String.format("DELETE FROM %s WHERE %s=? AND %s=? AND %s=?", TABLE_NAME, ACCOUNT_UUID, ADDRESS, DEVICE);
       try (var statement = Database.getConn().prepareStatement(query)) {
         for (SignalProtocolAddress address : addresses) {
-          statement.setObject(1, aci.uuid());
+          statement.setObject(1, aci.getRawUuid());
           statement.setString(2, address.getName());
           statement.setInt(3, address.getDeviceId());
           statement.addBatch();
@@ -123,7 +123,7 @@ public class SenderKeySharedTable implements ISenderKeySharedTable {
   public void deleteAllFor(DistributionId distributionId) throws SQLException {
     var query = String.format("DELETE FROM %s WHERE %s = ? AND %s = ?", TABLE_NAME, ACCOUNT_UUID, DISTRIBUTION_ID);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, aci.uuid());
+      statement.setObject(1, aci.getRawUuid());
       statement.setObject(2, distributionId.asUuid());
       Database.executeUpdate(TABLE_NAME + "_delete_all_for_distributionid", statement);
     }
@@ -133,7 +133,7 @@ public class SenderKeySharedTable implements ISenderKeySharedTable {
   public void deleteForAll(Recipient recipient) throws SQLException {
     var query = String.format("DELETE FROM %s WHERE %s = ? AND %s = ?", TABLE_NAME, ACCOUNT_UUID, ADDRESS);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, aci.uuid());
+      statement.setObject(1, aci.getRawUuid());
       statement.setObject(2, recipient.getServiceId().toString());
       Database.executeUpdate(TABLE_NAME + "_delete_all_for_recipient", statement);
     }
@@ -152,7 +152,7 @@ public class SenderKeySharedTable implements ISenderKeySharedTable {
   public void deleteSharedWith(Recipient source) throws SQLException {
     var query = String.format("DELETE FROM %s WHERE %s = ? AND %s = ?", TABLE_NAME, ACCOUNT_UUID, ADDRESS);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, aci.uuid());
+      statement.setObject(1, aci.getRawUuid());
       statement.setString(2, source.getServiceId().toString());
       Database.executeUpdate(TABLE_NAME + "_delete_shared_with", statement);
     }

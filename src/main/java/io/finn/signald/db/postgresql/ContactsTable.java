@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.signal.libsignal.protocol.util.Pair;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class ContactsTable implements IContactsTable {
@@ -29,7 +29,7 @@ public class ContactsTable implements IContactsTable {
 
   private ContactInfo infoFromRow(ResultSet row) throws SQLException {
     var serviceAddress = new SignalServiceAddress(ACI.from(row.getObject(RECIPIENT_ACI, UUID.class)), row.getString(RECIPIENT_E164));
-    return new ContactInfo(row.getString(NAME), new Recipient(aci.uuid(), row.getInt(RECIPIENT), serviceAddress), row.getString(COLOR), row.getBytes(PROFILE_KEY),
+    return new ContactInfo(row.getString(NAME), new Recipient(aci.getRawUuid(), row.getInt(RECIPIENT), serviceAddress), row.getString(COLOR), row.getBytes(PROFILE_KEY),
                            row.getInt(MESSAGE_EXPIRATION_TIME), row.getInt(INBOX_POSITION));
   }
 
@@ -46,7 +46,7 @@ public class ContactsTable implements IContactsTable {
                               // WHERE
                               TABLE_NAME, ACCOUNT_UUID, RECIPIENT);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, aci.uuid());
+      statement.setObject(1, aci.getRawUuid());
       statement.setInt(2, recipient.getId());
       try (var rows = Database.executeQuery(TABLE_NAME + "_get", statement)) {
         return rows.next() ? infoFromRow(rows) : null;
@@ -67,7 +67,7 @@ public class ContactsTable implements IContactsTable {
                               // WHERE
                               TABLE_NAME, ACCOUNT_UUID);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, aci.uuid());
+      statement.setObject(1, aci.getRawUuid());
       try (var rows = Database.executeQuery(TABLE_NAME + "_get", statement)) {
         var contactInfos = new ArrayList<ContactInfo>();
         while (rows.next()) {
@@ -123,7 +123,7 @@ public class ContactsTable implements IContactsTable {
                               RecipientsTable.TABLE_NAME, RECIPIENT, RecipientsTable.TABLE_NAME, IRecipientsTable.ROW_ID);
     try (var statement = Database.getConn().prepareStatement(query)) {
       // Account UUID
-      statement.setObject(1, aci.uuid());
+      statement.setObject(1, aci.getRawUuid());
       // Recipient ID
       statement.setInt(2, recipient.getId());
       int i = 3;
@@ -140,7 +140,7 @@ public class ContactsTable implements IContactsTable {
   public void clear() throws SQLException {
     var query = String.format("DELETE FROM %s WHERE %s=?", TABLE_NAME, ACCOUNT_UUID);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, aci.uuid());
+      statement.setObject(1, aci.getRawUuid());
       var deletedCount = Database.executeUpdate(TABLE_NAME + "_clear", statement);
       logger.info("Deleted {} contacts for {}", deletedCount, aci);
     }

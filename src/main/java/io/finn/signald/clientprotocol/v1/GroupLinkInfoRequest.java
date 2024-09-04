@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
 import org.signal.libsignal.zkgroup.groups.GroupMasterKey;
@@ -27,7 +28,6 @@ import org.signal.libsignal.zkgroup.groups.GroupSecretParams;
 import org.signal.storageservice.protos.groups.GroupInviteLink;
 import org.signal.storageservice.protos.groups.local.DecryptedGroupJoinInfo;
 import org.whispersystems.signalservice.api.groupsv2.GroupLinkNotActiveException;
-import org.whispersystems.util.Base64UrlSafe;
 
 @ProtocolType("group_link_info")
 @Doc("Get information about a group from a signal.group link")
@@ -53,17 +53,15 @@ public class GroupLinkInfoRequest implements RequestType<JsonGroupJoinInfo> {
 
     GroupInviteLink groupInviteLink;
     try {
-      byte[] groupInviteLinkBytes = Base64UrlSafe.decodePaddingAgnostic(encoding);
-      groupInviteLink = GroupInviteLink.parseFrom(groupInviteLinkBytes);
+      byte[] groupInviteLinkBytes = Base64.decode(encoding);
+      groupInviteLink = GroupInviteLink.ADAPTER.decode(groupInviteLinkBytes);
     } catch (IOException e) {
       throw new InvalidRequestError(e.getMessage());
     }
 
-    GroupInviteLink.GroupInviteLinkContentsV1 groupInviteLinkContentsV1 = groupInviteLink.getV1Contents();
-
     GroupMasterKey groupMasterKey;
     try {
-      groupMasterKey = new GroupMasterKey(groupInviteLinkContentsV1.getGroupMasterKey().toByteArray());
+      groupMasterKey = new GroupMasterKey(groupInviteLink.v1Contents.groupMasterKey.toByteArray());
     } catch (InvalidInputException e) {
       throw new InternalError("error getting group master key", e);
     }
@@ -72,7 +70,7 @@ public class GroupLinkInfoRequest implements RequestType<JsonGroupJoinInfo> {
     Groups groups = Common.getGroups(Common.getAccount(account));
     DecryptedGroupJoinInfo decryptedGroupJoinInfo;
     try {
-      decryptedGroupJoinInfo = groups.getGroupJoinInfo(groupSecretParams, groupInviteLinkContentsV1.getInviteLinkPassword().toByteArray());
+      decryptedGroupJoinInfo = groups.getGroupJoinInfo(groupSecretParams, groupInviteLink.v1Contents.inviteLinkPassword.toByteArray());
     } catch (IOException | InvalidInputException | SQLException | VerificationFailedException e) {
       throw new InternalError("error getting group join info", e);
     } catch (GroupLinkNotActiveException e) {

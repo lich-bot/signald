@@ -20,8 +20,8 @@ import java.sql.SQLException;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
-import org.whispersystems.util.Base64;
+import org.signal.core.util.Base64;
+import org.whispersystems.signalservice.internal.push.PaymentAddress;
 
 @Doc("Information about a Signal user")
 public class Profile {
@@ -69,9 +69,9 @@ public class Profile {
         about = profile.getAbout();
         emoji = profile.getEmoji();
 
-        SignalServiceProtos.PaymentAddress paymentAddress = profile.getPaymentAddress();
-        if (paymentAddress != null) {
-          mobileCoinAddress = Base64.encodeBytes(paymentAddress.getMobileCoinAddress().getAddress().toByteArray());
+        PaymentAddress paymentAddress = profile.getPaymentAddress();
+        if (paymentAddress != null && paymentAddress.mobileCoinAddress != null && paymentAddress.mobileCoinAddress.address != null) {
+          mobileCoinAddress = Base64.encodeWithPadding(paymentAddress.mobileCoinAddress.address.toByteArray());
         }
 
         visibleBadgeIds = IProfilesTable.StoredBadge.getVisibleIds(profile.getBadges());

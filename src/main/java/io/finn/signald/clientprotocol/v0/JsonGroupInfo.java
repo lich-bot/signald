@@ -10,9 +10,9 @@ package io.finn.signald.clientprotocol.v0;
 import io.finn.signald.annotations.Deprecated;
 import java.util.ArrayList;
 import java.util.List;
+import org.signal.core.util.Base64;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-import org.whispersystems.util.Base64;
 
 @Deprecated(1641027661)
 public class JsonGroupInfo {
@@ -23,7 +23,7 @@ public class JsonGroupInfo {
   public long avatarId;
 
   JsonGroupInfo(SignalServiceGroup groupInfo) {
-    this.groupId = Base64.encodeBytes(groupInfo.getGroupId());
+    this.groupId = Base64.encodeWithPadding(groupInfo.getGroupId());
     if (groupInfo.getMembers().isPresent()) {
       this.members = new ArrayList<>();
       for (SignalServiceAddress member : groupInfo.getMembers().get()) {

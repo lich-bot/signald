@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.zkgroup.profiles.ExpiringProfileKeyCredential;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
@@ -37,8 +38,7 @@ import org.whispersystems.signalservice.api.push.exceptions.NonSuccessfulRespons
 import org.whispersystems.signalservice.api.push.exceptions.RateLimitException;
 import org.whispersystems.signalservice.api.services.ProfileService;
 import org.whispersystems.signalservice.internal.ServiceResponse;
-import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
-import org.whispersystems.util.Base64;
+import org.whispersystems.signalservice.internal.push.PaymentAddress;
 
 public class RefreshProfileJob implements Job {
   private static final Logger logger = LogManager.getLogger();
@@ -128,7 +128,7 @@ public class RefreshProfileJob implements Job {
     if (encryptedPaymentsAddress != null) {
       try {
         byte[] decrypted = profileCipher.decryptWithLength(encryptedPaymentsAddress);
-        db.ProfilesTable.setPaymentAddress(recipient, SignalServiceProtos.PaymentAddress.parseFrom(decrypted));
+        db.ProfilesTable.setPaymentAddress(recipient, PaymentAddress.ADAPTER.decode(decrypted));
       } catch (InvalidCiphertextException ignored) {
       }
     } else {

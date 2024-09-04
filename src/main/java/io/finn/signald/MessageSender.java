@@ -33,6 +33,8 @@ import org.whispersystems.signalservice.api.crypto.UnidentifiedAccessPair;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
+import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
+import org.whispersystems.signalservice.api.messages.multidevice.ReadMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
 import org.whispersystems.signalservice.api.push.DistributionId;
 import org.whispersystems.signalservice.api.push.ServiceId;
@@ -65,9 +67,9 @@ public class MessageSender {
       members = group.getMembers().stream().filter(x -> !self.equals(x)).collect(Collectors.toList());
     }
 
-    DecryptedTimer timer = group.getDecryptedGroup().getDisappearingMessagesTimer();
-    if (timer != null && timer.getDuration() != 0) {
-      message.withExpiration(timer.getDuration());
+    DecryptedTimer timer = group.getDecryptedGroup().disappearingMessagesTimer;
+    if (timer != null && timer.duration != 0) {
+      message.withExpiration(timer.duration);
     }
 
     message.asGroupMessage(group.getSignalServiceGroupV2());
@@ -172,7 +174,7 @@ public class MessageSender {
       SenderKeyGroupEventsLogger sendEvents = new SenderKeyGroupEventsLogger();
       try {
         List<SendMessageResult> skdmResults = messageSender.sendGroupDataMessage(distributionId, recipientAddresses, access, isRecipientUpdate, ContentHint.DEFAULT,
-                                                                                 message.build(), sendEvents, isUrgent, isForStory);
+                                                                                 message.build(), sendEvents, isUrgent, isForStory, null, null);
         Set<ServiceId> networkFailAddressesForRetry = new HashSet<>();
         if (sendEvents.isSyncMessageSent()) {
           isRecipientUpdate = true; // prevent duplicate sync messages from being sent
@@ -220,8 +222,8 @@ public class MessageSender {
 
           SenderKeyGroupEventsLogger sendEventsRetry = new SenderKeyGroupEventsLogger();
 
-          List<SendMessageResult> senderKeyRetryResults = messageSender.sendGroupDataMessage(distributionId, retryRecipientAddresses, access, isRecipientUpdate,
-                                                                                             ContentHint.DEFAULT, message.build(), sendEventsRetry, isUrgent, isForStory);
+          List<SendMessageResult> senderKeyRetryResults = messageSender.sendGroupDataMessage(
+              distributionId, retryRecipientAddresses, access, isRecipientUpdate, ContentHint.DEFAULT, message.build(), sendEventsRetry, isUrgent, isForStory, null, null);
           if (!isRecipientUpdate && sendEventsRetry.isSyncMessageSent()) {
             isRecipientUpdate = true;
           }
@@ -325,6 +327,31 @@ public class MessageSender {
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
       account.getProtocolStore().handleUntrustedIdentityException(e);
       throw e;
+    }
+  }
+
+  public SendMessageResult sendReceipt(SignalServiceReceiptMessage message, Recipient recipient)
+      throws IOException, SQLException, NoSuchAccountException, ServerNotFoundException, InvalidProxyException {
+    SignalServiceAddress recipientAddress = recipient.getAddress();
+    UnidentifiedAccessUtil unidentifiedAccessUtil = new UnidentifiedAccessUtil(account.getACI());
+    try {
+      SignalServiceMessageSender messageSender = account.getSignalDependencies().getMessageSender();
+      try (SignalSessionLock.Lock ignored = account.getSignalDependencies().getSessionLock().acquire()) {
+        messageSender.sendReceipt(recipientAddress, unidentifiedAccessUtil.getAccessPairFor(recipient), message, recipient.isNeedsPniSignature());
+      }
+      if (message.getType() == SignalServiceReceiptMessage.Type.READ) {
+        List<ReadMessage> readMessages = new LinkedList<>();
+        for (Long ts : message.getTimestamps()) {
+          readMessages.add(new ReadMessage(recipientAddress.getServiceId(), ts));
+        }
+        try (SignalSessionLock.Lock ignored = account.getSignalDependencies().getSessionLock().acquire()) {
+          messageSender.sendSyncMessage(SignalServiceSyncMessage.forRead(readMessages), unidentifiedAccessUtil.getAccessPairFor(self));
+        }
+      }
+      return null;
+    } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
+      account.getProtocolStore().handleUntrustedIdentityException(e);
+      return SendMessageResult.identityFailure(recipientAddress, e.getIdentityKey());
     }
   }
 

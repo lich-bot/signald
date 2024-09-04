@@ -11,7 +11,6 @@ import static io.finn.signald.annotations.ExactlyOneOfRequired.ACCOUNT;
 import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.protobuf.InvalidProtocolBufferException;
 import io.finn.signald.Account;
 import io.finn.signald.SignalDependencies;
 import io.finn.signald.annotations.*;
@@ -33,6 +32,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.groups.GroupIdentifier;
 import org.signal.storageservice.protos.groups.local.EnabledState;
@@ -43,7 +43,7 @@ import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServicePreview;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 import org.whispersystems.signalservice.api.push.exceptions.NonSuccessfulResponseCodeException;
-import org.whispersystems.util.Base64;
+import org.whispersystems.signalservice.internal.push.BodyRange;
 
 @ProtocolType("send")
 public class SendRequest implements RequestType<SendResponse> {
@@ -55,6 +55,7 @@ public class SendRequest implements RequestType<SendResponse> {
   @ExampleValue(ExampleValue.GROUP_ID) @ExactlyOneOfRequired(RECIPIENT) public String recipientGroupId;
   @ExampleValue(ExampleValue.MESSAGE_BODY) @AtLeastOneOfRequired({"attachments"}) public String messageBody;
   @AtLeastOneOfRequired({"messageBody"}) public List<JsonAttachment> attachments;
+  @JsonProperty("body_ranges") public List<BodyRangeMessage> bodyRanges;
   public JsonQuote quote;
   public Long timestamp;
   public List<JsonMention> mentions;
@@ -81,6 +82,14 @@ public class SendRequest implements RequestType<SendResponse> {
 
     if (messageBody != null) {
       messageBuilder = messageBuilder.withBody(messageBody);
+    }
+
+    if (bodyRanges != null) {
+      List<BodyRange> br = new ArrayList<>();
+      for (BodyRangeMessage brm : bodyRanges) {
+        br.add(brm.toBodyRange());
+      }
+      messageBuilder = messageBuilder.withBodyRanges(br);
     }
 
     if (attachments != null) {
@@ -149,7 +158,7 @@ public class SendRequest implements RequestType<SendResponse> {
       Optional<IGroupsTable.IGroup> groupOptional;
       try {
         groupOptional = Database.Get(a.getACI()).GroupsTable.get(groupIdentifier);
-      } catch (SQLException | InvalidInputException | InvalidProtocolBufferException e) {
+      } catch (SQLException | InvalidInputException | IOException e) {
         throw new InternalError("unexpected error looking up group to send to", e);
       }
 
@@ -161,7 +170,7 @@ public class SendRequest implements RequestType<SendResponse> {
         } catch (SQLException | IOException e) {
           throw new InternalError("error verifying own capabilities before sending", e);
         }
-        if (group.getDecryptedGroup().getIsAnnouncementGroup() == EnabledState.ENABLED && !group.isAdmin(self)) {
+        if (group.getDecryptedGroup().isAnnouncementGroup == EnabledState.ENABLED && !group.isAdmin(self)) {
           logger.warn("refusing to send to an announcement only group that we're not an admin in.");
           throw new NoSendPermissionError();
         }

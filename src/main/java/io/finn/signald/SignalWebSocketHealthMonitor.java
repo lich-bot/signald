@@ -27,7 +27,7 @@ public final class SignalWebSocketHealthMonitor implements HealthMonitor {
       Gauge.build().name(BuildConfig.NAME + "_upstream_websocket").help("1 if the upstream websocket is connected, 0 otherwise").labelNames("account_uuid", "socket").register();
   private final static Logger logger = LogManager.getLogger();
 
-  private static final long KEEP_ALIVE_SEND_CADENCE = TimeUnit.SECONDS.toMillis(WebSocketConnection.KEEPALIVE_TIMEOUT_SECONDS);
+  private static final long KEEP_ALIVE_SEND_CADENCE = TimeUnit.SECONDS.toMillis(WebSocketConnection.KEEPALIVE_FREQUENCY_SECONDS);
   private static final long MAX_TIME_SINCE_SUCCESSFUL_KEEP_ALIVE = KEEP_ALIVE_SEND_CADENCE * 3;
 
   private SignalWebSocket signalWebSocket;

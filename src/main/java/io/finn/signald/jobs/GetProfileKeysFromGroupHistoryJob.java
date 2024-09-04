@@ -12,12 +12,12 @@ import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
 import org.signal.libsignal.zkgroup.groups.GroupSecretParams;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
-import org.whispersystems.util.Base64;
 
 public class GetProfileKeysFromGroupHistoryJob implements Job {
   private static final Logger logger = LogManager.getLogger();
@@ -39,7 +39,7 @@ public class GetProfileKeysFromGroupHistoryJob implements Job {
     final Groups groups = account.getGroups();
     // don't refresh group from server, and ensure we're still in the group
     final Optional<IGroupsTable.IGroup> localGroup = groups.getGroup(groupSecretParams, mostRecentGroupRevision);
-    final String groupId = Base64.encodeBytes(groupSecretParams.getPublicParams().getGroupIdentifier().serialize());
+    final String groupId = Base64.encodeWithPadding(groupSecretParams.getPublicParams().getGroupIdentifier().serialize());
     if (localGroup.isEmpty()) {
       logger.warn("Missing group " + groupId + "; might've left the group");
       return;

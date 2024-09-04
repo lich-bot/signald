@@ -2,8 +2,8 @@ package io.finn.signald.db;
 
 import org.whispersystems.signalservice.api.SignalServiceAccountDataStore;
 import org.whispersystems.signalservice.api.SignalServiceDataStore;
-import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.ServiceId;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 public class DatabaseDataStore implements SignalServiceDataStore {
 
@@ -12,7 +12,7 @@ public class DatabaseDataStore implements SignalServiceDataStore {
 
   @Override
   public SignalServiceAccountDataStore get(ServiceId accountIdentifier) {
-    return new DatabaseAccountDataStore(ACI.from(accountIdentifier.uuid()));
+    return new DatabaseAccountDataStore(ACI.from(accountIdentifier.getRawUuid()));
   }
 
   @Override

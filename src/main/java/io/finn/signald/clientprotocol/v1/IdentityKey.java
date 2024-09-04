@@ -11,8 +11,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.db.IIdentityKeysTable;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.protocol.fingerprint.Fingerprint;
-import org.whispersystems.util.Base64;
 
 public class IdentityKey {
   @ExampleValue(ExampleValue.SAFETY_NUMBER) @JsonProperty("safety_number") public String safetyNumber;
@@ -24,12 +24,12 @@ public class IdentityKey {
     trustLevel = identity.getTrustLevelString();
     added = identity.getAddedTimestamp();
     safetyNumber = fingerprint.getDisplayableFingerprint().getDisplayText();
-    qrCodeData = Base64.encodeBytes(fingerprint.getScannableFingerprint().getSerialized());
+    qrCodeData = Base64.encodeWithPadding(fingerprint.getScannableFingerprint().getSerialized());
   }
 
   public IdentityKey(String trustLevel, Fingerprint fingerprint) {
     this.trustLevel = trustLevel;
     safetyNumber = fingerprint.getDisplayableFingerprint().getDisplayText();
-    qrCodeData = Base64.encodeBytes(fingerprint.getScannableFingerprint().getSerialized());
+    qrCodeData = Base64.encodeWithPadding(fingerprint.getScannableFingerprint().getSerialized());
   }
 }

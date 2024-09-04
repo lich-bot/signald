@@ -30,22 +30,29 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.protocol.IdentityKeyPair;
 import org.signal.libsignal.protocol.InvalidKeyException;
+import org.signal.libsignal.protocol.state.KyberPreKeyRecord;
+import org.signal.libsignal.protocol.state.SignedPreKeyRecord;
 import org.signal.libsignal.protocol.util.KeyHelper;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
+import org.whispersystems.signalservice.api.account.AccountAttributes;
+import org.whispersystems.signalservice.api.account.PreKeyCollection;
+import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
+import org.whispersystems.signalservice.api.push.ServiceIdType;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
-import org.whispersystems.signalservice.api.util.DeviceNameUtil;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
-import org.whispersystems.signalservice.internal.push.ConfirmCodeMessage;
-import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
+import org.whispersystems.signalservice.internal.push.SyncMessage;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
-import org.whispersystems.util.Base64;
 
+/**
+ * ProvisioningManager is used to hold data about ongoing account linking operations.
+ */
 public class ProvisioningManager {
   private final static ConcurrentHashMap<String, ProvisioningManager> provisioningManagers = new ConcurrentHashMap<>();
   private final static Logger logger = LogManager.getLogger();
@@ -81,7 +88,7 @@ public class ProvisioningManager {
 
   public URI getDeviceLinkUri() throws TimeoutException, IOException, URISyntaxException {
     String deviceUuid = accountManager.getNewDeviceUuid();
-    String deviceKey = Base64.encodeBytesWithoutPadding(identityKey.getPublicKey().getPublicKey().serialize());
+    String deviceKey = Base64.encodeWithoutPadding(identityKey.getPublicKey().getPublicKey().serialize());
     return new URI("sgnl://linkdevice?uuid=" + URLEncoder.encode(deviceUuid, StandardCharsets.UTF_8) + "&pub_key=" + URLEncoder.encode(deviceKey, StandardCharsets.UTF_8));
   }
 
@@ -99,9 +106,25 @@ public class ProvisioningManager {
       new Account(newDeviceRegistration.getAci()).delete(false);
     }
 
-    String encryptedDeviceName = DeviceNameUtil.encryptDeviceName(deviceName, newDeviceRegistration.getAciIdentity().getPrivateKey());
-    int deviceId = accountManager.finishNewDeviceRegistration(newDeviceRegistration.getProvisioningCode(),
-                                                              new ConfirmCodeMessage(false, true, registrationId, pniRegistrationId, encryptedDeviceName, null));
+    IdentityKeyPair aciKeyPair = newDeviceRegistration.getAciIdentity();
+    int aciNextSignedPreKeyId = KeyUtil.getRandomInt(ServiceConfig.PREKEY_MAXIMUM_ID);
+    SignedPreKeyRecord aciSignedPreKey = RegistrationManager.generateSignedPreKeyRecord(aciNextSignedPreKeyId, aciKeyPair.getPrivateKey());
+    int aciKyberPreKeyIdOffset = KeyUtil.getRandomInt(ServiceConfig.PREKEY_MAXIMUM_ID);
+    KyberPreKeyRecord aciLastResortKyberPreKey = KeyUtil.generateKyberPreKeyRecord(aciKyberPreKeyIdOffset, aciKeyPair.getPrivateKey());
+    PreKeyCollection aciPreKeyCollection = new PreKeyCollection(aciKeyPair.getPublicKey(), aciSignedPreKey, aciLastResortKyberPreKey);
+
+    IdentityKeyPair pniKeyPair = newDeviceRegistration.getPniIdentity();
+    int pniNextSignedPreKeyId = KeyUtil.getRandomInt(ServiceConfig.PREKEY_MAXIMUM_ID);
+    SignedPreKeyRecord pniSignedPreKey = RegistrationManager.generateSignedPreKeyRecord(pniNextSignedPreKeyId, pniKeyPair.getPrivateKey());
+    int pniKyberPreKeyIdOffset = KeyUtil.getRandomInt(ServiceConfig.PREKEY_MAXIMUM_ID);
+    KyberPreKeyRecord pniLastResortKyberPreKey = KeyUtil.generateKyberPreKeyRecord(pniKyberPreKeyIdOffset, pniKeyPair.getPrivateKey());
+    PreKeyCollection pniPreKeyCollection = new PreKeyCollection(pniKeyPair.getPublicKey(), pniSignedPreKey, pniLastResortKyberPreKey);
+
+    byte[] unidentifiedAccessKey = UnidentifiedAccess.deriveAccessKeyFrom(newDeviceRegistration.getProfileKey());
+    AccountAttributes accountAttributes =
+        new AccountAttributes(null, registrationId, false, false, true, null, unidentifiedAccessKey, false, false, ServiceConfig.CAPABILITIES, "", pniRegistrationId, null);
+
+    int deviceId = accountManager.finishNewDeviceRegistration(newDeviceRegistration.getProvisioningCode(), accountAttributes, aciPreKeyCollection, pniPreKeyCollection);
 
     ACI aci = newDeviceRegistration.getAci();
     if (Database.Get().AccountsTable.exists(aci)) {
@@ -121,6 +144,12 @@ public class ProvisioningManager {
     account.setPNIIdentityKeyPair(newDeviceRegistration.getPniIdentity());
     account.setLocalRegistrationId(registrationId);
     account.setPniRegistrationId(pniRegistrationId);
+    account.setAciNextSignedPreKeyId(aciNextSignedPreKeyId);
+    account.setPniNextSignedPreKeyId(pniNextSignedPreKeyId);
+    account.setACINextKyberPreKeyId(aciKyberPreKeyIdOffset);
+    account.setPNINextKyberPreKeyId(pniKyberPreKeyIdOffset);
+    account.addLastResortKyberPreKey(ServiceIdType.ACI, aciLastResortKyberPreKey);
+    account.setMasterKey(newDeviceRegistration.getMasterKey());
 
     // store all known identifiers in the recipients table
     account.getDB().RecipientsTable.get(newDeviceRegistration.getNumber(), newDeviceRegistration.getAci());
@@ -129,7 +158,7 @@ public class ProvisioningManager {
       account.getDB().ProfileKeysTable.setProfileKey(account.getSelf(), newDeviceRegistration.getProfileKey());
     }
 
-    Manager m = new Manager(newDeviceRegistration.getAci());
+    //    Manager m = new Manager(newDeviceRegistration.getAci());
 
     Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.LAST_ACCOUNT_REPAIR, AccountRepair.getLatestVersion());
 
@@ -141,12 +170,12 @@ public class ProvisioningManager {
                   account.getPassword().equals(password), Util.redact(newDeviceRegistration.getAci()), Util.redact(newDeviceRegistration.getPni()));
       throw e;
     }
-    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.GROUPS));
-    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.CONTACTS));
-    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.BLOCKED));
-    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.CONFIGURATION));
-    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.KEYS));
-    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.PNI_IDENTITY));
+    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SyncMessage.Request.Type.GROUPS));
+    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SyncMessage.Request.Type.CONTACTS));
+    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SyncMessage.Request.Type.BLOCKED));
+    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SyncMessage.Request.Type.CONFIGURATION));
+    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SyncMessage.Request.Type.KEYS));
+    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SyncMessage.Request.Type.PNI_IDENTITY));
 
     return aci;
   }

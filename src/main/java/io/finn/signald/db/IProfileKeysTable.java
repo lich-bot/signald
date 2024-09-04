@@ -12,12 +12,11 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.libsignal.protocol.ServiceId;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.profiles.ExpiringProfileKeyCredential;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
-import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredential;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
-import org.whispersystems.signalservice.api.push.ACI;
 
 public interface IProfileKeysTable {
   byte[] UNRESTRICTED_KEY = new byte[16];
@@ -98,7 +97,7 @@ public interface IProfileKeysTable {
         final var selfProfileKey = getProfileKey(self);
         if (selfProfileKey != null && !selfProfileKey.equals(entry.getValue())) {
           logger.warn("Seen authoritative update for self that didn't match local, scheduling storage sync");
-          BackgroundJobRunnerThread.queue(new SyncStorageDataJob(new Account(ACI.from(self.getServiceId().uuid()))));
+          BackgroundJobRunnerThread.queue(new SyncStorageDataJob(new Account(new ServiceId.Aci(self.getServiceId().getRawUuid()))));
         }
       } else {
         logger.debug("Profile key from owner for " + entry.getKey().toRedactedString());

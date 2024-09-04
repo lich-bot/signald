@@ -17,7 +17,7 @@ import org.signal.libsignal.zkgroup.VerificationFailedException;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
-import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
+import org.whispersystems.signalservice.internal.push.SyncMessage;
 
 public class AccountRepair {
   private final static Logger logger = LogManager.getLogger();
@@ -79,11 +79,11 @@ public class AccountRepair {
   }
 
   private static void clearContactsTableIfNonPrimaryDevice(Account account) throws SQLException {
-    // primary device can't get contacts via sync from other devices, so dont wipe out the contacts table
+    // primary device can't get contacts via sync from other devices, so don't wipe out the contacts table
     if (account.getDeviceId() != SignalServiceAddress.DEFAULT_DEVICE_ID) {
       logger.info("clearing local contact list to fix potential data corruption. A contact sync from the primary device will be requested");
       account.getDB().ContactsTable.clear();
-      BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.CONTACTS));
+      BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SyncMessage.Request.Type.CONTACTS));
     }
 
     Database.Get().AccountDataTable.set(account.getACI(), IAccountDataTable.Key.LAST_ACCOUNT_REPAIR, ACCOUNT_REPAIR_VERSION_CLEAR_CONTACTS_TABLE);

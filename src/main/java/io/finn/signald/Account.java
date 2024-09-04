@@ -7,30 +7,45 @@
 
 package io.finn.signald;
 
+import static io.finn.signald.ServiceConfig.PREKEY_MAXIMUM_ID;
+
 import io.finn.signald.db.*;
 import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoProfileKeyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
+import io.finn.signald.jobs.RefreshProfileJob;
+import io.finn.signald.util.KeyUtil;
 import io.sentry.Sentry;
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.sql.SQLException;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 import org.signal.libsignal.protocol.IdentityKeyPair;
 import org.signal.libsignal.protocol.InvalidKeyException;
+import org.signal.libsignal.protocol.ServiceId;
+import org.signal.libsignal.protocol.state.KyberPreKeyRecord;
+import org.signal.libsignal.zkgroup.InvalidInputException;
+import org.signal.libsignal.zkgroup.profiles.ExpiringProfileKeyCredential;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
+import org.whispersystems.signalservice.api.account.AccountAttributes;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
-import org.whispersystems.signalservice.api.push.ACI;
-import org.whispersystems.signalservice.api.push.PNI;
+import org.whispersystems.signalservice.api.kbs.MasterKey;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.PNI;
+import org.whispersystems.signalservice.api.push.ServiceIdType;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.storage.StorageKey;
 import org.whispersystems.signalservice.api.util.DeviceNameUtil;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.push.WhoAmIResponse;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
-import org.whispersystems.util.Base64;
 
 public class Account {
   private static final Logger logger = LogManager.getLogger();
@@ -39,9 +54,11 @@ public class Account {
 
   public Account(ACI aci) { this.aci = aci; }
 
+  public Account(ServiceId.Aci aci) { this.aci = new ACI(aci); }
+
   public String getE164() throws SQLException, NoSuchAccountException { return Database.Get().AccountsTable.getE164(aci); }
 
-  public UUID getUUID() { return aci.uuid(); }
+  public UUID getUUID() { return aci.getRawUuid(); }
 
   public ACI getACI() { return aci; }
 
@@ -60,6 +77,10 @@ public class Account {
 
   public SignalServiceConfiguration getServiceConfiguration() throws SQLException, ServerNotFoundException, InvalidProxyException, IOException {
     return Database.Get().AccountsTable.getServer(aci).getSignalServiceConfiguration();
+  }
+
+  public String getCdsMrenclave() throws SQLException, IOException, ServerNotFoundException, InvalidProxyException {
+    return Database.Get().AccountsTable.getServer(aci).getCdsMrenclave();
   }
 
   public SignalDependencies getSignalDependencies() throws SQLException, ServerNotFoundException, IOException, InvalidProxyException, NoSuchAccountException {
@@ -179,18 +200,77 @@ public class Account {
 
   public void setPreKeyIdOffset(int preKeyIdOffset) throws SQLException { Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.PRE_KEY_ID_OFFSET, preKeyIdOffset); }
 
-  public int getNextSignedPreKeyId() throws SQLException {
-    int id = Database.Get().AccountDataTable.getInt(aci, IAccountDataTable.Key.NEXT_SIGNED_PRE_KEY_ID);
+  public int getNextSignedPreKeyId(ServiceIdType serviceIdType) throws SQLException {
+    IAccountDataTable.Key key = serviceIdType == ServiceIdType.ACI ? IAccountDataTable.Key.NEXT_SIGNED_PRE_KEY_ID : IAccountDataTable.Key.PNI_NEXT_SIGNED_PRE_KEY_ID;
+    int id = Database.Get().AccountDataTable.getInt(aci, key);
     if (id == -1) {
-      return 0;
+      id = KeyUtil.getRandomInt(PREKEY_MAXIMUM_ID);
+      Database.Get().AccountDataTable.set(aci, key, id);
     }
     return id;
   }
 
-  public void setNextSignedPreKeyId(int nextSignedPreKeyId) throws SQLException {
+  public void setAciNextSignedPreKeyId(int nextSignedPreKeyId) throws SQLException {
     Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.NEXT_SIGNED_PRE_KEY_ID, nextSignedPreKeyId);
   }
 
+  public void setPniNextSignedPreKeyId(int nextSignedPreKeyId) throws SQLException {
+    Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.PNI_NEXT_SIGNED_PRE_KEY_ID, nextSignedPreKeyId);
+  }
+
+  public int getNextKyberPreKeyId(ServiceIdType serviceIdType) throws SQLException {
+    IAccountDataTable.Key key = serviceIdType == ServiceIdType.ACI ? IAccountDataTable.Key.ACI_NEXT_KYBER_PRE_KEY_ID : IAccountDataTable.Key.PNI_NEXT_KYBER_PRE_KEY_ID;
+    int id = Database.Get().AccountDataTable.getInt(aci, key);
+    if (id == -1) {
+      id = KeyUtil.getRandomInt(PREKEY_MAXIMUM_ID);
+      Database.Get().AccountDataTable.set(aci, key, id);
+    }
+    return id;
+  }
+
+  public void setACINextKyberPreKeyId(int nextKyberPreKeyId) throws SQLException {
+    Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.ACI_NEXT_KYBER_PRE_KEY_ID, nextKyberPreKeyId);
+  }
+
+  public void setNextKyberPreKeyId(ServiceIdType serviceIdType, int nextKyberPreKeyId) throws SQLException {
+    IAccountDataTable.Key key = serviceIdType == ServiceIdType.ACI ? IAccountDataTable.Key.ACI_NEXT_KYBER_PRE_KEY_ID : IAccountDataTable.Key.PNI_NEXT_KYBER_PRE_KEY_ID;
+    Database.Get().AccountDataTable.set(aci, key, nextKyberPreKeyId);
+  }
+
+  public void setActiveSignedPreKeyId(ServiceIdType serviceIdType, int activeSignedPreKeyId) throws SQLException {
+    Database.Get().AccountDataTable.set(
+        aci, serviceIdType == ServiceIdType.ACI ? IAccountDataTable.Key.ACI_ACTIVE_SIGNED_PREKEY_ID : IAccountDataTable.Key.PNI_ACTIVE_SIGNED_PREKEY_ID, activeSignedPreKeyId);
+  }
+  public int getActiveSignedPreKeyId(ServiceIdType serviceIdType) throws SQLException {
+    return Database.Get().AccountDataTable.getInt(aci, serviceIdType == ServiceIdType.ACI ? IAccountDataTable.Key.ACI_ACTIVE_SIGNED_PREKEY_ID
+                                                                                          : IAccountDataTable.Key.PNI_ACTIVE_SIGNED_PREKEY_ID);
+  }
+
+  public void setPNINextKyberPreKeyId(int nextKyberPreKeyId) throws SQLException {
+    Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.PNI_NEXT_KYBER_PRE_KEY_ID, nextKyberPreKeyId);
+  }
+
+  public void setActiveLastResortKyberPreKeyId(ServiceIdType serviceIdType, int id) throws SQLException {
+    Database.Get().AccountDataTable.set(
+        aci, serviceIdType == ServiceIdType.PNI ? IAccountDataTable.Key.ACI_ACTIVE_LAST_RESORT_KYBER_PRE_KEY_ID : IAccountDataTable.Key.PNI_ACTIVE_LAST_RESORT_KYBER_PRE_KEY_ID,
+        id);
+  }
+  public int getActiveLastResortKyberPreKeyId(ServiceIdType serviceIdType) throws SQLException {
+    return Database.Get().AccountDataTable.getInt(aci, serviceIdType == ServiceIdType.PNI ? IAccountDataTable.Key.ACI_ACTIVE_LAST_RESORT_KYBER_PRE_KEY_ID
+                                                                                          : IAccountDataTable.Key.PNI_ACTIVE_LAST_RESORT_KYBER_PRE_KEY_ID);
+  }
+
+  public Optional<byte[]> getCdsiToken() throws SQLException { return Optional.ofNullable(Database.Get().AccountDataTable.getBytes(aci, IAccountDataTable.Key.CDSI_TOKEN)); }
+
+  public Consumer<byte[]> getTokenSaver() {
+    return token -> {
+      try {
+        Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.CDSI_TOKEN, token);
+      } catch (SQLException e) {
+        logger.catching(e);
+      }
+    };
+  }
   public Recipient getSelf() throws SQLException, IOException { return getDB().RecipientsTable.get(aci); }
 
   public void setStorageKey(StorageKey storageKey) throws SQLException { Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.STORAGE_KEY, storageKey.serialize()); }
@@ -242,13 +322,69 @@ public class Account {
       deviceName = "signald";
       setDeviceName(deviceName);
     }
-    deviceName = DeviceNameUtil.encryptDeviceName(deviceName, getProtocolStore().getIdentityKeyPair().getPrivateKey());
+    String encryptedDeviceName = DeviceNameUtil.encryptDeviceName(deviceName, getProtocolStore().getIdentityKeyPair().getPrivateKey());
     ProfileKey ownProfileKey = getDB().ProfileKeysTable.getProfileKey(getSelf());
     byte[] ownUnidentifiedAccessKey = UnidentifiedAccess.deriveAccessKeyFrom(ownProfileKey);
     int localRegistrationId = getLocalRegistrationId();
     int pniRegistrationId = getPniRegistrationId();
-    getSignalDependencies().getAccountManager().setAccountAttributes(null, localRegistrationId, true, null, null, ownUnidentifiedAccessKey, true, ServiceConfig.CAPABILITIES, true,
-                                                                     Base64.decode(deviceName), pniRegistrationId);
+
+    AccountAttributes.Capabilities capabilities = new AccountAttributes.Capabilities(true, true, true, true, true, true, true, true);
+    getSignalDependencies().getAccountManager().setAccountAttributes(new AccountAttributes(null, localRegistrationId, false, false, true, null, ownUnidentifiedAccessKey, false,
+                                                                                           false, capabilities, encryptedDeviceName, pniRegistrationId, null));
     setLastAccountRefresh(ACCOUNT_REFRESH_VERSION);
+  }
+
+  public void addKyberPreKeys(ServiceIdType serviceIdType, List<KyberPreKeyRecord> kyberPreKeyRecords) throws SQLException {
+    getProtocolStore().markAllOneTimeKyberPreKeysStaleIfNecessary(System.currentTimeMillis());
+    IKyberPreKeyStore store = Database.Get(aci).KyberPreKeyStore;
+    int next = getNextKyberPreKeyId(serviceIdType);
+    for (KyberPreKeyRecord record : kyberPreKeyRecords) {
+      if (record.getId() != next) {
+        logger.error("Invalid kyber pre key id {}, expected {}", record.getId(), next);
+        throw new AssertionError("invalid kyber pre key id");
+      }
+      store.storeKyberPreKey(record.getId(), record);
+      next = (next + 1) % PREKEY_MAXIMUM_ID;
+    }
+    setNextKyberPreKeyId(serviceIdType, next);
+  }
+
+  public void addLastResortKyberPreKey(ServiceIdType serviceIdType, KyberPreKeyRecord lastResortKyberPreKeyRecord) throws SQLException {
+    int expectedId = getNextKyberPreKeyId(serviceIdType);
+    if (expectedId != lastResortKyberPreKeyRecord.getId()) {
+      logger.error("Invalid last resort kyber pre key id {}, expected {}", lastResortKyberPreKeyRecord.getId(), expectedId);
+      throw new AssertionError("invalid kyber pre key id");
+    }
+    getProtocolStore().storeLastResortKyberPreKey(lastResortKyberPreKeyRecord.getId(), lastResortKyberPreKeyRecord);
+    setActiveLastResortKyberPreKeyId(serviceIdType, lastResortKyberPreKeyRecord.getId());
+  }
+
+  public void setMasterKey(MasterKey masterKey) throws SQLException { Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.MASTER_KEY, masterKey.serialize()); }
+
+  public MasterKey getOrCreateMasterKey() throws SQLException {
+    byte[] serialized = Database.Get().AccountDataTable.getBytes(aci, IAccountDataTable.Key.MASTER_KEY);
+    if (serialized == null) {
+      MasterKey masterKey = MasterKey.createNew(new SecureRandom());
+      setMasterKey(masterKey);
+      serialized = masterKey.serialize();
+    }
+
+    return new MasterKey(serialized);
+  }
+
+  public ExpiringProfileKeyCredential getExpiringProfileKeyCredential(Recipient recipient)
+      throws SQLException, InvalidInputException, NoSuchAccountException, ServerNotFoundException, IOException, InvalidKeyException, InvalidProxyException, NoProfileKeyException {
+    ExpiringProfileKeyCredential existing = getDB().ProfileKeysTable.getExpiringProfileKeyCredential(recipient);
+    if (existing == null) {
+      // no existing profile key for this user, refresh
+      new RefreshProfileJob(this, recipient).run();
+      existing = getDB().ProfileKeysTable.getExpiringProfileKeyCredential(recipient);
+    }
+
+    if (existing == null) {
+      throw new NoProfileKeyException(recipient);
+    }
+
+    return existing;
   }
 }

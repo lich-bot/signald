@@ -69,7 +69,7 @@ public class ApproveMembershipRequest implements RequestType<JsonGroupV2Info> {
 
     Set<UUID> membersToApprove = members.stream().map(JsonAddress::getUUID).collect(Collectors.toSet());
     GroupChange.Actions.Builder change = groupOperations.createApproveGroupJoinRequest(membersToApprove);
-    change.setSourceUuid(UuidUtil.toByteString(m.getUUID()));
+    change.sourceServiceId(UuidUtil.toByteString(m.getUUID()));
 
     Common.updateGroup(a, group, change);
 

@@ -16,11 +16,11 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Optional;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
-import org.whispersystems.signalservice.api.push.ACI;
-import org.whispersystems.util.Base64;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 @Deprecated(1641027661)
 public class JsonAttachment {
@@ -49,18 +49,18 @@ public class JsonAttachment {
     if (attachment.isPointer()) {
       // unclear if this is the correct identifier or the right way to be storing attachments anymore
       this.id = pointer.getRemoteId().toString();
-      this.key = Base64.encodeBytes(pointer.getKey());
+      this.key = Base64.encodeWithPadding(pointer.getKey());
 
       if (pointer.getSize().isPresent()) {
         this.size = pointer.getSize().get();
       }
 
       if (pointer.getPreview().isPresent()) {
-        this.preview = Base64.encodeBytes(pointer.getPreview().get());
+        this.preview = Base64.encodeWithPadding(pointer.getPreview().get());
       }
 
       if (pointer.getDigest().isPresent()) {
-        this.digest = Base64.encodeBytes(pointer.getDigest().get());
+        this.digest = Base64.encodeWithPadding(pointer.getDigest().get());
       }
 
       this.voiceNote = pointer.getVoiceNote();
@@ -96,7 +96,7 @@ public class JsonAttachment {
   @JsonIgnore
   public Optional<byte[]> getPreview() {
     if (preview != null) {
-      return Optional.of(Base64.encodeBytesToBytes(preview.getBytes()));
+      return Optional.of(java.util.Base64.getEncoder().encode(preview.getBytes()));
     }
     return Optional.empty();
   }

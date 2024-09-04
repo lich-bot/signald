@@ -8,7 +8,7 @@ import java.sql.SQLException;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import org.flywaydb.core.Flyway;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class TestUtil {
@@ -23,7 +23,7 @@ public class TestUtil {
       this.testHash = testHash;
     }
 
-    public ACI getAci() { return ACI.from(selfAddress.getServiceId().uuid()); }
+    public ACI getAci() { return ACI.from(selfAddress.getServiceId().getRawUuid()); }
   }
 
   public static TestPostgresDatabase createAndConfigureTestPostgresDatabase() throws IOException, SQLException {

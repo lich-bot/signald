@@ -9,8 +9,7 @@ import org.apache.logging.log4j.LogManager;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.profiles.ExpiringProfileKeyCredential;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
-import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredential;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 public class ProfileKeysTable implements IProfileKeysTable {
   private static final String TABLE_NAME = "signald_profile_keys";

@@ -20,16 +20,18 @@ import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.IGroupsTable;
 import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoProfileKeyException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.util.GroupsUtil;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Optional;
+import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
 import org.signal.libsignal.zkgroup.groups.GroupSecretParams;
 import org.signal.libsignal.zkgroup.profiles.ExpiringProfileKeyCredential;
-import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredential;
 import org.signal.storageservice.protos.groups.AccessControl;
 import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.storageservice.protos.groups.local.DecryptedGroupChange;
@@ -52,7 +54,7 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
   @Override
   public JsonGroupJoinInfo run(Request request)
       throws InvalidRequestError, InvalidInviteURIError, InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, OwnProfileKeyDoesNotExistError,
-             GroupVerificationError, GroupNotActiveError, UnknownGroupError, InvalidGroupStateError, AuthorizationFailedError, SQLError {
+             GroupVerificationError, GroupNotActiveError, UnknownGroupError, InvalidGroupStateError, AuthorizationFailedError, SQLError, NoProfileKeyError {
     Account a = Common.getAccount(account);
 
     GroupInviteLinkUrl groupInviteLinkUrl;
@@ -68,9 +70,17 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
 
     ExpiringProfileKeyCredential expiringProfileKeyCredential;
     try {
-      expiringProfileKeyCredential = a.getDB().ProfileKeysTable.getExpiringProfileKeyCredential(a.getSelf());
-    } catch (IOException | SQLException | InvalidInputException e) {
+      expiringProfileKeyCredential = a.getExpiringProfileKeyCredential(a.getSelf());
+    } catch (IOException | SQLException | InvalidInputException | InvalidKeyException e) {
       throw new InternalError("error getting own profile key credential", e);
+    } catch (NoSuchAccountException e) {
+      throw new NoSuchAccountError(e);
+    } catch (NoProfileKeyException e) {
+      throw new NoProfileKeyError(e);
+    } catch (ServerNotFoundException e) {
+      throw new ServerNotFoundError(e);
+    } catch (InvalidProxyException e) {
+      throw new InvalidProxyError(e);
     }
 
     if (expiringProfileKeyCredential == null) {
@@ -104,16 +114,16 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
       throw new GroupVerificationError(e);
     }
 
-    boolean requestToJoin = groupJoinInfo.getAddFromInviteLink() == AccessControl.AccessRequired.ADMINISTRATOR;
+    boolean requestToJoin = groupJoinInfo.addFromInviteLink == AccessControl.AccessRequired.ADMINISTRATOR;
     GroupChange.Actions.Builder change;
     if (requestToJoin) {
       change = groupOperations.createGroupJoinRequest(expiringProfileKeyCredential);
     } else {
       change = groupOperations.createGroupJoinDirect(expiringProfileKeyCredential);
     }
-    change.setSourceUuid(UuidUtil.toByteString(a.getUUID()));
+    change.sourceServiceId(UuidUtil.toByteString(a.getUUID()));
 
-    int revision = groupJoinInfo.getRevision() + 1;
+    int revision = groupJoinInfo.revision + 1;
 
     DecryptedGroupChange decryptedChange;
     GroupChange groupChange;
@@ -132,7 +142,7 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
 
     Optional<IGroupsTable.IGroup> groupOptional;
     try {
-      groupOptional = groups.getGroup(groupSecretParams, decryptedChange.getRevision());
+      groupOptional = groups.getGroup(groupSecretParams, decryptedChange.revision);
     } catch (IOException | SQLException | InvalidInputException e) {
       throw new InternalError("error getting new group information after join", e);
     } catch (VerificationFailedException e) {
@@ -147,7 +157,7 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
 
     var group = groupOptional.get();
 
-    SignalServiceGroupV2.Builder groupBuilder = SignalServiceGroupV2.newBuilder(group.getMasterKey()).withRevision(revision).withSignedGroupChange(groupChange.toByteArray());
+    SignalServiceGroupV2.Builder groupBuilder = SignalServiceGroupV2.newBuilder(group.getMasterKey()).withRevision(revision).withSignedGroupChange(groupChange.encode());
     SignalServiceDataMessage.Builder message = SignalServiceDataMessage.newBuilder().asGroupMessage(groupBuilder.build());
 
     Common.sendGroupUpdateMessage(a, message, group);

@@ -19,7 +19,7 @@ import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupContext;
 import org.whispersystems.signalservice.api.messages.SignalServicePreview;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 public class JsonDataMessage {
   @Doc("the timestamp that the message was sent at, according to the sender's device. This is used to uniquely identify "
@@ -73,6 +73,8 @@ public class JsonDataMessage {
   @Doc("details about the MobileCoin payment attached to the message, if present") public Payment payment;
 
   @JsonProperty("story_context") public StoryContext storyContext;
+
+  @JsonProperty("body_ranges") public List<BodyRangeMessage> bodyRanges;
 
   public JsonDataMessage(SignalServiceDataMessage dataMessage, ACI aci)
       throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError, NetworkError {
@@ -158,6 +160,10 @@ public class JsonDataMessage {
 
     if (dataMessage.getStoryContext().isPresent()) {
       storyContext = new StoryContext(dataMessage.getStoryContext().get());
+    }
+
+    if (dataMessage.getBodyRanges().isPresent()) {
+      bodyRanges = dataMessage.getBodyRanges().get().stream().map(BodyRangeMessage::new).toList();
     }
   }
 }

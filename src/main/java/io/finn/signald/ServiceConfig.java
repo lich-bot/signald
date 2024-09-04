@@ -7,6 +7,8 @@
 
 package io.finn.signald;
 
+import java.util.concurrent.TimeUnit;
+import org.signal.libsignal.protocol.util.Medium;
 import org.whispersystems.signalservice.api.account.AccountAttributes;
 
 public class ServiceConfig {
@@ -17,15 +19,18 @@ public class ServiceConfig {
   public final static long AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE = 10 * 1024 * 1024;
   public final static boolean AUTOMATIC_NETWORK_RETRY = true;
   public final static int GROUP_MAX_SIZE = 1000;
-  public static final AccountAttributes.Capabilities CAPABILITIES = new AccountAttributes.Capabilities(false, // UUID
-                                                                                                       true,  // groups v2
-                                                                                                       false, // storage
-                                                                                                       true,  // groups v1 migration
+  public final static int PREKEY_MAXIMUM_ID = Medium.MAX_VALUE;
+  public static final long PREKEY_ARCHIVE_AGE = TimeUnit.DAYS.toMillis(30);
+  public static final long PREKEY_STALE_AGE = TimeUnit.DAYS.toMillis(90);
+  public static final long SIGNED_PREKEY_ROTATE_AGE = TimeUnit.DAYS.toMillis(2);
+  public static final int CDSI_MAXIMUM_ONE_OFF_REQUEST_SIZE = 3;
+  public static final AccountAttributes.Capabilities CAPABILITIES = new AccountAttributes.Capabilities(false, // storage
                                                                                                        true,  // sender key
                                                                                                        true,  // announcement groups
                                                                                                        true,  // change number
                                                                                                        true,  // stories
                                                                                                        true,  // gift badges
-                                                                                                       false  // pnp
+                                                                                                       false, // pni
+                                                                                                       false  // paymentActivation
   );
 }

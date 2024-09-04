@@ -29,12 +29,12 @@ import java.nio.file.NoSuchFileException;
 import java.sql.SQLException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.PhoneNumberFormatter;
-import org.whispersystems.util.Base64;
 
 @Deprecated
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
@@ -119,8 +119,8 @@ public class LegacyAccountData {
         }
         try {
           ProfileKey p = new ProfileKey(c.profileKey);
-          Recipient recipient = Database.Get(ACI.from(self.getServiceId().uuid())).RecipientsTable.get(c.recipient.getServiceId());
-          legacyProfileCredentialStore.storeProfileKey(recipient, p);
+          Recipient recipient = Database.Get(ACI.from(self.getServiceId().getRawUuid())).RecipientsTable.get(c.recipient.getServiceId());
+          //          legacyProfileCredentialStore.storeProfileKey(recipient, p);
         } catch (InvalidInputException e) {
           logger.warn("Invalid profile key while migrating profile keys from contacts", e);
         }
@@ -129,7 +129,7 @@ public class LegacyAccountData {
       if (legacyProfileKey != null) {
         try {
           ProfileKey p = new ProfileKey(Base64.decode(legacyProfileKey));
-          legacyProfileCredentialStore.storeProfileKey(self, p);
+          //          legacyProfileCredentialStore.storeProfileKey(self, p);
         } catch (InvalidInputException e) {
           logger.warn("Invalid profile key while migrating own profile key", e);
         }
@@ -252,7 +252,7 @@ public class LegacyAccountData {
     }
 
     if (legacyNextSignedPreKeyId > -1) {
-      account.setNextSignedPreKeyId(legacyNextSignedPreKeyId);
+      account.setAciNextSignedPreKeyId(legacyNextSignedPreKeyId);
       legacyNextSignedPreKeyId = -1;
       needsSave = true;
     }

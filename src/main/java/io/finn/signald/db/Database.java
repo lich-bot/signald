@@ -25,8 +25,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sqlite.SQLiteErrorCode;
 import org.sqlite.SQLiteException;
-import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.ServiceId;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 
 public class Database {
@@ -70,6 +70,8 @@ public class Database {
   public final IProfileKeysTable ProfileKeysTable;
   public final IProfileCapabilitiesTable ProfileCapabilitiesTable;
   public final IProfileBadgesTable ProfileBadgesTable;
+  public final IKyberPreKeyStore KyberPreKeyStore;
+  public final ICdsiTable CdsiTable;
   private Database(ACI aci, Type databaseType) {
     switch (databaseType) {
     case SQLITE:
@@ -92,6 +94,8 @@ public class Database {
       ProfileKeysTable = new io.finn.signald.db.sqlite.ProfileKeysTable(aci);
       ProfileCapabilitiesTable = new io.finn.signald.db.sqlite.ProfileCapabilitiesTable(aci);
       ProfileBadgesTable = new io.finn.signald.db.sqlite.ProfileBadgesTable(aci);
+      KyberPreKeyStore = new io.finn.signald.db.sqlite.KyberPreKeyTable(aci);
+      CdsiTable = new io.finn.signald.db.sqlite.CdsiTable(aci);
       break;
     case POSTGRESQL:
       AccountDataTable = new io.finn.signald.db.postgresql.AccountDataTable();
@@ -113,6 +117,8 @@ public class Database {
       ProfileKeysTable = new io.finn.signald.db.postgresql.ProfileKeysTable(aci);
       ProfileCapabilitiesTable = new io.finn.signald.db.postgresql.ProfileCapabilitiesTable(aci);
       ProfileBadgesTable = new io.finn.signald.db.postgresql.ProfileBadgesTable(aci);
+      KyberPreKeyStore = new io.finn.signald.db.postgresql.KyberPreKeyTable(aci);
+      CdsiTable = new io.finn.signald.db.postgresql.CdsiTable(aci);
       break;
     default:
       throw new IllegalArgumentException("Illegal database type");
@@ -185,14 +191,15 @@ public class Database {
 
   public static IServersTable.AbstractServer NewServer(UUID uuid, String serviceURL, Map<Integer, String> cdns, String contactDiscoveryURL, String keyBackupURL, String storageURL,
                                                        byte[] zkParams, byte[] unidentifiedSenderRoot, String proxy, byte[] ca, String keyBackupServiceName,
-                                                       byte[] keyBackupServiceId, String keyBackupMrenclave, String cdsMrenclave, byte[] iasCa) throws InvalidProxyException {
+                                                       byte[] keyBackupServiceId, String keyBackupMrenclave, String cdsMrenclave, byte[] iasCa, String cdsiUrl, String svr2Url)
+      throws InvalidProxyException {
     switch (GetConnectionType()) {
     case SQLITE:
       return new io.finn.signald.db.sqlite.ServersTable.Server(uuid, serviceURL, cdns, contactDiscoveryURL, keyBackupURL, storageURL, zkParams, unidentifiedSenderRoot, proxy, ca,
-                                                               keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, iasCa, "");
+                                                               keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, iasCa, cdsiUrl, svr2Url);
     case POSTGRESQL:
       return new io.finn.signald.db.postgresql.ServersTable.Server(uuid, serviceURL, cdns, contactDiscoveryURL, keyBackupURL, storageURL, zkParams, unidentifiedSenderRoot, proxy,
-                                                                   ca, keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, iasCa, "");
+                                                                   ca, keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, iasCa, cdsiUrl, svr2Url);
     default:
       throw new IllegalArgumentException("Invalid connection type");
     }

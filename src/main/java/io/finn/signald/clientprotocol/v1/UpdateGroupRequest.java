@@ -18,6 +18,10 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.Recipient;
+import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoProfileKeyException;
+import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -25,6 +29,7 @@ import java.sql.SQLException;
 import java.util.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
 import org.signal.libsignal.zkgroup.profiles.ExpiringProfileKeyCredential;
@@ -33,6 +38,7 @@ import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.storageservice.protos.groups.Member;
 import org.whispersystems.signalservice.api.groupsv2.GroupCandidate;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
+import org.whispersystems.signalservice.api.push.ServiceId;
 
 @ProtocolType("update_group")
 @ErrorDoc(error = AuthorizationFailedError.class, doc = AuthorizationFailedError.DEFAULT_ERROR_DOC)
@@ -69,8 +75,9 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
   @Doc("ENABLED to only allow admins to post messages, DISABLED to allow anyone to post") @ExactlyOneOfRequired(GROUP_MODIFICATION) public String announcements;
 
   @Override
-  public GroupInfo run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError,
-                                               InvalidRequestError, AuthorizationFailedError, UnregisteredUserError, SQLError, GroupPatchNotAcceptedError, UnsupportedGroupError {
+  public GroupInfo run(Request request)
+      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError, InvalidRequestError, AuthorizationFailedError,
+             UnregisteredUserError, SQLError, GroupPatchNotAcceptedError, UnsupportedGroupError, NoProfileKeyError {
     Account a = Common.getAccount(account);
     var recipientsTable = a.getDB().RecipientsTable;
 
@@ -108,38 +115,44 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
         } catch (SQLException e) {
           throw new SQLError(e);
         }
-        change = GroupChange.Actions.newBuilder().setModifyAvatar(GroupChange.Actions.ModifyAvatarAction.newBuilder().setAvatar(cdnKey));
+        change = new GroupChange.Actions.Builder().modifyAvatar(new GroupChange.Actions.ModifyAvatarAction.Builder().avatar(cdnKey).build());
       } else if (addMembers != null && addMembers.size() > 0) {
         Set<GroupCandidate> candidates = new HashSet<>();
         for (JsonAddress member : addMembers) {
           Recipient recipient = recipientsTable.get(member);
-          ExpiringProfileKeyCredential expiringProfileKeyCredential = a.getDB().ProfileKeysTable.getExpiringProfileKeyCredential(recipient);
+          ExpiringProfileKeyCredential expiringProfileKeyCredential;
+          try {
+            expiringProfileKeyCredential = a.getExpiringProfileKeyCredential(recipient);
+          } catch (IOException | SQLException | InvalidInputException | InvalidKeyException e) {
+            throw new InternalError("error getting own profile key credential", e);
+          } catch (NoSuchAccountException e) {
+            throw new NoSuchAccountError(e);
+          } catch (NoProfileKeyException e) {
+            throw new NoProfileKeyError(e);
+          } catch (ServerNotFoundException e) {
+            throw new ServerNotFoundError(e);
+          } catch (InvalidProxyException e) {
+            throw new InvalidProxyError(e);
+          }
           recipients.add(recipientsTable.get(recipient.getAddress()));
-          UUID uuid = recipient.getUUID();
-          candidates.add(new GroupCandidate(uuid, Optional.ofNullable(expiringProfileKeyCredential)));
+          candidates.add(new GroupCandidate(recipient.getServiceId(), Optional.ofNullable(expiringProfileKeyCredential)));
         }
-        change = groupOperations.createModifyGroupMembershipChange(candidates, Set.of(), a.getUUID());
+        change = groupOperations.createModifyGroupMembershipChange(candidates, Set.of(), a.getACI());
       } else if (removeMembers != null && removeMembers.size() > 0) {
-        Set<UUID> members = new HashSet<>();
+        Set<ServiceId.ACI> members = new HashSet<>();
         for (JsonAddress member : removeMembers) {
           Recipient recipient = recipientsTable.get(member);
-          members.add(recipient.getUUID());
+          members.add(recipient.getACI());
         }
         change = groupOperations.createRemoveMembersChange(members, false, List.of());
       } else if (updateRole != null) {
         UUID uuid = UUID.fromString(updateRole.uuid);
-        Member.Role role;
-        switch (updateRole.role) {
-        case "ADMINISTRATOR":
-          role = Member.Role.ADMINISTRATOR;
-          break;
-        case "DEFAULT":
-          role = Member.Role.DEFAULT;
-          break;
-        default:
-          throw new InvalidRequestError("unknown role requested");
-        }
-        change = groupOperations.createChangeMemberRole(uuid, role);
+        Member.Role role = switch (updateRole.role) {
+          case "ADMINISTRATOR" -> Member.Role.ADMINISTRATOR;
+          case "DEFAULT" -> Member.Role.DEFAULT;
+          default -> throw new InvalidRequestError("unknown role requested");
+        };
+        change = groupOperations.createChangeMemberRole(ServiceId.ACI.from(uuid), role);
       } else if (updateAccessControl != null) {
         if (updateAccessControl.attributes != null) {
           if (updateAccessControl.members != null || updateAccessControl.link != null) {
@@ -159,7 +172,7 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
 
           change = groupOperations.createChangeJoinByLinkRights(access);
           if (access != AccessControl.AccessRequired.UNSATISFIABLE) {
-            if (group.getDecryptedGroup().getInviteLinkPassword().isEmpty()) {
+            if (group.getDecryptedGroup().inviteLinkPassword.size() == 0) {
               logger.debug("First time enabling group links for group and password empty, generating");
               change = groupOperations.createModifyGroupLinkPasswordAndRightsChange(GroupLinkPassword.createNew().serialize(), access);
             }
@@ -172,22 +185,17 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
       } else if (updateTimer > -1) {
         change = groupOperations.createModifyGroupTimerChange(updateTimer);
       } else if (announcements != null) {
-        boolean announcementMode;
-        switch (announcements) {
-        case "ENABLED":
-          announcementMode = true;
-          break;
-        case "DISABLED":
-          announcementMode = false;
-          break;
-        default:
-          throw new InvalidRequestError("unexpected value for key announcement: must be ENABLED or DISABLED");
-        }
+        boolean announcementMode = switch (announcements) {
+          case "ENABLED" -> true;
+          case "DISABLED" -> false;
+          default ->
+                  throw new InvalidRequestError("unexpected value for key announcement: must be ENABLED or DISABLED");
+        };
         change = groupOperations.createAnnouncementGroupChange(announcementMode);
       } else {
         throw new InvalidRequestError("no change requested");
       }
-    } catch (IOException | SQLException | InvalidInputException e) {
+    } catch (IOException | SQLException e) {
       throw new InternalError("error updating group: ", e);
     }
 
@@ -196,17 +204,12 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
   }
 
   public AccessControl.AccessRequired getAccessRequired(String name) throws InvalidRequestError {
-    switch (name) {
-    case "ANY":
-      return AccessControl.AccessRequired.ANY;
-    case "MEMBER":
-      return AccessControl.AccessRequired.MEMBER;
-    case "ADMINISTRATOR":
-      return AccessControl.AccessRequired.ADMINISTRATOR;
-    case "UNSATISFIABLE":
-      return AccessControl.AccessRequired.UNSATISFIABLE;
-    default:
-      throw new InvalidRequestError("invalid role: " + name);
-    }
+    return switch (name) {
+      case "ANY" -> AccessControl.AccessRequired.ANY;
+      case "MEMBER" -> AccessControl.AccessRequired.MEMBER;
+      case "ADMINISTRATOR" -> AccessControl.AccessRequired.ADMINISTRATOR;
+      case "UNSATISFIABLE" -> AccessControl.AccessRequired.UNSATISFIABLE;
+      default -> throw new InvalidRequestError("invalid role: " + name);
+    };
   }
 }

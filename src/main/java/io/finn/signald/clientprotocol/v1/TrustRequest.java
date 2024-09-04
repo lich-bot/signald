@@ -19,10 +19,10 @@ import io.finn.signald.db.Recipient;
 import java.io.IOException;
 import java.sql.SQLException;
 import org.asamk.signal.TrustLevel;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.protocol.fingerprint.FingerprintParsingException;
 import org.signal.libsignal.protocol.fingerprint.FingerprintVersionMismatchException;
-import org.whispersystems.util.Base64;
 
 @ProtocolType("trust")
 @Doc("Trust another user's safety number using either the QR code data or the safety number text")

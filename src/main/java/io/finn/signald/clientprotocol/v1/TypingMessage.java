@@ -8,8 +8,8 @@
 package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.signal.core.util.Base64;
 import org.whispersystems.signalservice.api.messages.SignalServiceTypingMessage;
-import org.whispersystems.util.Base64;
 
 public class TypingMessage {
   public String action;
@@ -20,7 +20,7 @@ public class TypingMessage {
     action = typingMessage.getAction().name();
     timestamp = typingMessage.getTimestamp();
     if (typingMessage.getGroupId().isPresent()) {
-      groupId = Base64.encodeBytes(typingMessage.getGroupId().get());
+      groupId = Base64.encodeWithPadding(typingMessage.getGroupId().get());
     }
   }
 }

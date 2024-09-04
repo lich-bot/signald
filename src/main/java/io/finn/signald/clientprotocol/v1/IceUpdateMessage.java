@@ -7,7 +7,7 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import org.whispersystems.util.Base64;
+import org.signal.core.util.Base64;
 
 public class IceUpdateMessage {
   public final long id;
@@ -16,7 +16,7 @@ public class IceUpdateMessage {
 
   public IceUpdateMessage(org.whispersystems.signalservice.api.messages.calls.IceUpdateMessage message) {
     id = message.getId();
-    opaque = Base64.encodeBytes(message.getOpaque());
+    opaque = Base64.encodeWithPadding(message.getOpaque());
     sdp = message.getSdp();
   }
 }

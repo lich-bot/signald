@@ -20,12 +20,12 @@ import io.finn.signald.util.JSONUtil;
 import java.io.IOException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.zkgroup.InvalidInputException;
+import org.signal.libsignal.zkgroup.profiles.ExpiringProfileKeyCredential;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
-import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredential;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-import org.whispersystems.util.Base64;
 
 @Deprecated
 @JsonDeserialize(using = LegacyProfileAndCredentialEntry.ProfileAndCredentialEntryDeserializer.class)
@@ -38,20 +38,18 @@ public class LegacyProfileAndCredentialEntry {
 
   private SignalServiceAddress serviceAddress;
 
-  private final ProfileKey profileKey;
-
   private final long lastUpdateTimestamp;
 
   private final LegacySignalProfile profile;
 
-  private final ProfileKeyCredential profileKeyCredential;
+  private final ExpiringProfileKeyCredential profileKeyCredential;
 
   private boolean requestPending;
 
-  public LegacyProfileAndCredentialEntry(final SignalServiceAddress serviceAddress, final ProfileKey profileKey, final long lastUpdateTimestamp, final LegacySignalProfile profile,
-                                         final ProfileKeyCredential profileKeyCredential, UnidentifiedAccessMode unidentifiedAccessMode) {
+  public LegacyProfileAndCredentialEntry(final SignalServiceAddress serviceAddress, final long lastUpdateTimestamp, final LegacySignalProfile profile,
+                                         final ExpiringProfileKeyCredential profileKeyCredential, UnidentifiedAccessMode unidentifiedAccessMode) {
     this.serviceAddress = serviceAddress;
-    this.profileKey = profileKey;
+    ;
     this.lastUpdateTimestamp = lastUpdateTimestamp;
     this.profile = profile;
     this.profileKeyCredential = profileKeyCredential;
@@ -60,13 +58,9 @@ public class LegacyProfileAndCredentialEntry {
 
   public SignalServiceAddress getServiceAddress() { return serviceAddress; }
 
-  public ProfileKey getProfileKey() { return profileKey; }
-
   public long getLastUpdateTimestamp() { return lastUpdateTimestamp; }
 
   public LegacySignalProfile getProfile() { return profile; }
-
-  public ProfileKeyCredential getProfileKeyCredential() { return profileKeyCredential; }
 
   public boolean isRequestPending() { return requestPending; }
 
@@ -79,19 +73,10 @@ public class LegacyProfileAndCredentialEntry {
   public byte[] getUnidentifiedAccessKey() {
     switch (unidentifiedAccessMode) {
     case UNKNOWN:
-      if (profileKey == null) {
-        return UNRESTRICTED_KEY;
-      } else {
-        return UnidentifiedAccess.deriveAccessKeyFrom(profileKey);
-      }
+    case ENABLED:
+      return UNRESTRICTED_KEY;
     case DISABLED:
       return null;
-    case ENABLED:
-      if (profileKey == null) {
-        return null;
-      } else {
-        return UnidentifiedAccess.deriveAccessKeyFrom(profileKey);
-      }
     case UNRESTRICTED:
       return UNRESTRICTED_KEY;
     default:
@@ -132,21 +117,22 @@ public class LegacyProfileAndCredentialEntry {
         profile = mapper.treeToValue(node.get("profile"), LegacySignalProfile.class);
       }
 
-      ProfileKeyCredential profileKeyCredential = null;
-      if (node.has("profileKeyCredential")) {
-        try {
-          profileKeyCredential = new ProfileKeyCredential(Base64.decode(node.get("profileKeyCredential").textValue()));
-        } catch (InvalidInputException e) {
-          logger.warn("error loading profile key credential from profile credential storage");
-        }
-      }
+      //      ProfileKeyCredential profileKeyCredential = null;
+      //      if (node.has("profileKeyCredential")) {
+      //        try {
+      //          profileKeyCredential = new ProfileKeyCredential(Base64.decode(node.get("profileKeyCredential").textValue()));
+      //        } catch (InvalidInputException e) {
+      //          logger.warn("error loading profile key credential from profile credential storage");
+      //        }
+      //      }
 
       UnidentifiedAccessMode unidentifiedAccessMode = UnidentifiedAccessMode.UNKNOWN;
       if (node.has("unidentifiedAccessMode")) {
         unidentifiedAccessMode = UnidentifiedAccessMode.fromMode(node.get("unidentifiedAccessMode").asInt());
       }
 
-      return new LegacyProfileAndCredentialEntry(address, profileKey, lastUpdateTimestamp, profile, profileKeyCredential, unidentifiedAccessMode);
+      //      return new LegacyProfileAndCredentialEntry(address, profileKey, lastUpdateTimestamp, profile, null, unidentifiedAccessMode);
+      return null; // TODO
     }
   }
 
@@ -160,9 +146,9 @@ public class LegacyProfileAndCredentialEntry {
         return; // don't store profiles without an address
       }
 
-      if (value.profileKey != null) {
-        node.put("profileKey", Base64.encodeBytes(value.profileKey.serialize()));
-      }
+      //      if (value.profileKey != null) {
+      //        node.put("profileKey", Base64.encodeWithPadding(value.profileKey.serialize()));
+      //      }
 
       node.put("lastUpdateTimestamp", value.lastUpdateTimestamp);
 
@@ -171,7 +157,7 @@ public class LegacyProfileAndCredentialEntry {
       }
 
       if (value.profileKeyCredential != null) {
-        node.put("profileKeyCredential", Base64.encodeBytes(value.profileKeyCredential.serialize()));
+        node.put("profileKeyCredential", Base64.encodeWithPadding(value.profileKeyCredential.serialize()));
       }
 
       node.put("unidentifiedAccessMode", value.unidentifiedAccessMode.getMode());

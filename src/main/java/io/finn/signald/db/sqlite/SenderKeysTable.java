@@ -17,8 +17,8 @@ import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.protocol.InvalidMessageException;
 import org.signal.libsignal.protocol.SignalProtocolAddress;
 import org.signal.libsignal.protocol.groups.state.SenderKeyRecord;
-import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.DistributionId;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 public class SenderKeysTable implements ISenderKeysTable {
   private static final Logger logger = LogManager.getLogger();

@@ -12,6 +12,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import okhttp3.OkHttpClient;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -85,7 +86,7 @@ public class Config {
       } else {
         Configurator.setLevel(System.getProperty("log4j.logger"), Level.DEBUG);
       }
-      LogSetup.setup();
+      java.util.logging.Logger.getLogger(OkHttpClient.class.getName()).setLevel(java.util.logging.Level.FINE);
       logger.debug("Debug logging enabled");
     }
 

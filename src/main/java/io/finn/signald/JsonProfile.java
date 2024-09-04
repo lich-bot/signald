@@ -12,11 +12,11 @@ import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import java.io.IOException;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.crypto.InvalidCiphertextException;
 import org.whispersystems.signalservice.api.crypto.ProfileCipher;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
-import org.whispersystems.util.Base64;
 
 @Deprecated(1641027661)
 public class JsonProfile {

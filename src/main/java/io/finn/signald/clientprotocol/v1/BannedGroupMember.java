@@ -10,8 +10,8 @@ public class BannedGroupMember {
   @Doc("Timestamp as milliseconds since Unix epoch of when the user was banned. This field is set by the server.") public final long timestamp;
 
   public BannedGroupMember(DecryptedBannedMember d) {
-    uuid = UuidUtil.fromByteStringOrUnknown(d.getUuid()).toString();
-    timestamp = d.getTimestamp();
+    uuid = UuidUtil.fromByteStringOrUnknown(d.serviceIdBytes).toString();
+    timestamp = d.timestamp;
   }
 
   public BannedGroupMember(BannedGroupMember otherForCopy) {

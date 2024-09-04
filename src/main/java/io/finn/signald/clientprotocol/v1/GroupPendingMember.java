@@ -13,9 +13,9 @@ public class GroupPendingMember {
   public long timestamp;
 
   public GroupPendingMember(DecryptedPendingMember d) {
-    uuid = UuidUtil.fromByteStringOrUnknown(d.getUuid()).toString();
-    role = d.getRole().name();
-    addedByUuid = UuidUtil.fromByteStringOrUnknown(d.getAddedByUuid()).toString();
-    timestamp = d.getTimestamp();
+    uuid = UuidUtil.fromByteStringOrUnknown(d.serviceIdBytes).toString();
+    role = d.role.name();
+    addedByUuid = UuidUtil.fromByteStringOrUnknown(d.addedByAci).toString();
+    timestamp = d.timestamp;
   }
 }

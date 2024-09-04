@@ -17,11 +17,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.Optional;
+import org.signal.core.util.Base64;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStream;
-import org.whispersystems.signalservice.api.push.ACI;
-import org.whispersystems.util.Base64;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 
 @Doc("represents a file attached to a message. When sending, only `filename` is required.")
 public class JsonAttachment {
@@ -50,18 +50,18 @@ public class JsonAttachment {
     if (attachment.isPointer()) {
       // unclear if this is the correct identifier or the right way to be storing attachments anymore
       this.id = pointer.getRemoteId().toString();
-      this.key = Base64.encodeBytes(pointer.getKey());
+      this.key = Base64.encodeWithPadding(pointer.getKey());
 
       if (pointer.getSize().isPresent()) {
         this.size = pointer.getSize().get();
       }
 
       if (pointer.getPreview().isPresent()) {
-        this.preview = Base64.encodeBytes(pointer.getPreview().get());
+        this.preview = Base64.encodeWithPadding(pointer.getPreview().get());
       }
 
       if (pointer.getDigest().isPresent()) {
-        this.digest = Base64.encodeBytes(pointer.getDigest().get());
+        this.digest = Base64.encodeWithPadding(pointer.getDigest().get());
       }
 
       this.voiceNote = pointer.getVoiceNote();
@@ -97,7 +97,7 @@ public class JsonAttachment {
   @JsonIgnore
   public Optional<byte[]> getPreview() {
     if (preview != null) {
-      return Optional.of(Base64.encodeBytesToBytes(preview.getBytes()));
+      return Optional.of(java.util.Base64.getDecoder().decode(preview.getBytes()));
     }
     return Optional.empty();
   }
@@ -105,15 +105,15 @@ public class JsonAttachment {
   public SignalServiceAttachmentStream asStream() throws IOException {
     File attachmentFile = new File(filename);
     InputStream attachmentStream = new FileInputStream(attachmentFile);
-    final long attachmentSize = attachmentFile.length();
     if (contentType == null) {
       contentType = Files.probeContentType(attachmentFile.toPath());
       if (contentType == null) {
         contentType = "application/octet-stream";
       }
     }
-    return new SignalServiceAttachmentStream(attachmentStream, contentType, attachmentSize,
-                                             customFilename == null ? Optional.of(attachmentFile.getName()) : Optional.of(customFilename), voiceNote, false, false, getPreview(),
-                                             width, height, System.currentTimeMillis(), Optional.ofNullable(caption), Optional.ofNullable(blurhash), null, null, Optional.empty());
+
+    return new SignalServiceAttachmentStream(
+        attachmentStream, contentType, attachmentFile.length(), customFilename == null ? Optional.of(attachmentFile.getName()) : Optional.of(customFilename), voiceNote, false,
+        false, false, getPreview(), width, height, System.currentTimeMillis(), Optional.ofNullable(caption), Optional.ofNullable(blurhash), null, null, Optional.empty());
   }
 }

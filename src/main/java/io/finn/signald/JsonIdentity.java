@@ -17,8 +17,8 @@ import io.finn.signald.util.SafetyNumberHelper;
 import java.io.IOException;
 import java.sql.SQLException;
 import org.asamk.signal.util.Hex;
+import org.signal.core.util.Base64;
 import org.signal.libsignal.protocol.fingerprint.Fingerprint;
-import org.whispersystems.util.Base64;
 
 @Deprecated(1641027661)
 class JsonIdentity {
@@ -53,7 +53,7 @@ class JsonIdentity {
         safety_number = "INVALID ID";
       } else {
         safety_number = fingerprint.getDisplayableFingerprint().getDisplayText();
-        qr_code_data = Base64.encodeBytes(fingerprint.getScannableFingerprint().getSerialized());
+        qr_code_data = Base64.encodeWithPadding(fingerprint.getScannableFingerprint().getSerialized());
       }
     }
   }
