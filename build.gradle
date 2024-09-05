@@ -89,19 +89,19 @@ repositories {
 dependencies {
     implementation 'org.signald:signal-service-java-' + getTarget() + ':2.15.3_unofficial_90'
     implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1'
-    implementation 'com.kohlschutter.junixsocket:junixsocket-common:2.9.1'
-    implementation 'com.kohlschutter.junixsocket:junixsocket-native-common:2.9.1'
+    implementation 'com.kohlschutter.junixsocket:junixsocket-common:2.10.0'
+    implementation 'com.kohlschutter.junixsocket:junixsocket-native-common:2.10.0'
     implementation 'org.apache.logging.log4j:log4j-api:2.23.1'
     implementation 'org.apache.logging.log4j:log4j-core:2.23.1'
     implementation 'info.picocli:picocli:4.7.6'
-    implementation 'org.xerial:sqlite-jdbc:3.45.3.0'
-    implementation 'org.flywaydb:flyway-core:10.13.0'
-    implementation 'com.google.protobuf:protobuf-javalite:4.26.1'
+    implementation 'org.xerial:sqlite-jdbc:3.46.0.1'
+    implementation 'org.flywaydb:flyway-core:10.17.0'
+    implementation 'com.google.protobuf:protobuf-javalite:4.27.3'
     implementation 'io.prometheus:simpleclient_hotspot:0.16.0'
     implementation 'io.prometheus:simpleclient_httpserver:0.16.0'
     implementation 'com.squareup.okhttp3:logging-interceptor:4.12.0'
-    implementation 'io.sentry:sentry:7.9.0'
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    implementation 'io.sentry:sentry:7.13.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.3'
 }
 
 
